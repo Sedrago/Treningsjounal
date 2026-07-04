@@ -28,6 +28,9 @@ Følg disse stegene én gang, så er alt klart. Regn med 10–15 minutter.
    Dette er normalt for egne skript – det er din egen kode som får
    tilgang til ditt eget regneark.
 
+   `kjorOppsett` oppretter ark, kategorier, API-nøkkel og **27 standardøvelser**
+   (Benkpress, Knebøy, Markløft osv.) hvis Exercises-arket er tomt.
+
 7. Et varsel viser **API-nøkkelen** din. Noter den (den ligger også i
    Settings-arket i regnearket).
 
@@ -105,6 +108,10 @@ Versjon: Ny versjon → Distribuer**. URL-en forblir den samme.
 - **«Ugyldig API-nøkkel»** – sjekk at nøkkelen i appen er identisk med verdien
   for `apiKey` i Settings-arket.
 - **«Oppsett mangler»** – kjør `kjorOppsett` i Apps Script (del 1, steg 5).
+- **Ingen øvelser i kategoriene** – appen legger inn 27 standardøvelser
+  automatisk ved oppstart hvis listen er tom. Gå til **Øvelser** og trykk
+  «Legg til standardøvelser», eller kjør `kjorSeedOvelser` i Apps Script
+  (kun hvis Exercises-arket er tomt).
 - **Test tilkobling feiler** – sjekk at URL-en slutter på `/exec` og at
   distribusjonen har tilgang «Alle».
 - **Endringer synkroniseres ikke** – åpne Innstillinger og se synk-status.

@@ -119,7 +119,6 @@ export async function init() {
   });
   notify();
   if (api.isConfigured() && navigator.onLine) {
-    // Ved oppstart: send eventuelle ventende endringer, hent så ferske data.
-    fullSync();
+    await fullSync();
   }
 }

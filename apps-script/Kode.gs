@@ -300,6 +300,8 @@ function kjorOppsett() {
     upsert_('Settings', { key: 'apiKey', value: apiKey });
   }
 
+  seedStandardOvelser_();
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ['Sheet1', 'Ark1', 'Ark 1'].forEach(function (name) {
     var sheet = ss.getSheetByName(name);
@@ -309,7 +311,25 @@ function kjorOppsett() {
   });
 
   var message = 'Oppsett fullført!\n\nAPI-nøkkelen din (lim inn i appen):\n\n' + apiKey
-    + '\n\nDu finner den også i Settings-arket.';
+    + '\n\nDu finner den også i Settings-arket.'
+    + '\n\n27 standardøvelser er lagt inn hvis Exercises-arket var tomt.';
+  try {
+    SpreadsheetApp.getUi().alert(message);
+  } catch (e) {
+    Logger.log(message);
+  }
+}
+
+/** Kjør manuelt hvis Exercises-arket er tomt etter oppsett (legger inn 27 standardøvelser). */
+function kjorSeedOvelser() {
+  var sheet = getSheet_('Exercises');
+  var countBefore = Math.max(0, sheet.getLastRow() - 1);
+  seedStandardOvelser_();
+  var countAfter = Math.max(0, sheet.getLastRow() - 1);
+  var added = countAfter - countBefore;
+  var message = added > 0
+    ? 'La til ' + added + ' standardøvelser i Exercises-arket.'
+    : 'Ingen endring – Exercises-arket har allerede data.';
   try {
     SpreadsheetApp.getUi().alert(message);
   } catch (e) {
@@ -324,4 +344,48 @@ function genererNokkel_() {
     key += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return key;
+}
+
+/** Legger inn standardøvelser i Exercises-arket hvis det er tomt. */
+function seedStandardOvelser_() {
+  var sheet = getSheet_('Exercises');
+  if (sheet.getLastRow() >= 2) return;
+  var ovelser = [
+    ['def-hp-benk', 'Benkpress', 'horisontal-push'],
+    ['def-hp-man', 'Manualpress', 'horisontal-push'],
+    ['def-hp-skra', 'Skrå benk', 'horisontal-push'],
+    ['def-hp-push', 'Push-ups', 'horisontal-push'],
+    ['def-hp-dips', 'Dips', 'horisontal-push'],
+    ['def-hpl-row', 'Stangroing', 'horisontal-pull'],
+    ['def-hpl-1arm', 'En-arms row', 'horisontal-pull'],
+    ['def-hpl-face', 'Face pulls', 'horisontal-pull'],
+    ['def-hpl-kabel', 'Kabel roing', 'horisontal-pull'],
+    ['def-vp-mil', 'Militærpress', 'vertikal-push'],
+    ['def-vp-man', 'Manualpress skuldre', 'vertikal-push'],
+    ['def-vp-arnold', 'Arnold press', 'vertikal-push'],
+    ['def-vpl-pull', 'Pull-ups', 'vertikal-pull'],
+    ['def-vpl-chin', 'Chin-ups', 'vertikal-pull'],
+    ['def-vpl-lat', 'Lat pulldown', 'vertikal-pull'],
+    ['def-kb-kne', 'Knebøy', 'kneboy'],
+    ['def-kb-front', 'Front squats', 'kneboy'],
+    ['def-kb-bulgar', 'Bulgarsk split squat', 'kneboy'],
+    ['def-kb-bein', 'Beinpress', 'kneboy'],
+    ['def-hh-mark', 'Markløft', 'hoftehengsel'],
+    ['def-hh-rdl', 'Rumensk markløft', 'hoftehengsel'],
+    ['def-hh-hip', 'Hip thrust', 'hoftehengsel'],
+    ['def-hh-good', 'Good morning', 'hoftehengsel'],
+    ['def-core-plank', 'Plank', 'core'],
+    ['def-core-dead', 'Dead bug', 'core'],
+    ['def-core-pallof', 'Pallof press', 'core'],
+    ['def-core-crunch', 'Crunches', 'core'],
+  ];
+  var now = new Date().toISOString();
+  ovelser.forEach(function (o) {
+    upsert_('Exercises', {
+      id: o[0], name: o[1], category: o[2],
+      notes: '', video: '', active: true,
+      goalSets: 3, goalRepsMin: 8, goalRepsMax: 10,
+      deleted: false, updatedAt: now,
+    });
+  });
 }

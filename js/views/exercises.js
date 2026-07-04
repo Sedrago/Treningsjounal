@@ -28,12 +28,21 @@ export async function render(container) {
       <h1>Øvelser</h1>
     </header>
     <button type="button" class="knapp primaer bred" id="ny-ovelse">+ Ny øvelse</button>
+    ${!exercises.length ? `
+    <button type="button" class="knapp sekundaer bred" id="legg-til-standard">
+      Legg til standardøvelser (27 stk)
+    </button>` : ''}
     ${sections}
     <div id="skjema-vert"></div>
   `;
 
   container.querySelector('#ny-ovelse').addEventListener('click', () => {
     openForm(container.querySelector('#skjema-vert'), null, () => render(container));
+  });
+  container.querySelector('#legg-til-standard')?.addEventListener('click', async () => {
+    const added = await store.ensureDefaultExercises();
+    toast(added ? 'Standardøvelser lagt til' : 'Øvelser finnes allerede', added ? 'suksess' : 'info');
+    render(container);
   });
   container.querySelectorAll('.ovelse-rad').forEach((row) => {
     row.addEventListener('click', async () => {

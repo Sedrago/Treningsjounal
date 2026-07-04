@@ -32,6 +32,58 @@ export function categoryById(id) {
   return KATEGORIER.find((k) => k.id === id) || null;
 }
 
+/** Standardøvelser som legges inn automatisk første gang (tom øvelsesliste). */
+const DEFAULT_OVELSER = [
+  // Horisontal push
+  { id: 'def-hp-benk', name: 'Benkpress', category: 'horisontal-push' },
+  { id: 'def-hp-man', name: 'Manualpress', category: 'horisontal-push' },
+  { id: 'def-hp-skra', name: 'Skrå benk', category: 'horisontal-push' },
+  { id: 'def-hp-push', name: 'Push-ups', category: 'horisontal-push' },
+  { id: 'def-hp-dips', name: 'Dips', category: 'horisontal-push' },
+  // Horisontal pull
+  { id: 'def-hpl-row', name: 'Stangroing', category: 'horisontal-pull' },
+  { id: 'def-hpl-1arm', name: 'En-arms row', category: 'horisontal-pull' },
+  { id: 'def-hpl-face', name: 'Face pulls', category: 'horisontal-pull' },
+  { id: 'def-hpl-kabel', name: 'Kabel roing', category: 'horisontal-pull' },
+  // Vertikal push
+  { id: 'def-vp-mil', name: 'Militærpress', category: 'vertikal-push' },
+  { id: 'def-vp-man', name: 'Manualpress skuldre', category: 'vertikal-push' },
+  { id: 'def-vp-arnold', name: 'Arnold press', category: 'vertikal-push' },
+  // Vertikal pull
+  { id: 'def-vpl-pull', name: 'Pull-ups', category: 'vertikal-pull' },
+  { id: 'def-vpl-chin', name: 'Chin-ups', category: 'vertikal-pull' },
+  { id: 'def-vpl-lat', name: 'Lat pulldown', category: 'vertikal-pull' },
+  // Knebøydominant
+  { id: 'def-kb-kne', name: 'Knebøy', category: 'kneboy' },
+  { id: 'def-kb-front', name: 'Front squats', category: 'kneboy' },
+  { id: 'def-kb-bulgar', name: 'Bulgarsk split squat', category: 'kneboy' },
+  { id: 'def-kb-bein', name: 'Beinpress', category: 'kneboy' },
+  // Hoftehengsel
+  { id: 'def-hh-mark', name: 'Markløft', category: 'hoftehengsel' },
+  { id: 'def-hh-rdl', name: 'Rumensk markløft', category: 'hoftehengsel' },
+  { id: 'def-hh-hip', name: 'Hip thrust', category: 'hoftehengsel' },
+  { id: 'def-hh-good', name: 'Good morning', category: 'hoftehengsel' },
+  // Core
+  { id: 'def-core-plank', name: 'Plank', category: 'core' },
+  { id: 'def-core-dead', name: 'Dead bug', category: 'core' },
+  { id: 'def-core-pallof', name: 'Pallof press', category: 'core' },
+  { id: 'def-core-crunch', name: 'Crunches', category: 'core' },
+];
+
+/**
+ * Legger inn standardøvelser hvis listen er tom.
+ * Kalles ved oppstart og etter synk fra tom server.
+ * @returns {boolean} true hvis øvelser ble lagt til
+ */
+export async function ensureDefaultExercises() {
+  const existing = await db.getAll('exercises');
+  if (existing.some((e) => !e.deleted)) return false;
+  for (const tpl of DEFAULT_OVELSER) {
+    await saveExercise({ ...tpl, notes: '', video: '', active: true });
+  }
+  return true;
+}
+
 /** Standardinnstillinger. */
 export const DEFAULT_SETTINGS = {
   theme: 'dark',            // 'dark' | 'light' | 'auto'

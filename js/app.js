@@ -86,6 +86,7 @@ async function main() {
   });
 
   await sync.init();
+  await store.ensureDefaultExercises();
   setupSyncBadge();
 
   window.addEventListener('hashchange', renderRoute);
