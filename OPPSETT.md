@@ -9,27 +9,26 @@ Følg disse stegene én gang, så er alt klart. Regn med 10–15 minutter.
 
 2. Velg **Utvidelser → Apps Script** i menyen. Et nytt skriptprosjekt åpnes.
 
-3. Slett innholdet i filen `Kode.gs` som ligger der fra før.
+3. Åpne filen **`Kode.gs`** i venstre panel (den ligger der fra før).
 
-4. Opprett disse fire filene i skriptprosjektet (klikk **+** ved «Filer» → «Skript»),
-   og lim inn innholdet fra mappen `apps-script/` i dette repoet:
+4. **Slett standardkoden** som ligger i `Kode.gs` fra før, og lim inn **hele
+   innholdet** fra filen `apps-script/Kode.gs` i dette repoet.
 
-   | Fil i Apps Script | Kopier innholdet fra |
-   |---|---|
-   | `Database` | `apps-script/Database.gs` |
-   | `API` | `apps-script/API.gs` |
-   | `Statistics` | `apps-script/Statistics.gs` |
-   | `Setup` | `apps-script/Setup.gs` |
+   > **Viktig:** `Kode.gs` skal **ikke** stå tom. All backend-kode ligger i
+   > denne éne filen. Hvis filen er tom, vises «Ingen funksjoner» og Kjør er
+   > grå.
 
-   (Den tomme `Kode.gs` kan du la stå eller slette.)
+5. **Lagre** prosjektet (⌘S på Mac / Ctrl+S på Windows). Dette er viktig –
+   uten lagring vises «Ingen funksjoner» og Kjør-knappen er grå.
 
-5. Lagre (⌘S), velg funksjonen **kjorOppsett** i nedtrekksmenyen i verktøylinjen,
-   og trykk **Kjør**. Første gang må du godkjenne tilgang:
+6. Øverst i editoren: klikk nedtrekksmenyen ved siden av ▶ **Kjør**
+   (den står kanskje «Ingen funksjoner» eller «Velg funksjon»).
+   Velg **`kjorOppsett`**, og trykk **Kjør**. Første gang må du godkjenne tilgang:
    velg kontoen din → «Avansert» → «Gå til … (usikker)» → «Tillat».
    Dette er normalt for egne skript – det er din egen kode som får
    tilgang til ditt eget regneark.
 
-6. Et varsel viser **API-nøkkelen** din. Noter den (den ligger også i
+7. Et varsel viser **API-nøkkelen** din. Noter den (den ligger også i
    Settings-arket i regnearket).
 
 ## Del 2: Publiser API-et
@@ -62,11 +61,27 @@ Følg disse stegene én gang, så er alt klart. Regn med 10–15 minutter.
 
 ## Senere endringer i backend-koden
 
-Hvis backend-filene i `apps-script/` oppdateres, limer du inn den nye koden i
-Apps Script og velger **Distribuer → Administrer distribusjoner → ✏️ Rediger →
+Hvis `apps-script/Kode.gs` oppdateres, limer du inn den nye koden i Apps Script og velger **Distribuer → Administrer distribusjoner → ✏️ Rediger →
 Versjon: Ny versjon → Distribuer**. URL-en forblir den samme.
 
 ## Feilsøking
+
+- **«Ingen funksjoner» / grå Kjør-knapp** – du har enten ikke limt inn koden,
+  ikke lagret (⌘S), eller står i feil panel. Sjekk dette:
+  1. Klikk på **`Kode.gs`** i fil-listen til venstre (ikke «Kjørelogg»).
+  2. Filen skal inneholde mange linjer kode, og `function kjorOppsett()` skal
+     finnes et sted i filen.
+  3. Trykk **⌘S** (Mac) eller **Ctrl+S** (Windows) for å lagre.
+  4. Vent et par sekunder – nedtrekksmenyen skal nå vise `kjorOppsett`, `doGet`
+     og `doPost`.
+  5. Velg **`kjorOppsett`** og trykk **Kjør**.
+
+- **«Load failed» / «Kunne ikke nå serveren»** – vanligste årsaker:
+  1. URL-en slutter på **`/dev`** i stedet for **`/exec`** (må være `/exec`).
+  2. Distribusjonen har tilgang **«Alle»** (Anyone), ikke «Kun meg».
+  3. **`Kode.gs` er utdatert** – lim inn nyeste versjon fra repoet og velg
+     Distribuer → Administrer distribusjoner → Rediger → Ny versjon → Distribuer.
+  4. Test URL-en i nettleseren: den skal vise «Treningsjournal-API kjører…».
 
 - **«Ugyldig API-nøkkel»** – sjekk at nøkkelen i appen er identisk med verdien
   for `apiKey` i Settings-arket.

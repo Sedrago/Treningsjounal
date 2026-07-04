@@ -37,7 +37,7 @@ js/
   importexport.js     – eksport og import
   views/              – én modul per skjerm
 sw.js                 – service worker (offline)
-apps-script/          – backend-kode til Google Apps Script
+apps-script/Kode.gs   – backend-kode (lim inn i Google Apps Script)
 ```
 
 **Dataflyt:** Alle skriv går umiddelbart til IndexedDB og legges i en synk-kø.
