@@ -134,8 +134,29 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  var request = JSON.parse(e.postData.contents);
+  var request = parseRequest_(e);
   return handleApiRequest_(request.action, request.key, JSON.stringify(request.payload || {}));
+}
+
+/** Parser innkommende POST (JSON-body eller urlencoded data=…). */
+function parseRequest_(e) {
+  // urlencoded: data={"key":"…","action":"ping","payload":{}}
+  if (e.parameter && e.parameter.data) {
+    return JSON.parse(e.parameter.data);
+  }
+  if (!e.postData || !e.postData.contents) {
+    throw new Error('Tom forespørsel');
+  }
+  var contents = e.postData.contents;
+  // Rå JSON-body.
+  if (contents.charAt(0) === '{') {
+    return JSON.parse(contents);
+  }
+  // urlencoded uten at GAS fylte e.parameter (f.eks. text/plain body).
+  if (contents.indexOf('data=') === 0) {
+    return JSON.parse(decodeURIComponent(contents.substring(5)));
+  }
+  throw new Error('Ukjent request-format');
 }
 
 /** Felles håndtering for GET og POST. */

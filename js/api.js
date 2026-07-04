@@ -1,11 +1,9 @@
 /**
  * api.js – klient mot Google Apps Script Web App.
  *
- * Apps Script har begrenset CORS-støtte. Strategi:
- *   - ping og pull: GET (fungerer pålitelig i Safari/iPhone)
- *   - push: POST uten Content-Type-header (unngår CORS preflight)
- *
- * Web App-URL og API-nøkkel lagres i localStorage.
+ * Apps Script har begrenset CORS-støtte. Vi sender derfor POST med
+ * urlencoded body (data=…) uten Content-Type-header – det unngår
+ * preflight og fungerer på tvers av Safari, Chrome og GitHub Pages.
  */
 
 const URL_KEY = 'tj_apiUrl';
@@ -34,31 +32,53 @@ export function isConfigured() {
 /** Normaliserer Web App-URL (trim, /dev → /exec). */
 export function normalizeUrl(url) {
   let u = String(url || '').trim();
-  // Fjern trailing slash.
   u = u.replace(/\/+$/, '');
-  // /dev krever innlogging – /exec er riktig for produksjon.
   if (u.endsWith('/dev')) u = u.slice(0, -4) + '/exec';
   return u;
 }
 
 /** Parser JSON-svar fra serveren. */
 async function parseResponse(res) {
-  const text = await res.text();
+  const text = (await res.text()).trim();
   let json;
   try {
     json = JSON.parse(text);
   } catch {
-    const hint = text.includes('<!DOCTYPE') || text.includes('<html')
-      ? ' Serveren returnerte HTML i stedet for JSON – sjekk at URL-en slutter på /exec og at tilgang er satt til «Alle».'
-      : '';
-    throw new Error(`Ugyldig svar fra server (${res.status}).${hint}`);
+    if (text.includes('Treningsjournal-API kjører')) {
+      throw new Error(
+        'Serveren svarer uten API-modus. Lim inn nyeste Kode.gs i Apps Script '
+        + 'og redeploy (Distribuer → Administrer distribusjoner → Ny versjon).'
+      );
+    }
+    if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+      throw new Error(
+        'Serveren returnerte en nettside i stedet for JSON. '
+        + 'Sjekk at URL-en slutter på /exec og at tilgang er «Alle».'
+      );
+    }
+    throw new Error(`Ugyldig svar fra server (${res.status}).`);
   }
   if (!json.ok) throw new Error(json.error || 'Ukjent serverfeil');
   return json.data;
 }
 
 /**
- * GET-kall – brukes for ping og pull (CORS-vennlig).
+ * POST med urlencoded body – anbefalt metode for Apps Script Web Apps.
+ * Ingen Content-Type-header (unngår CORS preflight).
+ */
+async function callPostForm(action, payload = {}) {
+  const envelope = { key: getApiKey(), action, payload };
+  const body = `data=${encodeURIComponent(JSON.stringify(envelope))}`;
+  const res = await fetch(getApiUrl(), {
+    method: 'POST',
+    body,
+    redirect: 'follow',
+  });
+  return parseResponse(res);
+}
+
+/**
+ * GET-reserve – brukes bare hvis POST feiler med nettverksfeil.
  */
 async function callGet(action, payload = {}) {
   const params = new URLSearchParams({
@@ -68,19 +88,6 @@ async function callGet(action, payload = {}) {
   });
   const res = await fetch(`${getApiUrl()}?${params.toString()}`, {
     method: 'GET',
-    redirect: 'follow',
-  });
-  return parseResponse(res);
-}
-
-/**
- * POST-kall – brukes for push (større payload).
- * Ingen Content-Type-header: da unngås CORS preflight i de fleste nettlesere.
- */
-async function callPost(action, payload = {}) {
-  const res = await fetch(getApiUrl(), {
-    method: 'POST',
-    body: JSON.stringify({ key: getApiKey(), action, payload }),
     redirect: 'follow',
   });
   return parseResponse(res);
@@ -98,18 +105,12 @@ export async function call(action, payload = {}) {
   }
 
   try {
-    // Lesende kall via GET (best Safari-støtte).
-    if (action === 'ping' || action === 'pull') {
-      return await callGet(action, payload);
-    }
-    return await callPost(action, payload);
+    return await callPostForm(action, payload);
   } catch (err) {
-    // «Load failed» / «Failed to fetch» = nettverk eller CORS blokkert.
-    if (err instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(err.message)) {
-      throw new Error(
-        'Kunne ikke nå serveren. Sjekk: (1) URL slutter på /exec, '
-        + '(2) tilgang er «Alle», (3) du har oppdatert Kode.gs med nyeste versjon og redeployet.'
-      );
+    // Nettverksfeil – prøv GET som reserve (ping/pull).
+    if ((err instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(err.message))
+        && (action === 'ping' || action === 'pull')) {
+      return callGet(action, payload);
     }
     throw err;
   }

@@ -76,6 +76,11 @@ Versjon: Ny versjon → Distribuer**. URL-en forblir den samme.
      og `doPost`.
   5. Velg **`kjorOppsett`** og trykk **Kjør**.
 
+- **«Ugyldig svar fra server (200)»** – serveren svarer, men uten JSON. Vanligst:
+  1. **`Kode.gs` er ikke redeployet** etter oppdatering – gjør Distribuer → Ny versjon.
+  2. URL-en peker på gammel versjon uten API-støtte.
+  3. Test at nyeste `Kode.gs` (med `parseRequest_`) er limt inn og lagret.
+
 - **«Load failed» / «Kunne ikke nå serveren»** – vanligste årsaker:
   1. URL-en slutter på **`/dev`** i stedet for **`/exec`** (må være `/exec`).
   2. Distribusjonen har tilgang **«Alle»** (Anyone), ikke «Kun meg».
