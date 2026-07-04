@@ -31,6 +31,20 @@ Følg disse stegene én gang, så er alt klart. Regn med 10–15 minutter.
 7. Et varsel viser **API-nøkkelen** din. Noter den (den ligger også i
    Settings-arket i regnearket).
 
+### Test API-et i nettleseren
+
+Grunn-URL uten parametere skal vise: *«Treningsjournal-API kjører…»* (det er normalt).
+
+For å teste ping, må spesialtegn **URL-enkodes**. `{}` blir `%7B%7D`:
+
+```
+https://script.google.com/macros/s/DIN-ID/exec?action=ping&key=DIN-API-NOKKEL&payload=%7B%7D
+```
+
+Du skal få JSON tilbake: `{"ok":true,"data":{"pong":true,…}}`
+
+> Skriv **ikke** `payload={}` direkte i adressefeltet – `{` og `}` gir feil hos Google.
+
 ## Del 2: Publiser API-et
 
 1. I Apps Script: trykk **Distribuer → Ny distribusjon** (Deploy → New deployment).

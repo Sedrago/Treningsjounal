@@ -124,10 +124,22 @@ function getSettingValue_(key) {
 // =============================================================================
 
 function doGet(e) {
-  // API-kall via GET (brukes av appen for ping og pull).
-  if (e && e.parameter && e.parameter.action) {
-    return handleApiRequest_(e.parameter.action, e.parameter.key, e.parameter.payload);
+  if (!e || !e.parameter) {
+    return statusPage_();
   }
+  // Appen sender alt som GET ?data={"key":"…","action":"…","payload":{…}}
+  if (e.parameter.data) {
+    var request = JSON.parse(e.parameter.data);
+    return handleApiRequest_(request.action, request.key, JSON.stringify(request.payload || {}));
+  }
+  // Enkel test i nettleser: ?action=ping&key=…&payload=%7B%7D
+  if (e.parameter.action) {
+    return handleApiRequest_(e.parameter.action, e.parameter.key, e.parameter.payload || '{}');
+  }
+  return statusPage_();
+}
+
+function statusPage_() {
   return ContentService
     .createTextOutput('Treningsjournal-API kjører. Bruk appen for å koble til.')
     .setMimeType(ContentService.MimeType.TEXT);

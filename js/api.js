@@ -1,13 +1,16 @@
 /**
  * api.js – klient mot Google Apps Script Web App.
  *
- * Apps Script har begrenset CORS-støtte. Vi sender derfor POST med
- * urlencoded body (data=…) uten Content-Type-header – det unngår
- * preflight og fungerer på tvers av Safari, Chrome og GitHub Pages.
+ * Apps Script redirecter POST-kall og mister body underveis – da svarer
+ * doGet med statustekst (HTTP 200, men ikke JSON). Løsning: send alt
+ * som GET med én urlencodet «data»-parameter i query-strengen.
  */
 
 const URL_KEY = 'tj_apiUrl';
 const APIKEY_KEY = 'tj_apiKey';
+
+/** Konservativ grense for GET-URL (Safari ~2048 tegn). */
+const MAX_URL_LEN = 1800;
 
 export function getApiUrl() {
   return localStorage.getItem(URL_KEY) || '';
@@ -37,6 +40,13 @@ export function normalizeUrl(url) {
   return u;
 }
 
+/** Bygger full GET-URL for et API-kall. */
+function buildUrl(action, payload = {}) {
+  const envelope = { key: getApiKey(), action, payload };
+  const params = new URLSearchParams({ data: JSON.stringify(envelope) });
+  return `${getApiUrl()}?${params.toString()}`;
+}
+
 /** Parser JSON-svar fra serveren. */
 async function parseResponse(res) {
   const text = (await res.text()).trim();
@@ -62,34 +72,13 @@ async function parseResponse(res) {
   return json.data;
 }
 
-/**
- * POST med urlencoded body – anbefalt metode for Apps Script Web Apps.
- * Ingen Content-Type-header (unngår CORS preflight).
- */
-async function callPostForm(action, payload = {}) {
-  const envelope = { key: getApiKey(), action, payload };
-  const body = `data=${encodeURIComponent(JSON.stringify(envelope))}`;
-  const res = await fetch(getApiUrl(), {
-    method: 'POST',
-    body,
-    redirect: 'follow',
-  });
-  return parseResponse(res);
-}
-
-/**
- * GET-reserve – brukes bare hvis POST feiler med nettverksfeil.
- */
+/** GET-kall – eneste metode som fungerer pålitelig mot Apps Script Web Apps. */
 async function callGet(action, payload = {}) {
-  const params = new URLSearchParams({
-    key: getApiKey(),
-    action,
-    payload: JSON.stringify(payload),
-  });
-  const res = await fetch(`${getApiUrl()}?${params.toString()}`, {
-    method: 'GET',
-    redirect: 'follow',
-  });
+  const url = buildUrl(action, payload);
+  if (url.length > MAX_URL_LEN) {
+    throw new Error('URL_FOR_STOR');
+  }
+  const res = await fetch(url, { method: 'GET', redirect: 'follow' });
   return parseResponse(res);
 }
 
@@ -105,12 +94,12 @@ export async function call(action, payload = {}) {
   }
 
   try {
-    return await callPostForm(action, payload);
+    return await callGet(action, payload);
   } catch (err) {
-    // Nettverksfeil – prøv GET som reserve (ping/pull).
-    if ((err instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(err.message))
-        && (action === 'ping' || action === 'pull')) {
-      return callGet(action, payload);
+    if (err instanceof TypeError || /load failed|failed to fetch|networkerror/i.test(err.message)) {
+      throw new Error(
+        'Kunne ikke nå serveren. Sjekk URL (/exec), tilgang («Alle») og at Kode.gs er redeployet.'
+      );
     }
     throw err;
   }
@@ -126,7 +115,41 @@ export function pullAll() {
   return call('pull');
 }
 
-/** Sender en liste operasjoner til serveren. */
-export function push(ops) {
-  return call('push', { ops });
+/**
+ * Sender operasjoner til serveren. Deler opp i bolker hvis URL-en blir for lang.
+ */
+export async function push(ops) {
+  if (!ops.length) return { applied: 0, results: [] };
+  const batches = chunkOpsForUrl(ops);
+  const allResults = [];
+  for (const batch of batches) {
+    const result = await call('push', { ops: batch });
+    allResults.push(result);
+  }
+  return { applied: ops.length, results: allResults };
+}
+
+/** Deler ops i bolker som passer innenfor MAX_URL_LEN. */
+function chunkOpsForUrl(ops) {
+  const batches = [];
+  let current = [];
+  for (const op of ops) {
+    const tryBatch = [...current, op];
+    try {
+      if (buildUrl('push', { ops: tryBatch }).length <= MAX_URL_LEN) {
+        current = tryBatch;
+      } else {
+        if (current.length) batches.push(current);
+        current = [op];
+        if (buildUrl('push', { ops: current }).length > MAX_URL_LEN) {
+          throw new Error('En enkelt synk-operasjon er for stor til å sendes.');
+        }
+      }
+    } catch {
+      if (current.length) batches.push(current);
+      current = [op];
+    }
+  }
+  if (current.length) batches.push(current);
+  return batches;
 }
