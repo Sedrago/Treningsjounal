@@ -3,7 +3,7 @@
  */
 
 import * as store from '../store.js';
-import { getCatalogByCategory, getCatalogEntry } from '../content.js';
+import { initContent, getCatalogByCategory, getCatalogEntry, isContentLoaded } from '../content.js';
 import { esc, toast } from '../utils.js';
 
 /** Kort utdrag av beskrivelse til listevisning. */
@@ -92,6 +92,17 @@ async function renderCategory(container, categoryId) {
 }
 
 export async function render(container, params) {
+  const loaded = await initContent();
+  if (!loaded || !isContentLoaded()) {
+    container.innerHTML = `
+      <header class="side-topp">
+        <a href="#/ovelser" class="tilbake" aria-label="Tilbake til øvelser">‹</a>
+        <h1>Bibliotek</h1>
+      </header>
+      <p class="tomt">Kunne ikke laste øvelsesbiblioteket. Prøv å laste siden på nytt.</p>
+      <button type="button" class="knapp primaer bred" onclick="location.reload()">Last på nytt</button>`;
+    return;
+  }
   const categoryId = params[0];
   if (categoryId) {
     await renderCategory(container, categoryId);

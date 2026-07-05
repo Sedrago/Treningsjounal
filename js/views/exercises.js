@@ -4,10 +4,11 @@
  */
 
 import * as store from '../store.js';
-import { getDescription, countCatalogNotInApp } from '../content.js';
+import { initContent, getDescription, countCatalogNotInApp } from '../content.js';
 import { esc, toast } from '../utils.js';
 
 export async function render(container) {
+  await initContent();
   const exercises = await store.getExercises({ includeInactive: true });
   const availableCount = countCatalogNotInApp(await store.getActiveCatalogIds());
 

@@ -7,7 +7,7 @@
 
 import * as store from '../store.js';
 import * as timer from '../timer.js';
-import { getDescription } from '../content.js';
+import { initContent, getDescription } from '../content.js';
 import { progressionSuggestion } from '../assistant.js';
 import {
   esc, fmtNum, formatDateShort, todayStr, debounce,
@@ -15,6 +15,7 @@ import {
 } from '../utils.js';
 
 export async function render(container, params) {
+  await initContent();
   const exerciseId = params[0];
   const exercise = await store.getExercise(exerciseId);
   if (!exercise) {

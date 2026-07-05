@@ -5,21 +5,44 @@
  * Brukerdata (notater, mål osv.) lagres separat og røres ikke her.
  */
 
+const EXPECTED_VERSION = 2;
+
 let pack = null;
+
+/** Absolutt URL til innholdsfil, uavhengig av hash og import.meta. */
+function contentJsonUrl() {
+  let base = location.pathname;
+  if (base.endsWith('.html')) {
+    base = base.replace(/\/[^/]+$/, '/');
+  } else if (!base.endsWith('/')) {
+    base = `${base}/`;
+  }
+  const url = new URL(`${base}data/ovelsesinnhold.json`, location.origin);
+  url.searchParams.set('v', String(EXPECTED_VERSION));
+  return url.href;
+}
 
 /** Laster innholdspakken (kalles ved oppstart). Feiler stille – appen virker uten beskrivelser. */
 export async function initContent() {
-  if (pack) return true;
+  if (pack?.version >= EXPECTED_VERSION) return true;
+  pack = null;
   try {
-    const url = new URL('../data/ovelsesinnhold.json', import.meta.url);
-    const res = await fetch(url);
+    const res = await fetch(contentJsonUrl(), { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    pack = await res.json();
+    const data = await res.json();
+    if (!data?.entries || data.version < EXPECTED_VERSION) {
+      throw new Error(`Ugyldig innholdspakke (v${data?.version ?? '?'})`);
+    }
+    pack = data;
     return true;
   } catch (err) {
     console.warn('Kunne ikke laste øvelsesinnhold:', err);
     return false;
   }
+}
+
+export function isContentLoaded() {
+  return pack?.version >= EXPECTED_VERSION;
 }
 
 function entryToCatalog(id, raw) {
