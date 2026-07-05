@@ -7,12 +7,19 @@
 
 let pack = null;
 
-/** Laster innholdspakken (kalles ved oppstart). */
+/** Laster innholdspakken (kalles ved oppstart). Feiler stille – appen virker uten beskrivelser. */
 export async function initContent() {
-  if (pack) return;
-  const res = await fetch('data/ovelsesinnhold.json');
-  if (!res.ok) throw new Error('Kunne ikke laste øvelsesinnhold');
-  pack = await res.json();
+  if (pack) return true;
+  try {
+    const url = new URL('../data/ovelsesinnhold.json', import.meta.url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    pack = await res.json();
+    return true;
+  } catch (err) {
+    console.warn('Kunne ikke laste øvelsesinnhold:', err);
+    return false;
+  }
 }
 
 /** @returns {string} Teknikkbeskrivelse for en øvelse, eller tom streng. */
