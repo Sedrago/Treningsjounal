@@ -8,8 +8,20 @@ import { esc, toast } from '../utils.js';
 
 /** Kort utdrag av beskrivelse til listevisning. */
 function excerpt(text, max = 140) {
-  if (!text || text.length <= max) return text;
-  return `${text.slice(0, max).trim()}…`;
+  if (!text || text.length <= max) return { short: text, truncated: false };
+  return { short: `${text.slice(0, max).trim()}…`, truncated: true };
+}
+
+/** Beskrivelse med «vis mer» for lange tekster. */
+function descriptionBlock(text) {
+  const { short, truncated } = excerpt(text);
+  if (!text) return '';
+  if (!truncated) return `<p class="bib-beskrivelse">${esc(text)}</p>`;
+  return `
+    <details class="bib-beskrivelse-detalj">
+      <summary class="bib-beskrivelse">${esc(short)}</summary>
+      <p class="bib-beskrivelse bib-beskrivelse--full">${esc(text)}</p>
+    </details>`;
 }
 
 /** Kategorivelger. */
@@ -54,7 +66,7 @@ async function renderCategory(container, categoryId) {
     return `
       <article class="kort bib-kort ${inApp ? 'bib-i-appen' : ''}" data-id="${esc(item.id)}">
         <h2 class="bib-navn">${esc(item.name)}</h2>
-        <p class="bib-beskrivelse">${esc(excerpt(item.description))}</p>
+        ${descriptionBlock(item.description)}
         <button type="button" class="knapp ${inApp ? 'sekundaer' : 'primaer'} bib-handling" data-id="${esc(item.id)}">
           ${inApp ? '✓ I appen · Fjern' : '+ Legg til i appen'}
         </button>

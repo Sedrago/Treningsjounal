@@ -5,7 +5,7 @@
  * Brukerdata (notater, mål osv.) lagres separat og røres ikke her.
  */
 
-const EXPECTED_VERSION = 2;
+const EXPECTED_VERSION = 3;
 
 let pack = null;
 

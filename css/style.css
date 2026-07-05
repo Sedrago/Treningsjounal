@@ -154,6 +154,22 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
   font-size: 0.92rem;
 }
 .bib-handling { width: 100%; }
+.bib-beskrivelse-detalj { margin: 0 0 12px; }
+.bib-beskrivelse-detalj summary {
+  cursor: pointer;
+  list-style: none;
+  line-height: 1.45;
+  color: var(--tekst-dus);
+  font-size: 0.92rem;
+}
+.bib-beskrivelse-detalj summary::-webkit-details-marker { display: none; }
+.bib-beskrivelse-detalj summary::after {
+  content: ' · Vis mer';
+  color: var(--aksent);
+  font-weight: 600;
+}
+.bib-beskrivelse-detalj[open] summary::after { content: ' · Vis mindre'; }
+.bib-beskrivelse--full { margin: 8px 0 0; }
 
 /* ---------- Knapper ---------- */
 
