@@ -186,6 +186,57 @@ export async function deleteExercise(id) {
   await queueOp('exercise', 'upsert', ex);
 }
 
+/** Finner øvelse koblet til en katalog-id (inkl. slettede). */
+export async function findExerciseByCatalogId(catalogId) {
+  const all = await db.getAll('exercises');
+  return all.find((e) => e.catalogId === catalogId || e.id === catalogId) || null;
+}
+
+/** Sjekker om katalogøvelsen er aktiv i brukerens bibliotek. */
+export async function isCatalogInApp(catalogId) {
+  const ex = await findExerciseByCatalogId(catalogId);
+  return Boolean(ex && !ex.deleted && ex.active !== false);
+}
+
+/** catalogId for alle øvelser som ikke er slettet. */
+export async function getActiveCatalogIds() {
+  const all = await db.getAll('exercises');
+  return all
+    .filter((e) => !e.deleted)
+    .map((e) => e.catalogId || e.id)
+    .filter(Boolean);
+}
+
+/** Legger katalogøvelse til i brukerens bibliotek. */
+export async function addExerciseFromCatalog(catalogId, catalogEntry) {
+  const existing = await findExerciseByCatalogId(catalogId);
+  if (existing) {
+    return saveExercise({
+      ...existing,
+      name: catalogEntry.name,
+      category: catalogEntry.category,
+      catalogId,
+      deleted: false,
+      active: true,
+    });
+  }
+  return saveExercise({
+    id: catalogId,
+    catalogId,
+    name: catalogEntry.name,
+    category: catalogEntry.category,
+    notes: '',
+    video: '',
+    active: true,
+  });
+}
+
+/** Fjerner katalogøvelse fra appen (historikk beholdes). */
+export async function removeExerciseFromCatalog(catalogId) {
+  const ex = await findExerciseByCatalogId(catalogId);
+  if (ex && !ex.deleted) await deleteExercise(ex.id);
+}
+
 /* ---------- Økter ---------- */
 
 export async function getWorkouts() {

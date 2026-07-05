@@ -1,86 +1,260 @@
 {
-  "version": 1,
+  "version": 2,
   "entries": {
     "def-hp-benk": {
+      "name": "Benkpress",
+      "category": "horisontal-push",
       "description": "Lie på benk med føttene i gulvet. Grepet skal være litt bredere enn skulderbredden. Senk stangen kontrollert til midtre bryst, albuer ca. 45° ut fra kroppen. Press opp til strake armer uten å løfte skuldrene for høyt."
     },
     "def-hp-man": {
+      "name": "Manualpress",
+      "category": "horisontal-push",
       "description": "Lie på flat benk med en manual i hver hånd. Senk vektene kontrollert til sidene av brystet, albuer peker litt ut. Press opp til strake armer og hold en kort pause øverst."
     },
     "def-hp-skra": {
+      "name": "Skrå benk",
+      "category": "horisontal-push",
       "description": "Still benken i ca. 30–45° vinkel. Grepet litt bredere enn skuldrene. Senk stangen til øvre bryst, press kontrollert opp. Hold skuldrene trukket ned og tilbake gjennom hele bevegelsen."
     },
     "def-hp-push": {
+      "name": "Push-ups",
+      "category": "horisontal-push",
       "description": "Hender i gulvet i skulderbredde, kroppen i rett linje fra hode til hæl. Senk brystet mot gulvet med albuer ca. 45° ut. Press tilbake til utgangsposisjon uten at hofta sagger."
     },
     "def-hp-dips": {
+      "name": "Dips",
+      "category": "horisontal-push",
       "description": "Støtt på parallelle stenger med rette armer. Senk kroppen ved å bøye albuer til ca. 90°. Litt fremoverlent kroppshold treffer bryst mer, mer oppreist treffer triceps. Press tilbake kontrollert."
     },
+    "lib-hp-fly": {
+      "name": "Flyes med manual",
+      "category": "horisontal-push",
+      "description": "Lie på benk med manualer over brystet, litt bøyde albu. Senk vektene ut til sidene i en bue til du kjenner strekk i brystet. Press sammen over brystet uten å låse albuene helt."
+    },
+    "lib-hp-close": {
+      "name": "Close-grip benkpress",
+      "category": "horisontal-push",
+      "description": "Grepet i skulderbredde eller smalere. Senk stangen til nedre bryst med albuene tett inn til kroppen. Fokuser på triceps og indre bryst ved presset."
+    },
+    "lib-hp-kabel-fly": {
+      "name": "Kabel fly",
+      "category": "horisontal-push",
+      "description": "Stå mellom to kabler i brysthøyde. Trekk håndtakene sammen foran brystet med litt bøyde albu. Klem brystet øverst og returner kontrollert til utgangsposisjon."
+    },
     "def-hpl-row": {
+      "name": "Stangroing",
+      "category": "horisontal-pull",
       "description": "Bøy deg frem med rett rygg, ca. 45°. Trekk stangen mot nedre del av brystet ved å dra albuene bakover. Klem skulderbladene sammen øverst. Senk kontrollert uten å runde ryggen."
     },
     "def-hpl-1arm": {
+      "name": "En-arms row",
+      "category": "horisontal-pull",
       "description": "Støtt med ett kne og én hånd på benk. Trekk manualen mot hoften, albuen tett inn til kroppen. Senk kontrollert til full strekk uten å rotere i korsryggen."
     },
     "def-hpl-face": {
+      "name": "Face pulls",
+      "category": "horisontal-pull",
       "description": "Fest tau eller håndtak i høy kabel. Trekk mot ansiktet med albuene høyt og ut til sidene. Klem skulderbladene sammen bak. Unngå å svaie med kroppen."
     },
     "def-hpl-kabel": {
+      "name": "Kabelroing",
+      "category": "horisontal-pull",
       "description": "Sitt med rett rygg og bøyde knær. Trekk håndtaket mot magen, albuer tett inn. Klem skulderbladene sammen. Strekk kontrollert frem til strake armer uten å runde ryggen."
     },
+    "lib-hpl-inverted": {
+      "name": "Inverted row",
+      "category": "horisontal-pull",
+      "description": "Heng under en stang i hoftehøyde, kroppen rett. Trekk brystet mot stangen og klem skulderbladene sammen. Senk kontrollert til strake armer."
+    },
+    "lib-hpl-chest": {
+      "name": "Chest supported row",
+      "category": "horisontal-pull",
+      "description": "Ligg eller sitt med brystet støttet mot pute. Trekk vekten mot magen uten å bruke korsryggen til å svaie. Klem skulderbladene bak øverst."
+    },
+    "lib-hpl-pullover": {
+      "name": "Pullover med manual",
+      "category": "horisontal-pull",
+      "description": "Lie på benk, hold en manual med begge hender over brystet. Senk vekten bak hodet i en bue til du kjenner strekk i bryst og lat. Trekk tilbake over brystet."
+    },
     "def-vp-mil": {
+      "name": "Militærpress",
+      "category": "vertikal-push",
       "description": "Stå med stang i skulderhøyde, grep litt utenfor skuldrene. Press stangen rett opp forbi ansiktet til strake armer. Hold core stram og unngå overdreven svai i korsryggen."
     },
     "def-vp-man": {
+      "name": "Manualpress skuldre",
+      "category": "vertikal-push",
       "description": "Sitt eller stå med manualer i skulderhøyde, håndflatene frem. Press vektene rett opp til strake armer. Senk kontrollert til manualene er i ørehøyde eller litt lavere."
     },
     "def-vp-arnold": {
+      "name": "Arnold press",
+      "category": "vertikal-push",
       "description": "Start med manualer foran ansiktet, håndflatene mot deg. Roter håndflatene ut mens du presser opp. Reverser bevegelsen på vei ned. Hold bevegelsen jevn og kontrollert."
     },
+    "lib-vp-push": {
+      "name": "Push press",
+      "category": "vertikal-push",
+      "description": "Start med stang i skulderhøyde. Bruk et kort beinpush og press stangen opp over hodet. Lås ut albuene øverst. Senk kontrollert til skuldrene."
+    },
+    "lib-vp-pike": {
+      "name": "Pike push-ups",
+      "category": "vertikal-push",
+      "description": "Start i push-up, gå på tærne og løft hoften slik at kroppen danner et V. Senk toppen av hodet mot gulvet mellom hendene. Press tilbake opp."
+    },
+    "lib-vp-landmine": {
+      "name": "Landmine press",
+      "category": "vertikal-push",
+      "description": "Stå foran landmine-stang i brysthøyde. Press stangen diagonalt opp og frem til strakt arm. Senk kontrollert tilbake til skulderhøyde."
+    },
     "def-vpl-pull": {
+      "name": "Pull-ups",
+      "category": "vertikal-pull",
       "description": "Grepet litt bredere enn skuldrene, heng fra stang med strake armer. Trekk brystet mot stangen ved å dra albuene ned og bak. Senk kontrollert til full strekk i skuldrene."
     },
     "def-vpl-chin": {
+      "name": "Chin-ups",
+      "category": "vertikal-pull",
       "description": "Håndflatene mot deg, grep i skulderbredde. Trekk deg opp til haken er over stangen. Senk kontrollert til strake armer. Unngå kipping og svaing."
     },
     "def-vpl-lat": {
+      "name": "Lat pulldown",
+      "category": "vertikal-pull",
       "description": "Grepet litt bredere enn skuldrene. Trekk stangen ned mot øvre bryst ved å dra albuene ned og bak. Klem skulderbladene sammen nederst. La vekten opp kontrollert."
     },
+    "lib-vpl-assisted": {
+      "name": "Assisted pull-ups",
+      "category": "vertikal-pull",
+      "description": "Bruk assistansemaskin eller strikk. Utfør pull-up med kontrollert tempo. Fokuser på å trekke albuene ned mot hoftene og klem skulderbladene sammen."
+    },
+    "lib-vpl-neutral": {
+      "name": "Nøytralt grep pulldown",
+      "category": "vertikal-pull",
+      "description": "Bruk håndtak med håndflatene mot hverandre. Trekk ned mot øvre bryst med albuene tett inn til kroppen. God for skuldre og lats."
+    },
+    "lib-vpl-pullover": {
+      "name": "Straight-arm pulldown",
+      "category": "vertikal-pull",
+      "description": "Stå foran høy kabel, nesten rette armer. Trekk stangen ned mot lårene ved å dra armene ned langs kroppen. Hold albuene nesten strake gjennom bevegelsen."
+    },
     "def-kb-kne": {
+      "name": "Knebøy",
+      "category": "kneboy",
       "description": "Stang på øvre rygg, føttene i skulderbredde. Senk deg ved å bøye knær og hofter til lår er minst parallelt med gulvet. Hold brystet oppe og knærne i linje med tærne. Press opp gjennom hælene."
     },
     "def-kb-front": {
+      "name": "Front squats",
+      "category": "kneboy",
       "description": "Stang i front rack på skuldrene, albuene høye. Senk kontrollert i knebøy med oppreist bryst. Knærne følger tærne. Press opp uten at hofta skyte frem."
     },
     "def-kb-bulgar": {
+      "name": "Bulgarsk split squat",
+      "category": "kneboy",
       "description": "Bakfot på benk, forfot langt nok frem til at du kan senke bak kne mot gulvet. Senk kontrollert til bakre kne nesten berører gulvet. Press opp gjennom forre hæl."
     },
     "def-kb-bein": {
+      "name": "Beinpress",
+      "category": "kneboy",
       "description": "Føttene i midten av plattformen, skulderbredde. Senk vekten ved å bøye knærne til ca. 90° uten at hofta løftes fra setet. Press kontrollert opp uten å låse knærne hardt."
     },
+    "lib-kb-goblet": {
+      "name": "Goblet squat",
+      "category": "kneboy",
+      "description": "Hold en manual eller kettlebell tett inn mot brystet. Senk i knebøy med oppreist bryst og albuene innenfor knærne. Press opp gjennom hælene."
+    },
+    "lib-kb-lunge": {
+      "name": "Utfall",
+      "category": "kneboy",
+      "description": "Stå rett, ta et langt steg frem. Senk bak kne mot gulvet til begge knær er ca. 90°. Press tilbake til start eller veksle ben for hver rep."
+    },
+    "lib-kb-hack": {
+      "name": "Hack squat",
+      "category": "kneboy",
+      "description": "Skuldrene mot putene, føttene i skulderbredde på plattformen. Senk kontrollert til knærne er i ca. 90°, press opp uten å løfte hælene."
+    },
     "def-hh-mark": {
+      "name": "Markløft",
+      "category": "hoftehengsel",
       "description": "Stang over midten av foten, grep utenfor bena. Rygg rett, bryst frem. Løft ved å strekke knær og hofter samtidig. Stangen nær kroppen hele veien. Senk kontrollert tilbake til gulvet."
     },
     "def-hh-rdl": {
+      "name": "Rumensk markløft",
+      "category": "hoftehengsel",
       "description": "Stå med stang foran lårene. Bøy deg frem ved hoftene med nesten rette ben. Senk stangen langs lårene til du kjenner strekk i bakside lår. Reis deg ved å strekke hoftene, ryggen flat."
     },
     "def-hh-hip": {
+      "name": "Hip thrust",
+      "category": "hoftehengsel",
       "description": "Rygg mot benk, stang over hoftene. Føttene i gulvet, skulderbredde. Senk hoftene kontrollert, press deretter hoftene til full strekk og klem setemusklene øverst."
     },
     "def-hh-good": {
+      "name": "Good morning",
+      "category": "hoftehengsel",
       "description": "Stang på øvre rygg som i knebøy. Bøy deg frem fra hoftene med nesten rette ben til brystet er parallelt med gulvet. Reis deg ved å strekke hoftene. Hold ryggen nøytral."
     },
+    "lib-hh-single-rdl": {
+      "name": "Enbeins RDL",
+      "category": "hoftehengsel",
+      "description": "Stå på ett ben med manual eller kettlebell i motsatt hånd. Bøy deg frem ved hoften, fritt ben strekkes bak for balanse. Reis deg ved å strekke hoften."
+    },
+    "lib-hh-swing": {
+      "name": "Kettlebell swing",
+      "category": "hoftehengsel",
+      "description": "Føttene i skulderbredde, kettlebell mellom bena. Sving vekten frem til brysthøyde ved kraftig hofteextension, ikke ved å løfte med armene. La vekten svinge tilbake mellom bena."
+    },
+    "lib-hh-pullthrough": {
+      "name": "Cable pull-through",
+      "category": "hoftehengsel",
+      "description": "Stå med ryggen mot lav kabel, tau mellom bena. Bøy deg frem ved hoftene og reis deg ved å strekke hoftene frem. Hold ryggen nøytral gjennom bevegelsen."
+    },
     "def-core-plank": {
+      "name": "Plank",
+      "category": "core",
       "description": "Underarmene i gulvet, kroppen i rett linje fra hode til hæl. Stram mage og sete. Unngå at hofta sagger eller peker opp. Pust jevnt og hold posisjonen."
     },
     "def-core-dead": {
+      "name": "Dead bug",
+      "category": "core",
       "description": "Ligg på ryggen, armer mot taket, hofter og knær i 90°. Senk motsatt arm og ben kontrollert mot gulvet uten at korsryggen bøyer seg. Bytt side jevnt."
     },
     "def-core-pallof": {
+      "name": "Pallof press",
+      "category": "core",
       "description": "Stå sideveis mot kabel, hold håndtaket foran brystet. Strekk armene rett frem mot siden mot kabelens retning. Hold core stram og unngå rotasjon i kroppen. Returner kontrollert."
     },
     "def-core-crunch": {
+      "name": "Crunches",
+      "category": "core",
       "description": "Ligg på ryggen med bøyde knær, hender ved tinningene. Løft skuldrene fra gulvet ved å rulle brystet mot knærne. Senk kontrollert uten å trekke i nakken."
+    },
+    "lib-core-side": {
+      "name": "Side plank",
+      "category": "core",
+      "description": "Støtt på underarm og siden av foten, kroppen i rett linje. Hold hoften oppe og stram mage. Bytt side etter valgt tid eller reps."
+    },
+    "lib-core-hollow": {
+      "name": "Hollow hold",
+      "category": "core",
+      "description": "Ligg på ryggen, press korsryggen mot gulvet. Løft skuldre og rette ben noen centimeter over gulvet. Hold posisjonen uten at korsryggen bøyer seg."
+    },
+    "lib-core-rollout": {
+      "name": "Ab wheel rollout",
+      "category": "core",
+      "description": "Knel eller stå med ab wheel foran deg. Rull fremover så langt du kan uten at korsryggen sagger, deretter rull tilbake ved å bruke magemusklene."
+    },
+    "lib-valgfri-farmers": {
+      "name": "Farmer's walk",
+      "category": "valgfri",
+      "description": "Hold tunge manualer eller kettlebells ved sidene. Gå med oppreist bryst og korte, stabile steg. Hold skuldrene trukket ned og unngå å lene deg."
+    },
+    "lib-valgfri-carry": {
+      "name": "Suitcase carry",
+      "category": "valgfri",
+      "description": "Hold en tung vekt i én hånd ved siden av kroppen. Gå rett frem uten å lene deg til siden. Bytt hånd etter valgt distanse."
+    },
+    "lib-valgfri-tgu": {
+      "name": "Turkish get-up",
+      "category": "valgfri",
+      "description": "Ligg med kettlebell låst ut over skulderen. Reis deg opp i kontrollerte steg til stående, deretter reverser bevegelsen tilbake til gulvet. Bytt side."
     }
   }
 }

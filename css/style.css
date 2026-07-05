@@ -139,6 +139,22 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
 }
 .teknikk-video { margin: 8px 0 0; font-size: 0.92rem; }
 
+/* ---------- Øvelsesbibliotek (katalog) ---------- */
+
+.bib-intro { margin: 0 0 16px; line-height: 1.45; }
+.bib-kategori { display: block; text-decoration: none; color: inherit; margin-bottom: 10px; }
+.bib-kategori:hover { text-decoration: none; }
+.bib-kort { margin-bottom: 12px; }
+.bib-kort.bib-i-appen { border-color: var(--aksent); }
+.bib-navn { font-size: 1.05rem; font-weight: 600; margin: 0 0 8px; }
+.bib-beskrivelse {
+  margin: 0 0 12px;
+  line-height: 1.45;
+  color: var(--tekst-dus);
+  font-size: 0.92rem;
+}
+.bib-handling { width: 100%; }
+
 /* ---------- Knapper ---------- */
 
 .knapp {

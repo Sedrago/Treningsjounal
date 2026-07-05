@@ -14,6 +14,7 @@ import * as history from './views/history.js';
 import * as statistics from './views/statistics.js';
 import * as bodyweight from './views/bodyweight.js';
 import * as exercises from './views/exercises.js';
+import * as exerciseLibrary from './views/exercise-library.js';
 import * as settings from './views/settings.js';
 
 /** Rutetabell: sti → render-funksjon. */
@@ -26,6 +27,7 @@ const routes = {
   statistikk: statistics.render,
   kroppsvekt: bodyweight.render,
   ovelser: exercises.render,
+  bibliotek: exerciseLibrary.render,
   innstillinger: settings.render,
 };
 

@@ -4,11 +4,12 @@
  */
 
 import * as store from '../store.js';
-import { getDescription } from '../content.js';
+import { getDescription, countCatalogNotInApp } from '../content.js';
 import { esc, toast } from '../utils.js';
 
 export async function render(container) {
   const exercises = await store.getExercises({ includeInactive: true });
+  const availableCount = countCatalogNotInApp(await store.getActiveCatalogIds());
 
   const sections = store.KATEGORIER.map((k) => {
     const catExercises = exercises.filter((e) => e.category === k.id);
@@ -28,7 +29,10 @@ export async function render(container) {
       <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
       <h1>Øvelser</h1>
     </header>
-    <button type="button" class="knapp primaer bred" id="ny-ovelse">+ Ny øvelse</button>
+    <a href="#/bibliotek" class="knapp primaer bred" id="apne-bibliotek">
+      + Legg til fra bibliotek${availableCount ? ` (${availableCount} tilgjengelig)` : ''}
+    </a>
+    <button type="button" class="knapp sekundaer bred" id="ny-ovelse">+ Ny egen øvelse</button>
     ${!exercises.length ? `
     <button type="button" class="knapp sekundaer bred" id="legg-til-standard">
       Legg til standardøvelser (27 stk)
