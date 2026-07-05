@@ -168,7 +168,7 @@ async function main() {
     added++;
   }
 
-  const out = { version: 3, entries };
+  const out = { version: 4, entries };
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`);
 
   const allCats = {};

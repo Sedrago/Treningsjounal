@@ -12,16 +12,38 @@ function excerpt(text, max = 140) {
   return { short: `${text.slice(0, max).trim()}…`, truncated: true };
 }
 
-/** Beskrivelse med «vis mer» for lange tekster. */
+/** Beskrivelse – klikk bytter mellom utdrag og full tekst. */
 function descriptionBlock(text) {
   const { short, truncated } = excerpt(text);
   if (!text) return '';
   if (!truncated) return `<p class="bib-beskrivelse">${esc(text)}</p>`;
-  return `
-    <details class="bib-beskrivelse-detalj">
-      <summary class="bib-beskrivelse">${esc(short)}</summary>
-      <p class="bib-beskrivelse bib-beskrivelse--full">${esc(text)}</p>
-    </details>`;
+  return `<p class="bib-beskrivelse bib-beskrivelse--utvidbar" role="button" tabindex="0">${esc(short)}</p>`;
+}
+
+/** Klikk/Enter på utdrag viser hele beskrivelsen og tilbake igjen. */
+function bindDescriptionToggles(container) {
+  container.querySelectorAll('.bib-beskrivelse--utvidbar').forEach((el) => {
+    const id = el.closest('[data-id]')?.dataset.id;
+    const entry = id ? getCatalogEntry(id) : null;
+    const full = entry?.description;
+    if (!full) return;
+
+    const { short } = excerpt(full);
+    let expanded = false;
+
+    const toggle = () => {
+      expanded = !expanded;
+      el.textContent = expanded ? full : short;
+    };
+
+    el.addEventListener('click', toggle);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+  });
 }
 
 /** Kategorivelger. */
@@ -83,6 +105,8 @@ async function renderCategory(container, categoryId) {
     </header>
     ${cards || '<p class="tomt">Ingen øvelser i denne kategorien ennå.</p>'}
   `;
+
+  bindDescriptionToggles(container);
 
   container.querySelectorAll('.bib-handling').forEach((btn) => {
     btn.addEventListener('click', async () => {

@@ -8,7 +8,7 @@
 import * as db from './db.js';
 
 /** Laveste støttede versjon (under dette avvises pakken). */
-const MIN_CONTENT_VERSION = 3;
+const MIN_CONTENT_VERSION = 4;
 
 /** Minst tid mellom bakgrunnssjekk når appen hentes frem (1 time). */
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
