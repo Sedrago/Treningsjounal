@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'treningsjournal-v10';
+const CACHE = 'treningsjournal-v11';
 
 const ASSETS = [
   './',
@@ -37,6 +37,14 @@ const ASSETS = [
   'icons/apple-touch-icon.png',
 ];
 
+/** Lagrer innholdspakke under stabil nøkkel (uten t= cache-bust). */
+function contentCacheKey(url) {
+  const u = new URL(url);
+  if (!u.pathname.endsWith('/data/ovelsesinnhold.json')) return url;
+  u.searchParams.delete('t');
+  return u.href;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
@@ -53,8 +61,24 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  // API-kall (Apps Script) og andre domener går alltid rett på nettet.
   if (url.origin !== location.origin || event.request.method !== 'GET') return;
+
+  // Innholdspakke: nett først, cache kun som offline-reserve.
+  if (url.pathname.endsWith('/data/ovelsesinnhold.json')) {
+    const cacheKey = contentCacheKey(event.request.url);
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(cacheKey, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(cacheKey))
+    );
+    return;
+  }
 
   // App-skall: cache først, oppdater i bakgrunnen (stale-while-revalidate).
   event.respondWith(

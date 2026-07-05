@@ -5,7 +5,7 @@
 import * as store from './store.js';
 import * as sync from './sync.js';
 import * as api from './api.js';
-import { initContent } from './content.js';
+import { initContent, checkContentUpdate } from './content.js';
 
 import * as home from './views/home.js';
 import * as workout from './views/workout.js';
@@ -88,13 +88,17 @@ async function main() {
     if (store.getSetting('theme') === 'auto') applyTheme();
   });
 
-  await initContent();
+  await initContent({ force: true });
   await sync.init();
   await store.ensureDefaultExercises();
   await store.migrateExerciseCatalogIds();
   setupSyncBadge();
 
   window.addEventListener('hashchange', renderRoute);
+  window.addEventListener('content-updated', () => renderRoute());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkContentUpdate();
+  });
   await renderRoute();
 
   // Førstegangsbruk: pek mot innstillinger hvis tilkobling mangler.
