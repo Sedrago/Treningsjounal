@@ -1,6 +1,6 @@
 /**
- * Oversetter ext-* poster i ovelsesinnhold.json fra engelsk til norsk.
- * Kjør: node scripts/translate-catalog-no.mjs
+ * Oversetter beskrivelser for ext-* poster i ovelsesinnhold.json (engelsk → norsk).
+ * Navn beholdes på engelsk. Kjør: node scripts/translate-catalog-no.mjs
  */
 
 import fs from 'fs';
@@ -53,8 +53,8 @@ async function main() {
   let done = 0;
 
   for (const id of ids) {
-    if (cache[id]) {
-      data.entries[id] = { ...data.entries[id], ...cache[id] };
+    if (cache[id]?.description) {
+      data.entries[id] = { ...data.entries[id], description: cache[id].description };
       done++;
       continue;
     }
@@ -63,14 +63,12 @@ async function main() {
     process.stdout.write(`\rOversetter ${done + 1}/${ids.length}: ${id.slice(0, 40).padEnd(40)}`);
 
     try {
-      const name = polishNorwegian(await translateText(entry.name));
-      await sleep(DELAY_MS);
       const description = polishNorwegian(await translateText(entry.description));
       await sleep(DELAY_MS);
 
-      const translated = { name, description };
+      const translated = { description };
       cache[id] = translated;
-      data.entries[id] = { ...entry, ...translated };
+      data.entries[id] = { ...entry, description };
       fs.writeFileSync(CACHE, `${JSON.stringify(cache, null, 2)}\n`);
 
       done++;

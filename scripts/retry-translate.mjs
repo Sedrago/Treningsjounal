@@ -1,5 +1,5 @@
 /**
- * Retranslater poster som feilet eller ble delvis oversatt.
+ * Retranslater beskrivelser for poster som feilet (navn beholdes på engelsk).
  * Kjør: node scripts/retry-translate.mjs
  */
 
@@ -70,13 +70,11 @@ async function main() {
     const origDesc = (ex.instructions || []).join(' ').replace(/\s+/g, ' ').trim();
 
     console.log('Oversetter', id);
-    const name = await translateText(origName);
-    await sleep(300);
     const description = await translateText(origDesc);
     await sleep(300);
 
-    data.entries[id] = { ...entry, name, description };
-    console.log('  ->', name);
+    data.entries[id] = { ...entry, name: origName, description };
+    console.log('  ->', origName);
   }
 
   fs.writeFileSync(OUT, `${JSON.stringify(data, null, 2)}\n`);
