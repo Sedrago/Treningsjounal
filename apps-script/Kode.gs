@@ -22,7 +22,7 @@ var SHEETS = {
 
 var COLUMNS = {
   Exercises: ['id', 'name', 'category', 'notes', 'video', 'active',
-    'goalSets', 'goalRepsMin', 'goalRepsMax', 'deleted', 'updatedAt'],
+    'goalSets', 'goalRepsMin', 'goalRepsMax', 'deleted', 'updatedAt', 'catalogId'],
   Workouts: ['id', 'date', 'startedAt', 'duration', 'bodyweight', 'notes', 'deleted', 'updatedAt'],
   Sets: ['id', 'workoutId', 'exerciseId', 'setNumber', 'weight', 'reps', 'rir',
     'rest', 'comment', 'deleted', 'updatedAt'],
@@ -385,7 +385,7 @@ function seedStandardOvelser_() {
       id: o[0], name: o[1], category: o[2],
       notes: '', video: '', active: true,
       goalSets: 3, goalRepsMin: 8, goalRepsMax: 10,
-      deleted: false, updatedAt: now,
+      deleted: false, updatedAt: now, catalogId: o[0],
     });
   });
 }

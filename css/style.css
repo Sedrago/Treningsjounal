@@ -107,6 +107,38 @@ a:hover { text-decoration: underline; }
   gap: 8px;
 }
 
+/* ---------- Teknikk / beskrivelse (read-only) ---------- */
+
+.teknikk-panel { margin-bottom: 12px; }
+.teknikk-summary {
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.teknikk-summary::-webkit-details-marker { display: none; }
+.teknikk-summary::before {
+  content: '›';
+  display: inline-block;
+  transition: transform 0.15s ease;
+  color: var(--tekst-dus);
+}
+details[open] .teknikk-summary::before { transform: rotate(90deg); }
+.teknikk-tekst {
+  margin: 10px 0 0;
+  line-height: 1.5;
+  color: var(--tekst);
+  font-size: 0.95rem;
+}
+.teknikk-notater {
+  margin: 10px 0 0;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+.teknikk-video { margin: 8px 0 0; font-size: 0.92rem; }
+
 /* ---------- Knapper ---------- */
 
 .knapp {

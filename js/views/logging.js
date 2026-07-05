@@ -7,6 +7,7 @@
 
 import * as store from '../store.js';
 import * as timer from '../timer.js';
+import { getDescription } from '../content.js';
 import { progressionSuggestion } from '../assistant.js';
 import {
   esc, fmtNum, formatDateShort, todayStr, debounce,
@@ -38,6 +39,7 @@ export async function render(container, params) {
   }
 
   const goalText = `${exercise.goalSets} × ${exercise.goalRepsMin}–${exercise.goalRepsMax}`;
+  const description = getDescription(exercise);
   const restTimes = String(store.getSetting('restTimes')).split(',')
     .map((t) => parseInt(t.trim(), 10)).filter((t) => t > 0);
 
@@ -50,6 +52,18 @@ export async function render(container, params) {
           · <a href="#/ovelse/${exercise.id}">historikk</a></p>
       </div>
     </header>
+
+    ${description ? `
+    <details class="kort teknikk-panel">
+      <summary class="teknikk-summary">Teknikk</summary>
+      <p class="teknikk-tekst">${esc(description)}</p>
+      ${exercise.notes ? `<p class="teknikk-notater"><span class="dus">Mine notater:</span> ${esc(exercise.notes)}</p>` : ''}
+      ${exercise.video ? `<p class="teknikk-video"><a href="${esc(exercise.video)}" target="_blank" rel="noopener">Se video ↗</a></p>` : ''}
+    </details>` : exercise.notes || exercise.video ? `
+    <section class="kort teknikk-panel">
+      ${exercise.notes ? `<p class="teknikk-notater">${esc(exercise.notes)}</p>` : ''}
+      ${exercise.video ? `<p class="teknikk-video"><a href="${esc(exercise.video)}" target="_blank" rel="noopener">Se video ↗</a></p>` : ''}
+    </section>` : ''}
 
     ${lastSession ? `
     <section class="kort forrige" aria-label="Forrige gang">

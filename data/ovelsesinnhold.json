@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "entries": {
+    "def-hp-benk": {
+      "description": "Lie på benk med føttene i gulvet. Grepet skal være litt bredere enn skulderbredden. Senk stangen kontrollert til midtre bryst, albuer ca. 45° ut fra kroppen. Press opp til strake armer uten å løfte skuldrene for høyt."
+    },
+    "def-hp-man": {
+      "description": "Lie på flat benk med en manual i hver hånd. Senk vektene kontrollert til sidene av brystet, albuer peker litt ut. Press opp til strake armer og hold en kort pause øverst."
+    },
+    "def-hp-skra": {
+      "description": "Still benken i ca. 30–45° vinkel. Grepet litt bredere enn skuldrene. Senk stangen til øvre bryst, press kontrollert opp. Hold skuldrene trukket ned og tilbake gjennom hele bevegelsen."
+    },
+    "def-hp-push": {
+      "description": "Hender i gulvet i skulderbredde, kroppen i rett linje fra hode til hæl. Senk brystet mot gulvet med albuer ca. 45° ut. Press tilbake til utgangsposisjon uten at hofta sagger."
+    },
+    "def-hp-dips": {
+      "description": "Støtt på parallelle stenger med rette armer. Senk kroppen ved å bøye albuer til ca. 90°. Litt fremoverlent kroppshold treffer bryst mer, mer oppreist treffer triceps. Press tilbake kontrollert."
+    },
+    "def-hpl-row": {
+      "description": "Bøy deg frem med rett rygg, ca. 45°. Trekk stangen mot nedre del av brystet ved å dra albuene bakover. Klem skulderbladene sammen øverst. Senk kontrollert uten å runde ryggen."
+    },
+    "def-hpl-1arm": {
+      "description": "Støtt med ett kne og én hånd på benk. Trekk manualen mot hoften, albuen tett inn til kroppen. Senk kontrollert til full strekk uten å rotere i korsryggen."
+    },
+    "def-hpl-face": {
+      "description": "Fest tau eller håndtak i høy kabel. Trekk mot ansiktet med albuene høyt og ut til sidene. Klem skulderbladene sammen bak. Unngå å svaie med kroppen."
+    },
+    "def-hpl-kabel": {
+      "description": "Sitt med rett rygg og bøyde knær. Trekk håndtaket mot magen, albuer tett inn. Klem skulderbladene sammen. Strekk kontrollert frem til strake armer uten å runde ryggen."
+    },
+    "def-vp-mil": {
+      "description": "Stå med stang i skulderhøyde, grep litt utenfor skuldrene. Press stangen rett opp forbi ansiktet til strake armer. Hold core stram og unngå overdreven svai i korsryggen."
+    },
+    "def-vp-man": {
+      "description": "Sitt eller stå med manualer i skulderhøyde, håndflatene frem. Press vektene rett opp til strake armer. Senk kontrollert til manualene er i ørehøyde eller litt lavere."
+    },
+    "def-vp-arnold": {
+      "description": "Start med manualer foran ansiktet, håndflatene mot deg. Roter håndflatene ut mens du presser opp. Reverser bevegelsen på vei ned. Hold bevegelsen jevn og kontrollert."
+    },
+    "def-vpl-pull": {
+      "description": "Grepet litt bredere enn skuldrene, heng fra stang med strake armer. Trekk brystet mot stangen ved å dra albuene ned og bak. Senk kontrollert til full strekk i skuldrene."
+    },
+    "def-vpl-chin": {
+      "description": "Håndflatene mot deg, grep i skulderbredde. Trekk deg opp til haken er over stangen. Senk kontrollert til strake armer. Unngå kipping og svaing."
+    },
+    "def-vpl-lat": {
+      "description": "Grepet litt bredere enn skuldrene. Trekk stangen ned mot øvre bryst ved å dra albuene ned og bak. Klem skulderbladene sammen nederst. La vekten opp kontrollert."
+    },
+    "def-kb-kne": {
+      "description": "Stang på øvre rygg, føttene i skulderbredde. Senk deg ved å bøye knær og hofter til lår er minst parallelt med gulvet. Hold brystet oppe og knærne i linje med tærne. Press opp gjennom hælene."
+    },
+    "def-kb-front": {
+      "description": "Stang i front rack på skuldrene, albuene høye. Senk kontrollert i knebøy med oppreist bryst. Knærne følger tærne. Press opp uten at hofta skyte frem."
+    },
+    "def-kb-bulgar": {
+      "description": "Bakfot på benk, forfot langt nok frem til at du kan senke bak kne mot gulvet. Senk kontrollert til bakre kne nesten berører gulvet. Press opp gjennom forre hæl."
+    },
+    "def-kb-bein": {
+      "description": "Føttene i midten av plattformen, skulderbredde. Senk vekten ved å bøye knærne til ca. 90° uten at hofta løftes fra setet. Press kontrollert opp uten å låse knærne hardt."
+    },
+    "def-hh-mark": {
+      "description": "Stang over midten av foten, grep utenfor bena. Rygg rett, bryst frem. Løft ved å strekke knær og hofter samtidig. Stangen nær kroppen hele veien. Senk kontrollert tilbake til gulvet."
+    },
+    "def-hh-rdl": {
+      "description": "Stå med stang foran lårene. Bøy deg frem ved hoftene med nesten rette ben. Senk stangen langs lårene til du kjenner strekk i bakside lår. Reis deg ved å strekke hoftene, ryggen flat."
+    },
+    "def-hh-hip": {
+      "description": "Rygg mot benk, stang over hoftene. Føttene i gulvet, skulderbredde. Senk hoftene kontrollert, press deretter hoftene til full strekk og klem setemusklene øverst."
+    },
+    "def-hh-good": {
+      "description": "Stang på øvre rygg som i knebøy. Bøy deg frem fra hoftene med nesten rette ben til brystet er parallelt med gulvet. Reis deg ved å strekke hoftene. Hold ryggen nøytral."
+    },
+    "def-core-plank": {
+      "description": "Underarmene i gulvet, kroppen i rett linje fra hode til hæl. Stram mage og sete. Unngå at hofta sagger eller peker opp. Pust jevnt og hold posisjonen."
+    },
+    "def-core-dead": {
+      "description": "Ligg på ryggen, armer mot taket, hofter og knær i 90°. Senk motsatt arm og ben kontrollert mot gulvet uten at korsryggen bøyer seg. Bytt side jevnt."
+    },
+    "def-core-pallof": {
+      "description": "Stå sideveis mot kabel, hold håndtaket foran brystet. Strekk armene rett frem mot siden mot kabelens retning. Hold core stram og unngå rotasjon i kroppen. Returner kontrollert."
+    },
+    "def-core-crunch": {
+      "description": "Ligg på ryggen med bøyde knær, hender ved tinningene. Løft skuldrene fra gulvet ved å rulle brystet mot knærne. Senk kontrollert uten å trekke i nakken."
+    }
+  }
+}

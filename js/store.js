@@ -79,9 +79,30 @@ export async function ensureDefaultExercises() {
   const existing = await db.getAll('exercises');
   if (existing.some((e) => !e.deleted)) return false;
   for (const tpl of DEFAULT_OVELSER) {
-    await saveExercise({ ...tpl, notes: '', video: '', active: true });
+    await saveExercise({ ...tpl, catalogId: tpl.id, notes: '', video: '', active: true });
   }
   return true;
+}
+
+/**
+ * Setter catalogId på standardøvelser som mangler det (engangsmigrering).
+ * Beskrivelser hentes fra innholdspakken via catalogId – lagres ikke i brukerdata.
+ */
+export async function migrateExerciseCatalogIds() {
+  if (await db.getMeta('catalogIdMigrated')) return false;
+  const all = await db.getAll('exercises');
+  let changed = false;
+  for (const ex of all) {
+    if (ex.deleted || ex.catalogId) continue;
+    if (!ex.id.startsWith('def-')) continue;
+    ex.catalogId = ex.id;
+    ex.updatedAt = nowIso();
+    await db.put('exercises', ex);
+    await queueOp('exercise', 'upsert', ex);
+    changed = true;
+  }
+  await db.setMeta('catalogIdMigrated', '1');
+  return changed;
 }
 
 /** Standardinnstillinger. */
@@ -134,12 +155,14 @@ export function getExercise(id) {
   return db.get('exercises', id);
 }
 
-/** Lagrer en øvelse (ny eller endret). */
+/** Lagrer en øvelse (ny eller endret). catalogId settes kun ved opprettelse eller migrering. */
 export async function saveExercise(ex) {
+  const existing = ex.id ? await db.get('exercises', ex.id) : null;
   const record = {
     id: ex.id || uuid(),
     name: ex.name.trim(),
     category: ex.category,
+    catalogId: ex.catalogId ?? existing?.catalogId ?? '',
     notes: ex.notes || '',
     video: ex.video || '',
     active: ex.active !== false,

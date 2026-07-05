@@ -4,6 +4,7 @@
  */
 
 import * as store from '../store.js';
+import { getDescription } from '../content.js';
 import { esc, toast } from '../utils.js';
 
 export async function render(container) {
@@ -61,6 +62,7 @@ function openForm(host, exercise, onDone) {
     goalRepsMin: store.getSetting('defaultRepsMin'),
     goalRepsMax: store.getSetting('defaultRepsMax'),
   };
+  const description = getDescription(e);
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -87,10 +89,14 @@ function openForm(host, exercise, onDone) {
           <input type="number" class="inndata" id="f-maks" value="${e.goalRepsMax}" min="1" max="50" aria-label="Øvre repsgrense">
         </fieldset>
 
-        <label class="felt-navn" for="f-notater">Beskrivelse og teknikknotater</label>
-        <textarea class="inndata" id="f-notater" rows="3">${esc(e.notes)}</textarea>
+        ${description ? `
+        <p class="felt-navn">Teknikk</p>
+        <p class="teknikk-tekst">${esc(description)}</p>` : ''}
 
-        <label class="felt-navn" for="f-video">Video-lenke</label>
+        <label class="felt-navn" for="f-notater">Mine notater</label>
+        <textarea class="inndata" id="f-notater" rows="3" placeholder="Egne tips og tilpasninger …">${esc(e.notes)}</textarea>
+
+        <label class="felt-navn" for="f-video">Video-lenke <span class="dus">(valgfritt)</span></label>
         <input type="url" class="inndata" id="f-video" value="${esc(e.video)}" placeholder="https://…">
 
         <label class="bryter-rad">
