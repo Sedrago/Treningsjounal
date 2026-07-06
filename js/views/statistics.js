@@ -1,35 +1,39 @@
 /**
- * views/statistics.js – statistikkskjermen: nøkkeltall, heatmap og grafer.
+ * views/statistics.js – statistikkskjermen: saldo, heatmap og detaljer.
  */
 
 import * as store from '../store.js';
 import * as stats from '../stats.js';
-import { lineChart, barChart, heatmap } from '../charts.js';
+import { saldoChart, heatmap, lineChart } from '../charts.js';
 import {
-  esc, fmtNum, fmtVolume, fmtDuration, todayStr,
-  toDisplayWeight, weightUnit, startOfWeek,
+  esc, fmtNum, fmtDuration, todayStr,
+  toDisplayWeight, weightUnit,
 } from '../utils.js';
+
+function saldoVerdi(v) {
+  if (v == null) return '–';
+  const diff = v - 100;
+  const sign = diff > 0 ? '+' : '';
+  return `${fmtNum(v, 0)} (${sign}${fmtNum(diff, 0)})`;
+}
 
 export async function render(container) {
   const enriched = await store.getEnrichedSets();
   const workouts = await store.getWorkouts();
+  const aerobic = await store.getAerobicSessions();
   const bodyweights = await store.getBodyweights();
   const units = store.getSetting('units');
   const unit = weightUnit(units);
+  const maxRir = Number(store.getSetting('workingSetRirMax')) || 4;
+  const streakMode = store.getSetting('streakMode');
+  const streak = stats.trainingStreak(enriched, streakMode);
 
   const dates = stats.workoutDates(enriched);
-  const totalVol = stats.totalVolume(enriched);
-  const monday = todayStr(startOfWeek(new Date()));
-  const weekVol = stats.totalVolume(enriched.filter((s) => s.date >= monday));
-  const monthCutoff = new Date(); monthCutoff.setDate(monthCutoff.getDate() - 30);
-  const monthVol = stats.totalVolume(enriched.filter((s) => s.date >= todayStr(monthCutoff)));
   const totalTime = workouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-  const rir = stats.avgRir(enriched);
-  const streak = stats.weekStreak(enriched);
+  const saldo = stats.saldoHistory(enriched, aerobic, { maxRir, numWeeks: 12 });
   const favorites = stats.favoriteExercises(enriched);
   const perCategory = stats.sessionsPerCategory(enriched);
 
-  // Personlige rekorder per øvelse (topp 8 etter est. 1RM).
   const byExercise = stats.groupBy(enriched, (s) => s.exerciseId);
   const records = [...byExercise.entries()]
     .map(([id, exSets]) => ({
@@ -42,6 +46,8 @@ export async function render(container) {
     .sort((a, b) => b.oneRM - a.oneRM)
     .slice(0, 8);
 
+  const latest = saldo.latest;
+
   container.innerHTML = `
     <header class="side-topp">
       <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
@@ -49,30 +55,28 @@ export async function render(container) {
     </header>
 
     <div class="nokkeltal">
-      <div class="nokkel"><span class="nokkel-verdi">${dates.length}</span><span class="nokkel-navn">Økter</span></div>
-      <div class="nokkel"><span class="nokkel-verdi">${streak}</span><span class="nokkel-navn">Ukestreak</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${dates.length}</span><span class="nokkel-navn">Styrkeøkter</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${streak}</span><span class="nokkel-navn">Streak</span></div>
       <div class="nokkel"><span class="nokkel-verdi">${fmtDuration(totalTime)}</span><span class="nokkel-navn">Tid totalt</span></div>
     </div>
-    <div class="nokkeltal">
-      <div class="nokkel"><span class="nokkel-verdi">${fmtVolume(weekVol)}</span><span class="nokkel-navn">Volum uke (kg)</span></div>
-      <div class="nokkel"><span class="nokkel-verdi">${fmtVolume(monthVol)}</span><span class="nokkel-navn">Volum 30 d (kg)</span></div>
-      <div class="nokkel"><span class="nokkel-verdi">${fmtVolume(totalVol)}</span><span class="nokkel-navn">Volum totalt (kg)</span></div>
-    </div>
-    ${rir !== null ? `<p class="dus sentrert">Gjennomsnittlig RIR: ${fmtNum(rir)}</p>` : ''}
+
+    <section class="kort" aria-label="Treningsutvikling">
+      <h2 class="kort-tittel">Treningsutvikling</h2>
+      <p class="dus liten saldo-intro">100 = ditt vanlige nivå. Styrke bygges fra e1RM per øvelse mot egen historikk.</p>
+      ${latest ? `
+      <div class="nokkeltal saldo-nokkeltal">
+        <div class="nokkel"><span class="nokkel-verdi">${saldoVerdi(latest.volume)}</span><span class="nokkel-navn">Mengde</span></div>
+        <div class="nokkel"><span class="nokkel-verdi">${saldoVerdi(latest.intensity)}</span><span class="nokkel-navn">Intensitet</span></div>
+        <div class="nokkel"><span class="nokkel-verdi">${saldoVerdi(latest.strength)}</span><span class="nokkel-navn">Styrke</span></div>
+      </div>
+      ${latest.strengthExercises ? `<p class="dus liten">Styrke basert på ${latest.strengthExercises} øvelse${latest.strengthExercises === 1 ? '' : 'r'} denne uken.</p>` : ''}` : ''}
+      <div id="saldo-graf"></div>
+    </section>
 
     <section class="kort">
       <h2 class="kort-tittel">Aktivitet siste 6 måneder</h2>
+      <p class="dus liten">Farge = arbeidssett den dagen.</p>
       <div id="heatmap"></div>
-    </section>
-
-    <section class="kort">
-      <h2 class="kort-tittel">Volum per uke (kg)</h2>
-      <div id="volum-graf"></div>
-    </section>
-
-    <section class="kort">
-      <h2 class="kort-tittel">Økter per uke</h2>
-      <div id="frekvens-graf"></div>
     </section>
 
     ${bodyweights.length >= 2 ? `
@@ -105,11 +109,17 @@ export async function render(container) {
     </section>
   `;
 
-  heatmap(container.querySelector('#heatmap'), stats.heatmapData(enriched));
-  barChart(container.querySelector('#volum-graf'),
-    stats.volumePerWeek(enriched).map((w) => ({ label: w.label, value: Math.round(w.volume) })));
-  barChart(container.querySelector('#frekvens-graf'),
-    stats.frequencyPerWeek(enriched).map((w) => ({ label: w.label, value: w.count })));
+  saldoChart(container.querySelector('#saldo-graf'), saldo.weeks);
+  heatmap(
+    container.querySelector('#heatmap'),
+    stats.heatmapActivityData(enriched, maxRir),
+    26,
+    {
+      valueLabel: (n, key) => (n > 0
+        ? `${key}: ${Math.round(n)} arbeidssett`
+        : `${key}: ingen styrke`),
+    },
+  );
 
   if (bodyweights.length >= 2) {
     const points = [...bodyweights].reverse().slice(-30).map((b) => ({

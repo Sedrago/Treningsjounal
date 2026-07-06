@@ -242,3 +242,171 @@ export function daysSinceCategory(sets, categoryId) {
   const last = catSets.reduce((max, s) => (s.date > max ? s.date : max), '0000');
   return Math.round((parseDate(todayStr()) - parseDate(last)) / 86400000);
 }
+
+/* ---------- Saldo (mengde, intensitet, styrke) ---------- */
+
+function median(values) {
+  if (!values.length) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/** ISO-uker siste `numWeeks`, stigende. */
+function recentWeeks(numWeeks) {
+  const result = [];
+  const cursor = startOfWeek(new Date());
+  cursor.setDate(cursor.getDate() - 7 * (numWeeks - 1));
+  for (let i = 0; i < numWeeks; i++) {
+    const week = isoWeekKey(cursor);
+    result.push({ week, label: week.split('-W')[1], index: i });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return result;
+}
+
+/** Normaliserer uke-serie til saldo der 100 = median av inntil 8 foregående uker. */
+function toSaldoIndex(values) {
+  return values.map((v, i) => {
+    if (v == null) return null;
+    const priors = values.slice(Math.max(0, i - 8), i).filter((x) => x != null);
+    if (!priors.length) return 100;
+    const base = median(priors);
+    if (!base) return 100;
+    return Math.round((v / base) * 1000) / 10;
+  });
+}
+
+/** Mengdedose for én uke (arbeidssett + treningsdager + aerob). */
+function weekVolumeDose(weekSets, weekAerob, maxRir) {
+  const days = new Set(weekSets.map((s) => s.date)).size;
+  const aerMin = weekAerob.reduce((sum, r) => sum + (Number(r.minutes) || 0), 0);
+  if (!weekSets.length && !aerMin) return null;
+  const ws = countWorkingSets(weekSets, maxRir);
+  return ws + days * 3 + Math.round(aerMin / 5);
+}
+
+/** Innsats-score for arbeidssett (høyere = hardere). */
+function weekIntensityScore(weekSets, maxRir) {
+  const working = weekSets.filter((s) => isWorkingSet(s, maxRir) && s.rir != null);
+  if (!working.length) return null;
+  const avg = avgRir(working);
+  return avg == null ? null : 10 - avg;
+}
+
+/**
+ * Bygger best e1RM per øvelse per uke-indeks.
+ * @returns {Map<string, Map<number, number>>}
+ */
+function exerciseE1rmByWeekIndex(enrichedSets, weeks) {
+  const weekIndex = new Map(weeks.map((w) => [w.week, w.index]));
+  const byEx = new Map();
+  for (const s of enrichedSets) {
+    if (!s.weight || !s.reps) continue;
+    const idx = weekIndex.get(isoWeekKey(parseDate(s.date)));
+    if (idx == null) continue;
+    const rm = epley1RM(s.weight, s.reps);
+    if (!rm) continue;
+    if (!byEx.has(s.exerciseId)) byEx.set(s.exerciseId, new Map());
+    const wm = byEx.get(s.exerciseId);
+    wm.set(idx, Math.max(wm.get(idx) || 0, rm));
+  }
+  return byEx;
+}
+
+/** Aggregert styrkeforhold for uke: median(e1RM / egen baseline) per øvelse. */
+function weekStrengthRatio(weekIndex, exByWeekIdx) {
+  const ratios = [];
+  for (const idxMap of exByWeekIdx.values()) {
+    const current = idxMap.get(weekIndex);
+    if (!current) continue;
+    const priors = [];
+    for (let j = 0; j < weekIndex; j++) {
+      if (idxMap.has(j)) priors.push(idxMap.get(j));
+    }
+    if (!priors.length) continue;
+    const baseline = median(priors.slice(-8));
+    if (baseline > 0) ratios.push(current / baseline);
+  }
+  return ratios.length ? median(ratios) : null;
+}
+
+/**
+ * Ukentlig saldo for mengde, intensitet og styrke.
+ * 100 = ditt vanlige nivå (median av inntil 8 foregående uker med data).
+ *
+ * @returns {{ weeks: Array, latest: { volume, intensity, strength, strengthExercises }|null }}
+ */
+export function saldoHistory(enrichedSets, aerobicRows, { maxRir = 4, numWeeks = 12 } = {}) {
+  const weeks = recentWeeks(numWeeks);
+  const setsByWeek = groupBy(enrichedSets, (s) => isoWeekKey(parseDate(s.date)));
+  const aerobByWeek = groupBy(aerobicRows || [], (r) => isoWeekKey(parseDate(r.date)));
+  const exByWeekIdx = exerciseE1rmByWeekIndex(enrichedSets, weeks);
+
+  const rawVolume = [];
+  const rawIntensity = [];
+  const rawStrength = [];
+  const strengthCounts = [];
+
+  for (const { week, index } of weeks) {
+    const weekSets = setsByWeek.get(week) || [];
+    const weekAerob = aerobByWeek.get(week) || [];
+    rawVolume.push(weekVolumeDose(weekSets, weekAerob, maxRir));
+    rawIntensity.push(weekIntensityScore(weekSets, maxRir));
+    const ratio = weekStrengthRatio(index, exByWeekIdx);
+    rawStrength.push(ratio);
+    strengthCounts.push(ratio != null ? countStrengthExercises(index, exByWeekIdx) : 0);
+  }
+
+  const volumeIdx = toSaldoIndex(rawVolume);
+  const intensityIdx = toSaldoIndex(rawIntensity);
+  const strengthIdx = rawStrength.map((r) => (r == null ? null : Math.round(r * 1000) / 10));
+
+  const result = weeks.map((w, i) => ({
+    week: w.week,
+    label: w.label,
+    volume: volumeIdx[i],
+    intensity: intensityIdx[i],
+    strength: strengthIdx[i],
+    strengthExercises: strengthCounts[i],
+  }));
+
+  let latest = null;
+  for (let i = result.length - 1; i >= 0; i--) {
+    const r = result[i];
+    if (r.volume != null || r.intensity != null || r.strength != null) {
+      latest = r;
+      break;
+    }
+  }
+
+  return { weeks: result, latest };
+}
+
+function countStrengthExercises(weekIndex, exByWeekIdx) {
+  let n = 0;
+  for (const idxMap of exByWeekIdx.values()) {
+    if (!idxMap.has(weekIndex)) continue;
+    let hasPrior = false;
+    for (let j = 0; j < weekIndex; j++) {
+      if (idxMap.has(j)) { hasPrior = true; break; }
+    }
+    if (hasPrior) n += 1;
+  }
+  return n;
+}
+
+/** Heatmap: antall arbeidssett per dag (mengde, ikke kg). */
+export function heatmapActivityData(sets, maxRir = 4, days = 182) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = todayStr(cutoff);
+  const map = new Map();
+  for (const s of sets) {
+    if (s.date < cutoffStr) continue;
+    if (!isWorkingSet(s, maxRir) && s.reps == null) continue;
+    const add = isWorkingSet(s, maxRir) ? 1 : 0.3;
+    map.set(s.date, (map.get(s.date) || 0) + add);
+  }
+  return map;
+}

@@ -110,11 +110,106 @@ export function barChart(container, bars, opts = {}) {
 }
 
 /**
+ * Saldo-graf: mengde, intensitet og styrke (100 = vanlig nivå).
+ * @param {HTMLElement} container
+ * @param {Array<{label:string, volume:number|null, intensity:number|null, strength:number|null}>} weeks
+ */
+export function saldoChart(container, weeks) {
+  container.innerHTML = '';
+  const series = [
+    { key: 'volume', name: 'Mengde', class: 'graf-linje-mengde' },
+    { key: 'intensity', name: 'Intensitet', class: 'graf-linje-intensitet' },
+    { key: 'strength', name: 'Styrke', class: 'graf-linje-styrke' },
+  ];
+
+  const hasData = weeks.some((w) => w.volume != null || w.intensity != null || w.strength != null);
+  if (!hasData) {
+    container.innerHTML = '<p class="tomt">Logg noen økter for å se utvikling.</p>';
+    return;
+  }
+
+  const W = 600; const H = 240;
+  const pad = { t: 20, r: 14, b: 28, l: 44 };
+  const labels = weeks.map((w) => w.label);
+
+  const allValues = [100];
+  weeks.forEach((w) => {
+    for (const s of series) {
+      if (w[s.key] != null) allValues.push(w[s.key]);
+    }
+  });
+  let min = Math.min(...allValues);
+  let max = Math.max(...allValues);
+  if (min === max) { min -= 5; max += 5; }
+  const span = max - min;
+  min = Math.min(min, 95);
+  max = Math.max(max, 105);
+  min -= span * 0.05;
+  max += span * 0.05;
+
+  const x = (i) => pad.l + (i / Math.max(1, weeks.length - 1)) * (W - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - (v - min) / (max - min)) * (H - pad.t - pad.b);
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'graf saldo-graf', role: 'img' });
+  svg.setAttribute('aria-label', 'Saldo for mengde, intensitet og styrke');
+
+  // Referanselinje 100.
+  const y100 = y(100);
+  svg.appendChild(svgEl('line', {
+    x1: pad.l, y1: y100, x2: W - pad.r, y2: y100,
+    class: 'graf-baseline',
+  }));
+  const baseLabel = svgEl('text', { x: W - pad.r, y: y100 - 4, class: 'graf-akse', 'text-anchor': 'end' });
+  baseLabel.textContent = '100';
+  svg.appendChild(baseLabel);
+
+  for (let i = 0; i <= 3; i++) {
+    const v = min + ((max - min) * i) / 3;
+    const yy = y(v);
+    svg.appendChild(svgEl('line', { x1: pad.l, y1: yy, x2: W - pad.r, y2: yy, class: 'graf-grid' }));
+    const label = svgEl('text', { x: pad.l - 6, y: yy + 4, class: 'graf-akse', 'text-anchor': 'end' });
+    label.textContent = Math.round(v);
+    svg.appendChild(label);
+  }
+
+  for (const s of series) {
+    const pts = [];
+    weeks.forEach((w, i) => {
+      if (w[s.key] != null) pts.push({ i, v: w[s.key] });
+    });
+    if (pts.length < 2) continue;
+    const linePts = pts.map((p) => `${x(p.i)},${y(p.v)}`).join(' ');
+    svg.appendChild(svgEl('polyline', { points: linePts, class: s.class, fill: 'none' }));
+    pts.forEach((p) => {
+      svg.appendChild(svgEl('circle', { cx: x(p.i), cy: y(p.v), r: 3, class: s.class.replace('linje', 'punkt') }));
+    });
+  }
+
+  const step = Math.max(1, Math.ceil(weeks.length / 6));
+  weeks.forEach((w, i) => {
+    if (i % step !== 0 && i !== weeks.length - 1) return;
+    const label = svgEl('text', { x: x(i), y: H - 8, class: 'graf-akse', 'text-anchor': 'middle' });
+    label.textContent = w.label;
+    svg.appendChild(label);
+  });
+
+  container.appendChild(svg);
+
+  const legend = document.createElement('div');
+  legend.className = 'saldo-forklaring';
+  legend.innerHTML = series.map((s) =>
+    `<span class="saldo-forklaring-rad"><span class="saldo-farge ${s.class.replace('graf-linje-', '')}" aria-hidden="true"></span>${s.name}</span>`,
+  ).join('');
+  container.appendChild(legend);
+}
+
+/**
  * Aktivitets-heatmap à la GitHub: siste ~26 uker, én kolonne per uke.
  * @param {HTMLElement} container
- * @param {Map<string, number>} data  'YYYY-MM-DD' → volum
+ * @param {Map<string, number>} data  'YYYY-MM-DD' → aktivitetsverdi
+ * @param {{ valueLabel?: (n:number)=>string }} opts
  */
-export function heatmap(container, data, weeks = 26) {
+export function heatmap(container, data, weeks = 26, opts = {}) {
   container.innerHTML = '';
   const cell = 12; const gap = 3;
   const W = weeks * (cell + gap);
@@ -143,7 +238,9 @@ export function heatmap(container, data, weeks = 26) {
         class: `hm-celle hm-${level}`,
       });
       const title = svgEl('title');
-      title.textContent = `${key}: ${Math.round(vol)} kg volum`;
+      title.textContent = opts.valueLabel
+        ? opts.valueLabel(vol, key)
+        : `${key}: ${Math.round(vol)} kg volum`;
       rect.appendChild(title);
       svg.appendChild(rect);
       d.setDate(d.getDate() + 1);

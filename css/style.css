@@ -523,12 +523,40 @@ select.inndata { appearance: none; }
 
 .graf { width: 100%; height: auto; display: block; }
 .graf-grid { stroke: var(--kant); stroke-width: 1; }
+.graf-baseline { stroke: var(--tekst-dus); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.6; }
 .graf-akse { fill: var(--tekst-dus); font-size: 11px; }
 .graf-linje { stroke: var(--aksent); stroke-width: 2.5; stroke-linejoin: round; }
+.graf-linje-mengde { stroke: #5b9bd5; stroke-width: 2.5; stroke-linejoin: round; fill: #5b9bd5; }
+.graf-linje-intensitet { stroke: #e8a838; stroke-width: 2.5; stroke-linejoin: round; fill: #e8a838; }
+.graf-linje-styrke { stroke: #6bc98a; stroke-width: 2.5; stroke-linejoin: round; fill: #6bc98a; }
+.graf-punkt-mengde { fill: #5b9bd5; }
+.graf-punkt-intensitet { fill: #e8a838; }
+.graf-punkt-styrke { fill: #6bc98a; }
 .graf-areal { fill: var(--aksent); opacity: 0.12; }
 .graf-punkt { fill: var(--aksent); }
 .graf-stolpe { fill: var(--aksent); opacity: 0.85; }
 .graf-stolpe.tom { fill: var(--flate-2); }
+
+.saldo-intro { margin: 0 0 12px; }
+.saldo-nokkeltal { margin-bottom: 8px; }
+.saldo-forklaring {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  justify-content: center;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--tekst-dus);
+}
+.saldo-forklaring-rad { display: inline-flex; align-items: center; gap: 6px; }
+.saldo-farge {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+.saldo-farge.mengde { background: #5b9bd5; }
+.saldo-farge.intensitet { background: #e8a838; }
+.saldo-farge.styrke { background: #6bc98a; }
 
 .heatmap { width: 100%; height: auto; display: block; }
 .hm-celle.hm-0 { fill: var(--flate-2); }
