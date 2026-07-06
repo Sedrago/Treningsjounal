@@ -150,17 +150,22 @@ export function progressionSuggestion(exercise, lastSession, exerciseSets) {
 }
 
 /**
- * Ukentlig bevegelsesbalanse: antall økter per kategori denne uken,
+ * Bevegelsesbalanse siden gitt dato: antall treningsdager per kategori,
  * pluss hvilke kategorier som mangler.
  */
-export function weeklyBalance(enrichedSets, mondayStr) {
-  const thisWeek = enrichedSets.filter((s) => s.date >= mondayStr);
+export function balanceSince(enrichedSets, sinceDate) {
+  const recent = enrichedSets.filter((s) => s.date >= sinceDate);
   const counts = new Map();
   for (const k of KATEGORIER) counts.set(k.id, 0);
-  const byCat = groupBy(thisWeek, (s) => s.category);
+  const byCat = groupBy(recent, (s) => s.category);
   for (const [cat, catSets] of byCat) {
     counts.set(cat, new Set(catSets.map((s) => s.date)).size);
   }
   const missing = KATEGORIER.filter((k) => k.id !== 'valgfri' && counts.get(k.id) === 0);
   return { counts, missing };
+}
+
+/** @deprecated Bruk balanceSince med windowStartStr(7). */
+export function weeklyBalance(enrichedSets, mondayStr) {
+  return balanceSince(enrichedSets, mondayStr);
 }

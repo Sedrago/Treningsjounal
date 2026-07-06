@@ -16,6 +16,7 @@ var SHEETS = {
   workout: 'Workouts',
   set: 'Sets',
   bodyweight: 'Bodyweight',
+  aerobic: 'Aerobic',
   category: 'Categories',
   setting: 'Settings',
 };
@@ -27,6 +28,7 @@ var COLUMNS = {
   Sets: ['id', 'workoutId', 'exerciseId', 'setNumber', 'weight', 'reps', 'rir',
     'rest', 'comment', 'deleted', 'updatedAt'],
   Bodyweight: ['id', 'date', 'weight', 'fatPct', 'comment', 'deleted', 'updatedAt'],
+  Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt'],
   Categories: ['id', 'name', 'icon', 'priority'],
   Settings: ['key', 'value'],
   Statistics: ['key', 'value'],
@@ -215,6 +217,7 @@ function pullAll_() {
     workouts: readAll_('Workouts'),
     sets: readAll_('Sets'),
     bodyweight: readAll_('Bodyweight'),
+    aerobic: readAll_('Aerobic'),
     categories: readAll_('Categories'),
     settings: settings,
   };

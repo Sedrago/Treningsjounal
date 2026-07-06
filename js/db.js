@@ -2,14 +2,14 @@
  * db.js – tynn promise-basert innpakning rundt IndexedDB.
  *
  * Lagre (object stores):
- *   exercises, workouts, sets, bodyweight  – data (keyPath: id)
+ *   exercises, workouts, sets, bodyweight, aerobic  – data (keyPath: id)
  *   settings                               – nøkkel/verdi (keyPath: key)
  *   queue                                  – synk-kø (autoIncrement)
  *   meta                                   – intern metadata (keyPath: key)
  */
 
 const DB_NAME = 'treningsjournal';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise = null;
 
@@ -17,20 +17,27 @@ function open() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
-      const ex = db.createObjectStore('exercises', { keyPath: 'id' });
-      ex.createIndex('category', 'category');
-      const wo = db.createObjectStore('workouts', { keyPath: 'id' });
-      wo.createIndex('date', 'date');
-      const st = db.createObjectStore('sets', { keyPath: 'id' });
-      st.createIndex('workoutId', 'workoutId');
-      st.createIndex('exerciseId', 'exerciseId');
-      const bw = db.createObjectStore('bodyweight', { keyPath: 'id' });
-      bw.createIndex('date', 'date');
-      db.createObjectStore('settings', { keyPath: 'key' });
-      db.createObjectStore('queue', { keyPath: 'qid', autoIncrement: true });
-      db.createObjectStore('meta', { keyPath: 'key' });
+      const oldVersion = event.oldVersion;
+      if (oldVersion < 1) {
+        const ex = db.createObjectStore('exercises', { keyPath: 'id' });
+        ex.createIndex('category', 'category');
+        const wo = db.createObjectStore('workouts', { keyPath: 'id' });
+        wo.createIndex('date', 'date');
+        const st = db.createObjectStore('sets', { keyPath: 'id' });
+        st.createIndex('workoutId', 'workoutId');
+        st.createIndex('exerciseId', 'exerciseId');
+        const bw = db.createObjectStore('bodyweight', { keyPath: 'id' });
+        bw.createIndex('date', 'date');
+        db.createObjectStore('settings', { keyPath: 'key' });
+        db.createObjectStore('queue', { keyPath: 'qid', autoIncrement: true });
+        db.createObjectStore('meta', { keyPath: 'key' });
+      }
+      if (oldVersion < 2 && !db.objectStoreNames.contains('aerobic')) {
+        const ae = db.createObjectStore('aerobic', { keyPath: 'id' });
+        ae.createIndex('date', 'date');
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

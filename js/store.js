@@ -115,7 +115,22 @@ export const DEFAULT_SETTINGS = {
   defaultRepsMin: 8,
   defaultRepsMax: 10,
   startPage: 'hjem',        // 'hjem' | 'okt'
+  streakMode: 'rolling7',   // 'rolling7' | 'calendar'
+  workingSetRirMax: 4,      // sett med RIR ≤ dette telles som arbeidssett
 };
+
+/** Typer aerob aktivitet. */
+export const AEROBIC_TYPES = [
+  { id: 'run', name: 'Løping' },
+  { id: 'bike', name: 'Sykkel' },
+  { id: 'row', name: 'Roing' },
+  { id: 'walk', name: 'Gåtur' },
+  { id: 'other', name: 'Annet' },
+];
+
+export function aerobicTypeById(id) {
+  return AEROBIC_TYPES.find((t) => t.id === id) || AEROBIC_TYPES[AEROBIC_TYPES.length - 1];
+}
 
 /* ---------- Innstillinger ---------- */
 
@@ -377,6 +392,37 @@ export async function deleteBodyweight(id) {
   await queueOp('bodyweight', 'upsert', b);
 }
 
+/* ---------- Aerob trening ---------- */
+
+export async function getAerobicSessions() {
+  const all = await db.getAll('aerobic');
+  return all.filter((a) => !a.deleted).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function saveAerobicSession(entry) {
+  const record = {
+    id: entry.id || uuid(),
+    date: entry.date || todayStr(),
+    minutes: Math.max(1, Number(entry.minutes) || 0),
+    activity: entry.activity || 'other',
+    comment: entry.comment || '',
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  await db.put('aerobic', record);
+  await queueOp('aerobic', 'upsert', record);
+  return record;
+}
+
+export async function deleteAerobicSession(id) {
+  const row = await db.get('aerobic', id);
+  if (!row) return;
+  row.deleted = true;
+  row.updatedAt = nowIso();
+  await db.put('aerobic', row);
+  await queueOp('aerobic', 'upsert', row);
+}
+
 /* ---------- Sammensatte spørringer ---------- */
 
 /**
@@ -425,7 +471,7 @@ export async function getLastSessionForExercise(exerciseId, beforeDate = null) {
 
 /** Sletter alle lokale data (brukes fra innstillinger). */
 export async function wipeLocalData() {
-  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'settings', 'queue', 'meta']) {
+  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'settings', 'queue', 'meta']) {
     await db.clearStore(s);
   }
   Object.assign(settingsCache, DEFAULT_SETTINGS);

@@ -76,6 +76,7 @@ export async function pull() {
     await db.replaceAll('workouts', data.workouts || []);
     await db.replaceAll('sets', data.sets || []);
     await db.replaceAll('bodyweight', data.bodyweight || []);
+    await db.replaceAll('aerobic', data.aerobic || []);
     // Innstillinger flettes (server vinner), apiKey holdes utenfor klienten.
     const settings = data.settings || {};
     for (const [key, value] of Object.entries(settings)) {

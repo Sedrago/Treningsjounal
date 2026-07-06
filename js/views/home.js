@@ -3,20 +3,28 @@
  */
 
 import * as store from '../store.js';
-import { getMessages, nextRecommendedCategory, weeklyBalance } from '../assistant.js';
-import { daysThisWeek, weekStreak, workoutDates } from '../stats.js';
+import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
+import { daysLast7Days, trainingStreak, aerobicMinutesSince } from '../stats.js';
 import { balanceBars } from '../charts.js';
-import { esc, formatDateLong, relativeDays, startOfWeek, todayStr } from '../utils.js';
+import { esc, formatDateLong, relativeDays, todayStr, windowStartStr } from '../utils.js';
 
 export async function render(container) {
   const sets = await store.getEnrichedSets();
-  const dates = workoutDates(sets);
+  const aerobic = await store.getAerobicSessions();
+  const dates = [...new Set(sets.map((s) => s.date))].sort();
   const lastDate = dates[dates.length - 1] || null;
-  const streak = weekStreak(sets);
-  const thisWeek = daysThisWeek(sets);
+  const streakMode = store.getSetting('streakMode');
+  const streak = trainingStreak(sets, streakMode);
+  const last7Days = daysLast7Days(sets);
+  const since7 = windowStartStr(7);
   const messages = getMessages(sets);
   const next = nextRecommendedCategory(sets);
-  const balance = weeklyBalance(sets, todayStr(startOfWeek(new Date())));
+  const balance = balanceSince(sets, since7);
+  const aerobMin = aerobicMinutesSince(aerobic, since7);
+
+  const streakLabel = streakMode === 'calendar'
+    ? (streak === 1 ? 'uke' : 'uker')
+    : (streak === 1 ? 'periode' : 'perioder');
 
   container.innerHTML = `
     <header class="hjem-topp">
@@ -25,20 +33,21 @@ export async function render(container) {
       <div class="nokkeltal" role="list">
         <div class="nokkel" role="listitem">
           <span class="nokkel-verdi">${lastDate ? relativeDays(lastDate) : '–'}</span>
-          <span class="nokkel-navn">Siste økt</span>
+          <span class="nokkel-navn">Siste styrkeøkt</span>
         </div>
         <div class="nokkel" role="listitem">
-          <span class="nokkel-verdi">${thisWeek}</span>
-          <span class="nokkel-navn">Dager denne uken</span>
+          <span class="nokkel-verdi">${last7Days}</span>
+          <span class="nokkel-navn">Dager siste 7 dager</span>
         </div>
         <div class="nokkel" role="listitem">
-          <span class="nokkel-verdi">${streak} ${streak === 1 ? 'uke' : 'uker'}</span>
+          <span class="nokkel-verdi">${streak} ${streakLabel}</span>
           <span class="nokkel-navn">Streak</span>
         </div>
       </div>
     </header>
 
     <a href="#/okt" class="knapp primaer stor" id="start-okt">Start dagens økt</a>
+    <a href="#/aerob" class="knapp sekundaer bred">🏃 Aerob trening</a>
 
     ${messages.length ? `
     <section class="kort assistent" aria-label="Treningsassistent">
@@ -53,10 +62,11 @@ export async function render(container) {
       </p>
     </section>` : ''}
 
-    <section class="kort" aria-label="Ukentlig bevegelsesbalanse">
-      <h2 class="kort-tittel">Denne uken</h2>
+    <section class="kort" aria-label="Bevegelsesbalanse siste 7 dager">
+      <h2 class="kort-tittel">Siste 7 dager</h2>
       ${balanceBars(store.KATEGORIER.map((k) => ({ icon: k.icon, name: k.name, count: balance.counts.get(k.id) || 0 })))}
       ${balance.missing.length && sets.length ? `<p class="dus liten">Mangler: ${balance.missing.map((k) => esc(k.name)).join(', ')}</p>` : ''}
+      ${aerobMin > 0 ? `<p class="dus liten aerob-oppsummert">🏃 ${aerobMin} min aerob</p>` : ''}
     </section>
 
     <nav class="hjem-meny" aria-label="Hovedmeny">

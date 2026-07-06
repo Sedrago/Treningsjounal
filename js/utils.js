@@ -70,6 +70,18 @@ export function isoWeekKey(d) {
   return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
+/** Dato-streng for N dager siden (0 = i dag). */
+export function daysAgoStr(n, from = new Date()) {
+  const d = new Date(from.getTime());
+  d.setDate(d.getDate() - n);
+  return todayStr(d);
+}
+
+/** Første dato (inkl.) i et vindu på `days` dager som slutter i dag. */
+export function windowStartStr(days) {
+  return daysAgoStr(Math.max(0, days - 1));
+}
+
 /** Mandag i uken til gitt dato. */
 export function startOfWeek(d) {
   const date = new Date(d.getTime());

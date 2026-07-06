@@ -4,7 +4,7 @@
  * og kategori).
  */
 
-import { epley1RM, isoWeekKey, parseDate, startOfWeek, todayStr } from './utils.js';
+import { epley1RM, isoWeekKey, parseDate, startOfWeek, todayStr, windowStartStr, daysAgoStr } from './utils.js';
 
 /** Volum for ett sett (kg × reps). */
 export function setVolume(s) {
@@ -40,11 +40,64 @@ export function weekStreak(sets) {
   return streak;
 }
 
-/** Antall unike treningsdager i inneværende uke. */
+/**
+ * Streak i rullerende 7-dagersperioder: minst én treningsdag per periode,
+ * regnet bakover fra i dag.
+ */
+export function rollingWeekStreak(sets) {
+  const dateSet = new Set(workoutDates(sets));
+  if (!dateSet.size) return 0;
+  let streak = 0;
+  let endOffset = 0;
+  while (true) {
+    let found = false;
+    for (let i = 0; i < 7; i++) {
+      if (dateSet.has(daysAgoStr(endOffset + i))) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) break;
+    streak += 1;
+    endOffset += 7;
+  }
+  return streak;
+}
+
+/** Streak etter valgt modus: 'rolling7' | 'calendar'. */
+export function trainingStreak(sets, mode = 'rolling7') {
+  return mode === 'calendar' ? weekStreak(sets) : rollingWeekStreak(sets);
+}
+
+/** Sett som telles som arbeidssett (RIR registrert og ≤ grense). */
+export function isWorkingSet(set, maxRir = 4) {
+  if (set.rir == null || set.rir === '') return false;
+  return Number(set.rir) <= Number(maxRir);
+}
+
+/** Antall arbeidssett i en liste. */
+export function countWorkingSets(sets, maxRir = 4) {
+  return sets.filter((s) => isWorkingSet(s, maxRir)).length;
+}
+
+/** Antall unike treningsdager i inneværende kalenderuke. */
 export function daysThisWeek(sets) {
   const monday = startOfWeek(new Date());
   const mondayStr = todayStr(monday);
   return new Set(sets.filter((s) => s.date >= mondayStr).map((s) => s.date)).size;
+}
+
+/** Antall unike treningsdager siste 7 dager (inkl. i dag). */
+export function daysLast7Days(sets) {
+  const since = windowStartStr(7);
+  return new Set(sets.filter((s) => s.date >= since).map((s) => s.date)).size;
+}
+
+/** Summer minutter fra aerob-aktiviteter siden gitt dato. */
+export function aerobicMinutesSince(rows, sinceDate) {
+  return rows
+    .filter((r) => r.date >= sinceDate)
+    .reduce((sum, r) => sum + (Number(r.minutes) || 0), 0);
 }
 
 /** Beste estimerte 1RM for en øvelses sett. */

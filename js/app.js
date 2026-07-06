@@ -13,6 +13,7 @@ import * as logging from './views/logging.js';
 import * as history from './views/history.js';
 import * as statistics from './views/statistics.js';
 import * as bodyweight from './views/bodyweight.js';
+import * as aerobic from './views/aerobic.js';
 import * as exercises from './views/exercises.js';
 import * as exerciseLibrary from './views/exercise-library.js';
 import * as settings from './views/settings.js';
@@ -26,6 +27,7 @@ const routes = {
   ovelse: history.renderExercise,
   statistikk: statistics.render,
   kroppsvekt: bodyweight.render,
+  aerob: aerobic.render,
   ovelser: exercises.render,
   bibliotek: exerciseLibrary.render,
   innstillinger: settings.render,

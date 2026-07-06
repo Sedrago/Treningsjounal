@@ -431,6 +431,29 @@ select.inndata { appearance: none; }
 .forslag.decrease { border-left-color: var(--advarsel); }
 .forslag p { margin: 0; font-weight: 600; }
 
+.rir-hurtigvalg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.knapp.rir-chip {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  background: var(--flate-2);
+  color: var(--tekst);
+}
+.knapp.rir-chip:active { background: var(--flate-3); }
+
+.aerob-rad {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
+
 .sett-hode {
   display: grid;
   grid-template-columns: 34px 1fr 1fr 1fr 44px 44px;

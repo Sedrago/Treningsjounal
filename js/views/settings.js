@@ -78,6 +78,16 @@ export async function render(container) {
         <option value="hjem" ${s('startPage') === 'hjem' ? 'selected' : ''}>Hjem</option>
         <option value="okt" ${s('startPage') === 'okt' ? 'selected' : ''}>Dagens økt</option>
       </select>
+
+      <label class="felt-navn" for="s-streak">Streak-modus</label>
+      <select class="inndata" id="s-streak">
+        <option value="rolling7" ${s('streakMode') === 'rolling7' ? 'selected' : ''}>Rullerende 7 dager (minst 1 dag per periode)</option>
+        <option value="calendar" ${s('streakMode') === 'calendar' ? 'selected' : ''}>Kalenderuke (mandag–søndag)</option>
+      </select>
+
+      <label class="felt-navn" for="s-arbeidssett">Arbeidssett-grense (RIR ≤)</label>
+      <p class="dus liten">Sett med høyere RIR eller uten RIR telles som lette/oppvarming og brukes ikke i intensitetsstatistikk.</p>
+      <input type="number" class="inndata" id="s-arbeidssett" value="${s('workingSetRirMax')}" min="0" max="10">
     </section>
 
     <section class="kort" aria-label="Eksport og import">
@@ -153,6 +163,8 @@ export async function render(container) {
   bind('#s-repsmin', 'defaultRepsMin');
   bind('#s-repsmaks', 'defaultRepsMax');
   bind('#s-start', 'startPage');
+  bind('#s-streak', 'streakMode');
+  bind('#s-arbeidssett', 'workingSetRirMax');
 
   // Eksport.
   container.querySelector('#eksport-json').addEventListener('click', () => ie.exportJson());

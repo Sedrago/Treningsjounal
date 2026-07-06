@@ -85,6 +85,13 @@ export async function render(container, params) {
     </section>` : ''}
 
     <section aria-label="Dagens sett">
+      <div class="rir-hurtigvalg" aria-label="RIR-hurtigvalg">
+        <span class="dus liten">RIR:</span>
+        <button type="button" class="knapp rir-chip" data-rir="2" title="Tung (ca. RIR 0–2)">Tung</button>
+        <button type="button" class="knapp rir-chip" data-rir="4" title="Moderat (ca. RIR 3–4)">Mod</button>
+        <button type="button" class="knapp rir-chip" data-rir="6" title="Lett (RIR 5+)">Lett</button>
+        <button type="button" class="knapp rir-chip" data-rir="" title="Ikke relevant">–</button>
+      </div>
       <div class="sett-hode">
         <span class="sett-nr-plass"></span><span>${unit}</span><span>Reps</span><span>RIR</span><span></span>
       </div>
@@ -100,6 +107,7 @@ export async function render(container, params) {
 
   const list = container.querySelector('#sett-liste');
   const rows = [];
+  let activeRirInput = null;
 
   /** Lagrer en rad hvis den har innhold. */
   async function persistRow(row) {
@@ -138,6 +146,9 @@ export async function render(container, params) {
     `;
 
     el.querySelectorAll('[data-felt]').forEach((input) => {
+      if (input.dataset.felt === 'rir') {
+        input.addEventListener('focus', () => { activeRirInput = input; });
+      }
       input.addEventListener('input', () => {
         const field = input.dataset.felt;
         const value = input.value.trim();
@@ -204,6 +215,18 @@ export async function render(container, params) {
       weight: lastRow?.set.weight ?? null,
       reps: null, rir: null, comment: '',
     }, true);
+  });
+
+  container.querySelectorAll('.rir-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = activeRirInput
+        || list.querySelector('.sett-rad:last-child [data-felt="rir"]');
+      if (!target) return;
+      const val = btn.dataset.rir;
+      target.value = val;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      target.focus();
+    });
   });
 
   container.querySelectorAll('.hvile').forEach((btn) => {
