@@ -14,6 +14,7 @@ import * as history from './views/history.js';
 import * as statistics from './views/statistics.js';
 import * as bodyweight from './views/bodyweight.js';
 import * as aerobic from './views/aerobic.js';
+import * as sleep from './views/sleep.js';
 import * as exercises from './views/exercises.js';
 import * as exerciseLibrary from './views/exercise-library.js';
 import * as settings from './views/settings.js';
@@ -28,6 +29,7 @@ const routes = {
   statistikk: statistics.render,
   kroppsvekt: bodyweight.render,
   aerob: aerobic.render,
+  sovn: sleep.render,
   ovelser: exercises.render,
   bibliotek: exerciseLibrary.render,
   innstillinger: settings.render,

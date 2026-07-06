@@ -453,6 +453,15 @@ select.inndata { appearance: none; }
   gap: 12px;
 }
 .aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
+.sovn-oppsummert { margin: 0 0 12px; padding: 0 4px; }
+.sovn-rad {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.hjem-ekstra { margin-bottom: 12px; }
+.hjem-ekstra .knapp { flex: 1; text-align: center; text-decoration: none; }
 
 .sett-hode {
   display: grid;

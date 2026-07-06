@@ -17,6 +17,7 @@ var SHEETS = {
   set: 'Sets',
   bodyweight: 'Bodyweight',
   aerobic: 'Aerobic',
+  sleep: 'Sleep',
   category: 'Categories',
   setting: 'Settings',
 };
@@ -29,6 +30,7 @@ var COLUMNS = {
     'rest', 'comment', 'deleted', 'updatedAt'],
   Bodyweight: ['id', 'date', 'weight', 'fatPct', 'comment', 'deleted', 'updatedAt'],
   Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt'],
+  Sleep: ['id', 'date', 'hours', 'quality', 'comment', 'deleted', 'updatedAt'],
   Categories: ['id', 'name', 'icon', 'priority'],
   Settings: ['key', 'value'],
   Statistics: ['key', 'value'],
@@ -218,6 +220,7 @@ function pullAll_() {
     sets: readAll_('Sets'),
     bodyweight: readAll_('Bodyweight'),
     aerobic: readAll_('Aerobic'),
+    sleep: readAll_('Sleep'),
     categories: readAll_('Categories'),
     settings: settings,
   };

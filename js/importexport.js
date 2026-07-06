@@ -38,6 +38,7 @@ export async function exportJson() {
     sets: await store.getAllSets(),
     bodyweight: await store.getBodyweights(),
     aerobic: await store.getAerobicSessions(),
+    sleep: await store.getSleepEntries(),
   };
   download(`treningsjournal-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
@@ -123,6 +124,7 @@ export async function importJson(text) {
   for (const s of data.sets || []) { await store.saveSet(s); count++; }
   for (const b of data.bodyweight || []) { await store.saveBodyweight(b); count++; }
   for (const a of data.aerobic || []) { await store.saveAerobicSession(a); count++; }
+  for (const s of data.sleep || []) { await store.saveSleepEntry(s); count++; }
   return count;
 }
 

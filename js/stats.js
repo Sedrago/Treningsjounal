@@ -100,6 +100,44 @@ export function aerobicMinutesSince(rows, sinceDate) {
     .reduce((sum, r) => sum + (Number(r.minutes) || 0), 0);
 }
 
+/** Oppsummert søvn siden gitt dato. */
+export function sleepSummarySince(rows, sinceDate) {
+  const recent = rows.filter((r) => r.date >= sinceDate);
+  if (!recent.length) return null;
+  const avgHours = recent.reduce((sum, r) => sum + (Number(r.hours) || 0), 0) / recent.length;
+  const withQuality = recent.filter((r) => r.quality != null && r.quality !== '');
+  const avgQuality = withQuality.length
+    ? withQuality.reduce((sum, r) => sum + Number(r.quality), 0) / withQuality.length
+    : null;
+  return {
+    nights: recent.length,
+    avgHours: Math.round(avgHours * 10) / 10,
+    avgQuality: avgQuality != null ? Math.round(avgQuality * 10) / 10 : null,
+  };
+}
+
+/** Gjennomsnittlig søvntimer per ISO-uke (siste `numWeeks`). */
+export function sleepHoursPerWeek(rows, numWeeks = 12) {
+  const result = [];
+  const cursor = startOfWeek(new Date());
+  cursor.setDate(cursor.getDate() - 7 * (numWeeks - 1));
+  const byWeek = groupBy(rows, (r) => isoWeekKey(parseDate(r.date)));
+  for (let i = 0; i < numWeeks; i++) {
+    const key = isoWeekKey(cursor);
+    const weekRows = byWeek.get(key) || [];
+    const avg = weekRows.length
+      ? weekRows.reduce((s, r) => s + (Number(r.hours) || 0), 0) / weekRows.length
+      : null;
+    result.push({
+      week: key,
+      label: key.split('-W')[1],
+      value: avg != null ? Math.round(avg * 10) / 10 : null,
+    });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return result;
+}
+
 /** Beste estimerte 1RM for en øvelses sett. */
 export function best1RM(sets) {
   return sets.reduce((best, s) => Math.max(best, epley1RM(s.weight, s.reps)), 0);

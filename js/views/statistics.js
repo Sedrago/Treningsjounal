@@ -21,6 +21,7 @@ export async function render(container) {
   const enriched = await store.getEnrichedSets();
   const workouts = await store.getWorkouts();
   const aerobic = await store.getAerobicSessions();
+  const sleepRows = await store.getSleepEntries();
   const bodyweights = await store.getBodyweights();
   const units = store.getSetting('units');
   const unit = weightUnit(units);
@@ -47,6 +48,8 @@ export async function render(container) {
     .slice(0, 8);
 
   const latest = saldo.latest;
+  const sleepWeeks = stats.sleepHoursPerWeek(sleepRows);
+  const hasSleepChart = sleepWeeks.filter((w) => w.value != null).length >= 2;
 
   container.innerHTML = `
     <header class="side-topp">
@@ -72,6 +75,12 @@ export async function render(container) {
       ${latest.strengthExercises ? `<p class="dus liten">Styrke basert på ${latest.strengthExercises} øvelse${latest.strengthExercises === 1 ? '' : 'r'} denne uken.</p>` : ''}` : ''}
       <div id="saldo-graf"></div>
     </section>
+
+    ${hasSleepChart ? `
+    <section class="kort">
+      <h2 class="kort-tittel">Søvn (snitt timer/natt)</h2>
+      <div id="sovn-graf"></div>
+    </section>` : ''}
 
     <section class="kort">
       <h2 class="kort-tittel">Aktivitet siste 6 måneder</h2>
@@ -120,6 +129,13 @@ export async function render(container) {
         : `${key}: ingen styrke`),
     },
   );
+
+  if (hasSleepChart) {
+    lineChart(
+      container.querySelector('#sovn-graf'),
+      sleepWeeks.filter((w) => w.value != null).map((w) => ({ label: w.label, value: w.value })),
+    );
+  }
 
   if (bodyweights.length >= 2) {
     const points = [...bodyweights].reverse().slice(-30).map((b) => ({

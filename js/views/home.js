@@ -4,13 +4,14 @@
 
 import * as store from '../store.js';
 import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
-import { daysLast7Days, trainingStreak, aerobicMinutesSince } from '../stats.js';
+import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince } from '../stats.js';
 import { balanceBars } from '../charts.js';
 import { esc, formatDateLong, relativeDays, todayStr, windowStartStr } from '../utils.js';
 
 export async function render(container) {
   const sets = await store.getEnrichedSets();
   const aerobic = await store.getAerobicSessions();
+  const sleepRows = await store.getSleepEntries();
   const dates = [...new Set(sets.map((s) => s.date))].sort();
   const lastDate = dates[dates.length - 1] || null;
   const streakMode = store.getSetting('streakMode');
@@ -21,6 +22,7 @@ export async function render(container) {
   const next = nextRecommendedCategory(sets);
   const balance = balanceSince(sets, since7);
   const aerobMin = aerobicMinutesSince(aerobic, since7);
+  const sleepSum = sleepSummarySince(sleepRows, since7);
 
   const streakLabel = streakMode === 'calendar'
     ? (streak === 1 ? 'uke' : 'uker')
@@ -47,7 +49,10 @@ export async function render(container) {
     </header>
 
     <a href="#/okt" class="knapp primaer stor" id="start-okt">Start dagens økt</a>
-    <a href="#/aerob" class="knapp sekundaer bred">🏃 Aerob trening</a>
+    <div class="knapp-rad hjem-ekstra">
+      <a href="#/aerob" class="knapp sekundaer">🏃 Aerob</a>
+      <a href="#/sovn" class="knapp sekundaer">😴 Søvn</a>
+    </div>
 
     ${messages.length ? `
     <section class="kort assistent" aria-label="Treningsassistent">
@@ -67,6 +72,7 @@ export async function render(container) {
       ${balanceBars(store.KATEGORIER.map((k) => ({ icon: k.icon, name: k.name, count: balance.counts.get(k.id) || 0 })))}
       ${balance.missing.length && sets.length ? `<p class="dus liten">Mangler: ${balance.missing.map((k) => esc(k.name)).join(', ')}</p>` : ''}
       ${aerobMin > 0 ? `<p class="dus liten aerob-oppsummert">🏃 ${aerobMin} min aerob</p>` : ''}
+      ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${sleepSum.avgHours} t søvn (${sleepSum.nights} netter)</p>` : ''}
     </section>
 
     <nav class="hjem-meny" aria-label="Hovedmeny">

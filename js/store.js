@@ -423,6 +423,51 @@ export async function deleteAerobicSession(id) {
   await queueOp('aerobic', 'upsert', row);
 }
 
+/* ---------- Søvn ---------- */
+
+/** Valgfri kvalitetsskala 1–5. */
+export const SLEEP_QUALITY = [
+  { value: 1, name: 'Dårlig' },
+  { value: 2, name: 'Litt dårlig' },
+  { value: 3, name: 'OK' },
+  { value: 4, name: 'Bra' },
+  { value: 5, name: 'Utmerket' },
+];
+
+export function sleepQualityLabel(value) {
+  if (value == null || value === '') return null;
+  return SLEEP_QUALITY.find((q) => q.value === Number(value))?.name || null;
+}
+
+export async function getSleepEntries() {
+  const all = await db.getAll('sleep');
+  return all.filter((s) => !s.deleted).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export async function saveSleepEntry(entry) {
+  const record = {
+    id: entry.id || uuid(),
+    date: entry.date || todayStr(),
+    hours: Math.min(24, Math.max(0, Number(entry.hours) || 0)),
+    quality: entry.quality === '' || entry.quality == null ? null : Number(entry.quality),
+    comment: entry.comment || '',
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  await db.put('sleep', record);
+  await queueOp('sleep', 'upsert', record);
+  return record;
+}
+
+export async function deleteSleepEntry(id) {
+  const row = await db.get('sleep', id);
+  if (!row) return;
+  row.deleted = true;
+  row.updatedAt = nowIso();
+  await db.put('sleep', row);
+  await queueOp('sleep', 'upsert', row);
+}
+
 /* ---------- Sammensatte spørringer ---------- */
 
 /**
@@ -471,7 +516,7 @@ export async function getLastSessionForExercise(exerciseId, beforeDate = null) {
 
 /** Sletter alle lokale data (brukes fra innstillinger). */
 export async function wipeLocalData() {
-  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'settings', 'queue', 'meta']) {
+  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'settings', 'queue', 'meta']) {
     await db.clearStore(s);
   }
   Object.assign(settingsCache, DEFAULT_SETTINGS);
