@@ -138,9 +138,42 @@ export function fmtDuration(minutes) {
 
 /** Sekunder → 'M:SS'. */
 export function fmtClock(totalSec) {
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
+  if (totalSec == null || Number.isNaN(totalSec)) return '–';
+  const sec = Math.max(0, Math.round(Number(totalSec)));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/** Parser varighet fra '90', '1:30' osv. → sekunder. */
+export function parseDurationInput(value) {
+  const v = String(value ?? '').trim();
+  if (!v) return null;
+  if (v.includes(':')) {
+    const [minPart, secPart] = v.split(':');
+    const m = parseInt(minPart, 10) || 0;
+    const s = parseInt(secPart, 10) || 0;
+    return m * 60 + s;
+  }
+  const n = parseInt(v.replace(',', '.'), 10);
+  return Number.isNaN(n) ? null : Math.max(0, n);
+}
+
+/** Viser ett sett kompakt (historikk, dagens økt). */
+export function summarizeSet(set, logMode, units = 'metric') {
+  const mode = logMode || 'weight';
+  if (mode === 'duration' || set.durationSec != null) {
+    return fmtClock(set.durationSec);
+  }
+  const reps = set.reps ?? '–';
+  if (mode === 'bodyweight') {
+    if (set.weight != null) {
+      return `${fmtNum(toDisplayWeight(set.weight, units))} ${weightUnit(units)} · ${reps}`;
+    }
+    return `${reps} reps`;
+  }
+  const w = set.weight != null ? `${fmtNum(toDisplayWeight(set.weight, units))} ${weightUnit(units)}` : '–';
+  return `${w} × ${reps}`;
 }
 
 /** HTML-escaping for trygg rendering av brukertekst. */

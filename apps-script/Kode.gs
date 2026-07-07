@@ -25,9 +25,9 @@ var SHEETS = {
 
 var COLUMNS = {
   Exercises: ['id', 'name', 'category', 'notes', 'video', 'active',
-    'goalSets', 'goalRepsMin', 'goalRepsMax', 'deleted', 'updatedAt', 'catalogId'],
+    'goalSets', 'goalRepsMin', 'goalRepsMax', 'logMode', 'deleted', 'updatedAt', 'catalogId'],
   Workouts: ['id', 'date', 'startedAt', 'duration', 'bodyweight', 'notes', 'deleted', 'updatedAt'],
-  Sets: ['id', 'workoutId', 'exerciseId', 'setNumber', 'weight', 'reps', 'rir',
+  Sets: ['id', 'workoutId', 'exerciseId', 'setNumber', 'weight', 'reps', 'rir', 'durationSec',
     'rest', 'comment', 'deleted', 'updatedAt'],
   Bodyweight: ['id', 'date', 'weight', 'fatPct', 'comment', 'deleted', 'updatedAt'],
   Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt'],

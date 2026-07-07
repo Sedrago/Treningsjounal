@@ -8,11 +8,46 @@
 import * as store from '../store.js';
 import * as timer from '../timer.js';
 import { initContent, getDescription } from '../content.js';
-import { progressionSuggestion } from '../assistant.js';
 import {
   esc, fmtNum, formatDateShort, todayStr, debounce,
   toDisplayWeight, fromInputWeight, weightUnit,
+  fmtClock, parseDurationInput, summarizeSet,
 } from '../utils.js';
+
+function setRowHtml(set, { logMode, units, unit, showWeight }) {
+  const weightCell = showWeight ? `
+        <input type="number" inputmode="decimal" step="any" class="inndata" data-felt="weight"
+          value="${set.weight != null ? fmtNum(toDisplayWeight(set.weight, units)).replace(',', '.') : ''}"
+          aria-label="Vekt sett ${set.setNumber}" placeholder="0">` : '';
+
+  if (logMode === 'duration') {
+    return `
+      <div class="sett-rad">
+        <span class="sett-nr">${set.setNumber}</span>
+        <input type="text" inputmode="numeric" class="inndata" data-felt="durationSec"
+          value="${set.durationSec != null ? fmtClock(set.durationSec) : ''}"
+          aria-label="Varighet sett ${set.setNumber}" placeholder="1:30">
+        <input type="number" inputmode="numeric" class="inndata" data-felt="rir"
+          value="${set.rir ?? ''}" aria-label="RIR sett ${set.setNumber}"
+          placeholder="${store.getSetting('defaultRir')}">
+        <button type="button" class="ikon-knapp" data-handling="kommentar" aria-label="Kommentar">💬</button>
+        <button type="button" class="ikon-knapp" data-handling="slett" aria-label="Slett sett">✕</button>
+      </div>`;
+  }
+
+  return `
+      <div class="sett-rad">
+        <span class="sett-nr">${set.setNumber}</span>
+        ${weightCell}
+        <input type="number" inputmode="numeric" class="inndata" data-felt="reps"
+          value="${set.reps ?? ''}" aria-label="Repetisjoner sett ${set.setNumber}" placeholder="0">
+        <input type="number" inputmode="numeric" class="inndata" data-felt="rir"
+          value="${set.rir ?? ''}" aria-label="RIR sett ${set.setNumber}"
+          placeholder="${store.getSetting('defaultRir')}">
+        <button type="button" class="ikon-knapp" data-handling="kommentar" aria-label="Kommentar">💬</button>
+        <button type="button" class="ikon-knapp" data-handling="slett" aria-label="Slett sett">✕</button>
+      </div>`;
+}
 
 export async function render(container, params) {
   await initContent();
@@ -23,15 +58,13 @@ export async function render(container, params) {
     return;
   }
   const category = store.categoryById(exercise.category);
+  const logMode = store.logModeOf(exercise);
   const units = store.getSetting('units');
   const unit = weightUnit(units);
   const today = todayStr();
 
   const lastSession = await store.getLastSessionForExercise(exerciseId, today);
-  const allExSets = (await store.getEnrichedSets()).filter((s) => s.exerciseId === exerciseId);
-  const suggestion = progressionSuggestion(exercise, lastSession, allExSets);
 
-  // Dagens allerede lagrede sett for øvelsen.
   const workouts = await store.getWorkouts();
   const todayWorkout = workouts.find((w) => w.date === today) || null;
   let persisted = [];
@@ -39,10 +72,17 @@ export async function render(container, params) {
     persisted = (await store.getSetsForWorkout(todayWorkout.id)).filter((s) => s.exerciseId === exerciseId);
   }
 
-  const goalText = `${exercise.goalSets} × ${exercise.goalRepsMin}–${exercise.goalRepsMax}`;
+  const goalText = store.goalTextFor(exercise);
   const description = getDescription(exercise);
   const restTimes = String(store.getSetting('restTimes')).split(',')
     .map((t) => parseInt(t.trim(), 10)).filter((t) => t > 0);
+
+  const modeClass = logMode === 'bodyweight' ? 'bodyweight' : logMode === 'duration' ? 'duration' : 'weight';
+  const headerCols = logMode === 'duration'
+    ? '<span class="sett-nr-plass"></span><span>Varighet</span><span>RIR</span><span></span>'
+    : logMode === 'bodyweight'
+      ? '<span class="sett-nr-plass"></span><span>Reps</span><span>RIR</span><span></span>'
+      : `<span class="sett-nr-plass"></span><span>${unit}</span><span>Reps</span><span>RIR</span><span></span>`;
 
   container.innerHTML = `
     <header class="side-topp">
@@ -72,19 +112,18 @@ export async function render(container, params) {
       ${lastSession.sets.map((s) => `
         <p class="forrige-sett">
           <span class="sett-nr">${s.setNumber}</span>
-          <strong>${s.weight != null ? `${fmtNum(toDisplayWeight(s.weight, units))} ${unit}` : '–'}</strong>
-          × ${s.reps ?? '–'}
+          <strong>${esc(summarizeSet(s, logMode, units))}</strong>
           ${s.rir != null ? `<span class="dus">RIR ${s.rir}</span>` : ''}
           ${s.comment ? `<span class="dus kommentar">«${esc(s.comment)}»</span>` : ''}
         </p>`).join('')}
     </section>` : '<section class="kort forrige"><p class="dus">Første gang du logger denne øvelsen.</p></section>'}
 
-    ${suggestion ? `
-    <section class="kort forslag ${suggestion.type}" aria-label="Forslag fra assistenten">
-      <p><span aria-hidden="true">${suggestion.type === 'increase' ? '📈' : '💡'}</span> ${esc(suggestion.text)}</p>
-    </section>` : ''}
-
-    <section aria-label="Dagens sett">
+    <section class="logg-sett logg-sett--${modeClass}" aria-label="Dagens sett" data-mode="${modeClass}">
+      ${logMode === 'bodyweight' ? `
+      <label class="bryter-rad logg-tilleggsvekt">
+        <input type="checkbox" id="tilleggsvekt">
+        <span>Tilleggsvekt (veste, skive …)</span>
+      </label>` : ''}
       <div class="rir-hurtigvalg" aria-label="RIR-hurtigvalg">
         <span class="dus liten">RIR:</span>
         <button type="button" class="knapp rir-chip" data-rir="2" title="Tung (ca. RIR 0–2)">Tung</button>
@@ -92,9 +131,7 @@ export async function render(container, params) {
         <button type="button" class="knapp rir-chip" data-rir="6" title="Lett (RIR 5+)">Lett</button>
         <button type="button" class="knapp rir-chip" data-rir="" title="Ikke relevant">–</button>
       </div>
-      <div class="sett-hode">
-        <span class="sett-nr-plass"></span><span>${unit}</span><span>Reps</span><span>RIR</span><span></span>
-      </div>
+      <div class="sett-hode sett-hode--${modeClass}">${headerCols}</div>
       <div id="sett-liste"></div>
       <button type="button" class="knapp sekundaer bred" id="nytt-sett">+ Legg til sett</button>
     </section>
@@ -105,14 +142,27 @@ export async function render(container, params) {
     </section>
   `;
 
+  const logSection = container.querySelector('.logg-sett');
   const list = container.querySelector('#sett-liste');
   const rows = [];
   let activeRirInput = null;
+  let showWeight = logMode === 'weight';
 
-  /** Lagrer en rad hvis den har innhold. */
+  if (logMode === 'bodyweight') {
+    const toggle = container.querySelector('#tilleggsvekt');
+    toggle.addEventListener('change', () => {
+      showWeight = toggle.checked;
+      logSection.classList.toggle('med-vekt', showWeight);
+      logSection.querySelector('.sett-hode').innerHTML = showWeight
+        ? `<span class="sett-nr-plass"></span><span>${unit}</span><span>Reps</span><span>RIR</span><span></span>`
+        : headerCols;
+      rebuildRows();
+    });
+  }
+
   async function persistRow(row) {
     const hasContent = row.set.weight != null || row.set.reps != null
-      || row.set.rir != null || row.set.comment;
+      || row.set.durationSec != null || row.set.rir != null || row.set.comment;
     if (!hasContent) return;
     const workout = await store.getOrCreateTodayWorkout();
     row.set.workoutId = workout.id;
@@ -121,30 +171,7 @@ export async function render(container, params) {
     await store.touchWorkoutDuration(workout.id);
   }
 
-  function addRow(set, focus = false) {
-    const row = { set: { ...set }, save: null };
-    row.save = debounce(() => persistRow(row), 500);
-    const el = document.createElement('div');
-    el.className = 'sett-rad-gruppe';
-    el.innerHTML = `
-      <div class="sett-rad">
-        <span class="sett-nr">${set.setNumber}</span>
-        <input type="number" inputmode="decimal" step="any" class="inndata" data-felt="weight"
-          value="${set.weight != null ? fmtNum(toDisplayWeight(set.weight, units)).replace(',', '.') : ''}"
-          aria-label="Vekt sett ${set.setNumber}" placeholder="0">
-        <input type="number" inputmode="numeric" class="inndata" data-felt="reps"
-          value="${set.reps ?? ''}" aria-label="Repetisjoner sett ${set.setNumber}" placeholder="0">
-        <input type="number" inputmode="numeric" class="inndata" data-felt="rir"
-          value="${set.rir ?? ''}" aria-label="RIR sett ${set.setNumber}"
-          placeholder="${store.getSetting('defaultRir')}">
-        <button type="button" class="ikon-knapp" data-handling="kommentar" aria-label="Kommentar">💬</button>
-        <button type="button" class="ikon-knapp" data-handling="slett" aria-label="Slett sett">✕</button>
-      </div>
-      <input type="text" class="inndata sett-kommentar ${set.comment ? '' : 'skjult'}"
-        data-felt="comment" value="${esc(set.comment || '')}"
-        placeholder="Kommentar …" aria-label="Kommentar sett ${set.setNumber}">
-    `;
-
+  function wireRow(el, row) {
     el.querySelectorAll('[data-felt]').forEach((input) => {
       if (input.dataset.felt === 'rir') {
         input.addEventListener('focus', () => { activeRirInput = input; });
@@ -154,6 +181,8 @@ export async function render(container, params) {
         const value = input.value.trim();
         if (field === 'weight') {
           row.set.weight = value === '' ? null : fromInputWeight(parseFloat(value.replace(',', '.')), units);
+        } else if (field === 'durationSec') {
+          row.set.durationSec = parseDurationInput(value);
         } else if (field === 'comment') {
           row.set.comment = value;
         } else {
@@ -174,13 +203,27 @@ export async function render(container, params) {
       el.remove();
       renumber();
     });
-
-    rows.push(row);
-    list.appendChild(el);
-    if (focus) el.querySelector('[data-felt="reps"]').focus();
   }
 
-  /** Renummererer settene etter sletting. */
+  function addRow(set, focus = false) {
+    const row = { set: { ...set, exerciseId }, save: null };
+    row.save = debounce(() => persistRow(row), 500);
+    const el = document.createElement('div');
+    el.className = 'sett-rad-gruppe';
+    el.innerHTML = `
+      ${setRowHtml(set, { logMode, units, unit, showWeight })}
+      <input type="text" class="inndata sett-kommentar ${set.comment ? '' : 'skjult'}"
+        data-felt="comment" value="${esc(set.comment || '')}"
+        placeholder="Kommentar …" aria-label="Kommentar sett ${set.setNumber}">`;
+    wireRow(el, row);
+    rows.push(row);
+    list.appendChild(el);
+    if (focus) {
+      const focusField = logMode === 'duration' ? 'durationSec' : 'reps';
+      el.querySelector(`[data-felt="${focusField}"]`)?.focus();
+    }
+  }
+
   function renumber() {
     rows.forEach((row, i) => {
       const n = i + 1;
@@ -192,18 +235,43 @@ export async function render(container, params) {
     list.querySelectorAll('.sett-nr').forEach((el, i) => { el.textContent = i + 1; });
   }
 
-  // Startrader: dagens lagrede sett, ellers mål-antall rader
-  // forhåndsutfylt med vekt fra forrige økt (reps fylles inn av deg).
+  function rebuildRows() {
+    const saved = rows.map((r) => ({ ...r.set }));
+    list.innerHTML = '';
+    rows.length = 0;
+    saved.forEach((s) => addRow(s));
+  }
+
   if (persisted.length) {
     persisted.forEach((s) => addRow(s));
+    if (logMode === 'bodyweight' && persisted.some((s) => s.weight != null)) {
+      container.querySelector('#tilleggsvekt').checked = true;
+      container.querySelector('#tilleggsvekt').dispatchEvent(new Event('change'));
+    }
   } else {
     const n = Number(exercise.goalSets) || 3;
+    const prev = lastSession?.sets;
     for (let i = 1; i <= n; i++) {
-      const prev = lastSession?.sets[i - 1] || lastSession?.sets[lastSession.sets.length - 1];
-      const prefillWeight = suggestion?.type === 'increase' && i === 1
-        ? suggestion.weight
-        : prev?.weight ?? null;
-      addRow({ exerciseId, setNumber: i, weight: prefillWeight, reps: null, rir: null, comment: '' });
+      const prevSet = prev?.[i - 1] || prev?.[prev.length - 1];
+      if (logMode === 'duration') {
+        addRow({
+          exerciseId, setNumber: i,
+          weight: null, reps: null, durationSec: prevSet?.durationSec ?? null,
+          rir: null, comment: '',
+        });
+      } else if (logMode === 'bodyweight') {
+        addRow({
+          exerciseId, setNumber: i,
+          weight: prevSet?.weight ?? null, reps: null,
+          durationSec: null, rir: null, comment: '',
+        });
+      } else {
+        addRow({
+          exerciseId, setNumber: i,
+          weight: prevSet?.weight ?? null, reps: null,
+          durationSec: null, rir: null, comment: '',
+        });
+      }
     }
   }
 
@@ -212,8 +280,11 @@ export async function render(container, params) {
     addRow({
       exerciseId,
       setNumber: rows.length + 1,
-      weight: lastRow?.set.weight ?? null,
-      reps: null, rir: null, comment: '',
+      weight: logMode === 'weight' || showWeight ? (lastRow?.set.weight ?? null) : null,
+      reps: null,
+      durationSec: logMode === 'duration' ? (lastRow?.set.durationSec ?? null) : null,
+      rir: null,
+      comment: '',
     }, true);
   });
 
@@ -222,8 +293,7 @@ export async function render(container, params) {
       const target = activeRirInput
         || list.querySelector('.sett-rad:last-child [data-felt="rir"]');
       if (!target) return;
-      const val = btn.dataset.rir;
-      target.value = val;
+      target.value = btn.dataset.rir;
       target.dispatchEvent(new Event('input', { bubbles: true }));
       target.focus();
     });

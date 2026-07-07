@@ -4,7 +4,7 @@
  */
 
 import * as store from '../store.js';
-import { esc, fmtNum, formatDateLong, relativeDays, todayStr, toDisplayWeight, weightUnit, debounce, toast } from '../utils.js';
+import { esc, fmtNum, formatDateLong, relativeDays, todayStr, debounce, toast, summarizeSet } from '../utils.js';
 import { groupBy } from '../stats.js';
 
 /** Finner forrige økt-informasjon per kategori (før i dag). */
@@ -19,12 +19,16 @@ function lastPerCategory(enriched) {
     const byEx = groupBy(daySets, (s) => s.exerciseId);
     const [exId, exSets] = [...byEx.entries()].sort((a, b) => b[1].length - a[1].length)[0];
     const topWeight = Math.max(...exSets.map((s) => s.weight || 0));
+    const mode = exSets[0].logMode || 'weight';
+    const summary = exSets.sort((a, b) => a.setNumber - b.setNumber)
+      .map((s) => summarizeSet(s, mode, 'metric')).join(' / ');
     result.set(cat, {
       date: lastDate,
       exerciseId: exId,
       exerciseName: exSets[0].exerciseName,
+      logMode: mode,
       weight: topWeight || null,
-      reps: exSets.sort((a, b) => a.setNumber - b.setNumber).map((s) => s.reps ?? '–').join(' / '),
+      summary,
     });
   }
   return result;
@@ -48,14 +52,15 @@ export async function render(container) {
       const byEx = groupBy(done, (s) => s.exerciseId);
       body = [...byEx.values()].map((exSets) => {
         const name = exSets[0].exerciseName;
-        const reps = exSets.sort((a, b) => a.setNumber - b.setNumber).map((s) => s.reps ?? '–').join(' / ');
-        const top = Math.max(...exSets.map((s) => s.weight || 0));
-        return `<p class="okt-status ferdig">✓ ${esc(name)} · ${top ? `${fmtNum(toDisplayWeight(top, units))} ${weightUnit(units)} · ` : ''}${reps}</p>`;
+        const mode = exSets[0].logMode || 'weight';
+        const summary = exSets.sort((a, b) => a.setNumber - b.setNumber)
+          .map((s) => summarizeSet(s, mode, units)).join(' · ');
+        return `<p class="okt-status ferdig">✓ ${esc(name)} · ${esc(summary)}</p>`;
       }).join('');
     } else if (prev) {
       body = `
         <p class="okt-status dus">Forrige (${relativeDays(prev.date)}):</p>
-        <p class="okt-forrige">${esc(prev.exerciseName)}${prev.weight ? ` · ${fmtNum(toDisplayWeight(prev.weight, units))} ${weightUnit(units)}` : ''} · ${prev.reps}</p>`;
+        <p class="okt-forrige">${esc(prev.exerciseName)} · ${esc(prev.summary)}</p>`;
     } else {
       body = '<p class="okt-status dus">Ikke trent ennå</p>';
     }

@@ -3,11 +3,11 @@
  */
 
 import * as store from '../store.js';
-import { groupBy, totalVolume, oneRMHistory, best1RM, personalRecord, bestSessionVolume } from '../stats.js';
+import { groupBy, totalVolume, oneRMHistory, best1RM, personalRecord, personalRecordReps, personalRecordDuration, bestSessionVolume } from '../stats.js';
 import { lineChart } from '../charts.js';
 import {
   esc, fmtNum, fmtVolume, fmtDuration, formatDateShort, formatDateLong,
-  todayStr, toDisplayWeight, weightUnit,
+  todayStr, toDisplayWeight, weightUnit, summarizeSet, fmtClock,
 } from '../utils.js';
 
 const FILTERS = [
@@ -67,10 +67,11 @@ export async function render(container, params, query = {}) {
       const workout = woByDate.get(date);
       const byEx = groupBy(daySets, (s) => s.exerciseId);
       const lines = [...byEx.entries()].map(([exId, exSets]) => {
-        const top = Math.max(...exSets.map((s) => s.weight || 0));
-        const reps = exSets.sort((a, b) => a.setNumber - b.setNumber).map((s) => s.reps ?? '–').join('/');
+        const mode = exSets[0].logMode || 'weight';
+        const summary = exSets.sort((a, b) => a.setNumber - b.setNumber)
+          .map((s) => summarizeSet(s, mode, units)).join(' · ');
         return `<p class="hist-linje"><a href="#/ovelse/${exId}">${esc(exSets[0].exerciseName)}</a>
-          <span class="dus">${top ? `${fmtNum(toDisplayWeight(top, units))} ${weightUnit(units)} · ` : ''}${reps}</span></p>`;
+          <span class="dus">${esc(summary)}</span></p>`;
       }).join('');
       const comments = daySets.filter((s) => s.comment).map((s) => `<p class="dus liten">«${esc(s.comment)}»</p>`).join('');
       return `
@@ -111,22 +112,36 @@ export async function renderExercise(container, params) {
   }
   const units = store.getSetting('units');
   const unit = weightUnit(units);
+  const logMode = store.logModeOf(exercise);
   const sets = (await store.getEnrichedSets()).filter((s) => s.exerciseId === exerciseId);
   const byDate = groupBy(sets, (s) => s.date);
   const dates = [...byDate.keys()].sort().reverse();
   const pr = personalRecord(sets);
+  const prReps = personalRecordReps(sets);
+  const prDur = personalRecordDuration(sets);
   const rm = best1RM(sets);
   const bestVol = bestSessionVolume(sets);
 
-  container.innerHTML = `
-    <header class="side-topp">
-      <a href="#/historikk" class="tilbake" aria-label="Tilbake til historikk">‹</a>
-      <div>
-        <h1>${esc(exercise.name)}</h1>
-        <p class="dus">${dates.length} økter · <a href="#/logg/${exercise.id}">logg i dag</a></p>
-      </div>
-    </header>
-    ${sets.length ? `
+  let statsHtml = '';
+  if (sets.length) {
+    if (logMode === 'duration') {
+      statsHtml = `
+    <div class="nokkeltal">
+      <div class="nokkel"><span class="nokkel-verdi">${prDur ? fmtClock(prDur.durationSec) : '–'}</span>
+        <span class="nokkel-navn">Lengste hold</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${dates.length}</span>
+        <span class="nokkel-navn">Økter</span></div>
+    </div>`;
+    } else if (logMode === 'bodyweight') {
+      statsHtml = `
+    <div class="nokkeltal">
+      <div class="nokkel"><span class="nokkel-verdi">${prReps ? prReps.reps : '–'}</span>
+        <span class="nokkel-navn">Beste reps</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${dates.length}</span>
+        <span class="nokkel-navn">Økter</span></div>
+    </div>`;
+    } else {
+      statsHtml = `
     <div class="nokkeltal">
       <div class="nokkel"><span class="nokkel-verdi">${pr ? `${fmtNum(toDisplayWeight(pr.weight, units))}` : '–'}</span>
         <span class="nokkel-navn">PR (${unit})</span></div>
@@ -138,19 +153,30 @@ export async function renderExercise(container, params) {
     <section class="kort">
       <h2 class="kort-tittel">Estimert 1RM over tid</h2>
       <div id="rm-graf"></div>
-    </section>` : ''}
+    </section>`;
+    }
+  }
+
+  container.innerHTML = `
+    <header class="side-topp">
+      <a href="#/historikk" class="tilbake" aria-label="Tilbake til historikk">‹</a>
+      <div>
+        <h1>${esc(exercise.name)}</h1>
+        <p class="dus">${dates.length} økter · <a href="#/logg/${exercise.id}">logg i dag</a></p>
+      </div>
+    </header>
+    ${statsHtml}
     <div id="okt-liste">
       ${dates.map((date) => {
         const daySets = byDate.get(date).sort((a, b) => a.setNumber - b.setNumber);
         return `
           <section class="kort">
             <h2 class="kort-tittel">${formatDateShort(date)}
-              <span class="dus liten">${fmtVolume(totalVolume(daySets))} kg</span></h2>
+              <span class="dus liten">${logMode === 'weight' ? `${fmtVolume(totalVolume(daySets))} kg` : ''}</span></h2>
             ${daySets.map((s) => `
               <p class="forrige-sett">
                 <span class="sett-nr">${s.setNumber}</span>
-                <strong>${s.weight != null ? `${fmtNum(toDisplayWeight(s.weight, units))} ${unit}` : '–'}</strong>
-                × ${s.reps ?? '–'}
+                <strong>${esc(summarizeSet(s, logMode, units))}</strong>
                 ${s.rir != null ? `<span class="dus">RIR ${s.rir}</span>` : ''}
                 ${s.comment ? `<span class="dus kommentar">«${esc(s.comment)}»</span>` : ''}
               </p>`).join('')}
@@ -159,7 +185,7 @@ export async function renderExercise(container, params) {
     </div>
   `;
 
-  if (sets.length) {
+  if (logMode === 'weight' && sets.length) {
     const history = oneRMHistory(sets).map((p) => ({
       label: p.date.slice(5).replace('-', '.'),
       value: Math.round(toDisplayWeight(p.oneRM, units)),

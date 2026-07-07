@@ -5,7 +5,7 @@
 
 import * as store from './store.js';
 import * as stats from './stats.js';
-import { esc, fmtNum, fmtVolume, todayStr, uuid } from './utils.js';
+import { esc, fmtNum, fmtVolume, todayStr, uuid, fmtClock, parseDurationInput } from './utils.js';
 
 /* ---------- Hjelpere ---------- */
 
@@ -47,12 +47,13 @@ export async function exportJson() {
 /** CSV med alle sett (beriket med dato/øvelse/kategori). */
 async function buildSetsCsv(separator) {
   const enriched = await store.getEnrichedSets();
-  const header = ['dato', 'kategori', 'ovelse', 'sett', 'kg', 'reps', 'rir', 'kommentar'];
+  const header = ['dato', 'kategori', 'ovelse', 'sett', 'kg', 'reps', 'rir', 'varighet', 'kommentar'];
   const lines = [header.join(separator)];
   for (const s of enriched) {
     lines.push([
       s.date, s.category, csvEscape(s.exerciseName), s.setNumber,
-      s.weight ?? '', s.reps ?? '', s.rir ?? '', csvEscape(s.comment),
+      s.weight ?? '', s.reps ?? '', s.rir ?? '',
+      s.durationSec != null ? fmtClock(s.durationSec) : '', csvEscape(s.comment),
     ].join(separator));
   }
   return lines.join('\r\n');
@@ -176,6 +177,8 @@ export async function importCsv(text) {
       const v = i === -1 ? '' : String(row[i] ?? '').trim().replace(',', '.');
       return v === '' ? null : Number(v);
     };
+    const durCol = col('varighet');
+    const durRaw = durCol === -1 ? '' : String(row[durCol] ?? '').trim();
     await store.saveSet({
       workoutId: workout.id,
       exerciseId: exercise.id,
@@ -183,6 +186,7 @@ export async function importCsv(text) {
       weight: num(col('kg')),
       reps: num(col('reps')),
       rir: num(col('rir')),
+      durationSec: durRaw ? parseDurationInput(durRaw) : null,
       comment: col('kommentar') === -1 ? '' : (row[col('kommentar')] || '').trim(),
     });
     count++;

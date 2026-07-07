@@ -7,6 +7,16 @@ import * as store from '../store.js';
 import { initContent, getDescription, countCatalogNotInApp } from '../content.js';
 import { esc, toast } from '../utils.js';
 
+function goalSummary(ex) {
+  const mode = store.logModeOf(ex);
+  const label = mode === 'duration' ? 's' : 'reps';
+  return `${ex.goalSets} × ${ex.goalRepsMin}–${ex.goalRepsMax} ${label}`;
+}
+
+function logModeLabel(id) {
+  return store.LOG_MODES.find((m) => m.id === id)?.name || id;
+}
+
 export async function render(container) {
   await initContent();
   const exercises = await store.getExercises({ includeInactive: true });
@@ -20,7 +30,7 @@ export async function render(container) {
         ${catExercises.map((e) => `
           <button type="button" class="ovelse-rad ${e.active === false ? 'inaktiv' : ''}" data-id="${e.id}">
             <span>${esc(e.name)}${e.active === false ? ' <span class="dus">(inaktiv)</span>' : ''}</span>
-            <span class="dus">${e.goalSets} × ${e.goalRepsMin}–${e.goalRepsMax} ›</span>
+            <span class="dus">${logModeLabel(store.logModeOf(e))} · ${goalSummary(e)} ›</span>
           </button>`).join('') || '<p class="dus liten">Ingen øvelser.</p>'}
       </section>`;
   }).join('');
@@ -58,16 +68,17 @@ export async function render(container) {
   });
 }
 
-/** Skjema for ny/eksisterende øvelse (bunn-ark). */
 function openForm(host, exercise, onDone) {
   const isNew = !exercise;
   const e = exercise || {
     name: '', category: store.KATEGORIER[0].id, notes: '', video: '', active: true,
+    logMode: 'weight',
     goalSets: store.getSetting('defaultSets'),
     goalRepsMin: store.getSetting('defaultRepsMin'),
     goalRepsMax: store.getSetting('defaultRepsMax'),
   };
   const description = getDescription(e);
+  const mode = store.logModeOf(e);
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -85,13 +96,18 @@ function openForm(host, exercise, onDone) {
           ${store.KATEGORIER.map((k) => `<option value="${k.id}" ${k.id === e.category ? 'selected' : ''}>${k.icon} ${esc(k.name)}</option>`).join('')}
         </select>
 
+        <label class="felt-navn" for="f-logmode">Loggingstype</label>
+        <select class="inndata" id="f-logmode">
+          ${store.LOG_MODES.map((m) => `<option value="${m.id}" ${m.id === mode ? 'selected' : ''}>${m.name}</option>`).join('')}
+        </select>
+
         <fieldset class="skjema-rad maal">
-          <legend class="felt-navn">Mål (sett × reps)</legend>
+          <legend class="felt-navn" id="f-maal-legend">Mål (sett × reps)</legend>
           <input type="number" class="inndata" id="f-sett" value="${e.goalSets}" min="1" max="10" aria-label="Antall sett">
           <span aria-hidden="true">×</span>
-          <input type="number" class="inndata" id="f-min" value="${e.goalRepsMin}" min="1" max="50" aria-label="Nedre repsgrense">
+          <input type="number" class="inndata" id="f-min" value="${e.goalRepsMin}" min="1" max="600" aria-label="Nedre målgrense">
           <span aria-hidden="true">–</span>
-          <input type="number" class="inndata" id="f-maks" value="${e.goalRepsMax}" min="1" max="50" aria-label="Øvre repsgrense">
+          <input type="number" class="inndata" id="f-maks" value="${e.goalRepsMax}" min="1" max="600" aria-label="Øvre målgrense">
         </fieldset>
 
         ${description ? `
@@ -114,6 +130,16 @@ function openForm(host, exercise, onDone) {
       </form>
     </div>`;
 
+  const modeSelect = host.querySelector('#f-logmode');
+  const legend = host.querySelector('#f-maal-legend');
+
+  function updateGoalLegend() {
+    const m = modeSelect.value;
+    legend.textContent = m === 'duration' ? 'Mål (sett × sekunder)' : 'Mål (sett × reps)';
+  }
+  modeSelect.addEventListener('change', updateGoalLegend);
+  updateGoalLegend();
+
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
 
   host.querySelector('#ovelse-skjema').addEventListener('submit', async (ev) => {
@@ -122,6 +148,7 @@ function openForm(host, exercise, onDone) {
       ...e,
       name: host.querySelector('#f-navn').value,
       category: host.querySelector('#f-kategori').value,
+      logMode: host.querySelector('#f-logmode').value,
       goalSets: host.querySelector('#f-sett').value,
       goalRepsMin: host.querySelector('#f-min').value,
       goalRepsMax: host.querySelector('#f-maks').value,

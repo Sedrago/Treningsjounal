@@ -6,8 +6,11 @@
 
 import { epley1RM, isoWeekKey, parseDate, startOfWeek, todayStr, windowStartStr, daysAgoStr } from './utils.js';
 
-/** Volum for ett sett (kg × reps). */
+/** Volum for ett sett (kg × reps). Egenvekt og varighet telles ikke som kg-volum. */
 export function setVolume(s) {
+  if (s.durationSec != null) return 0;
+  const mode = s.logMode || 'weight';
+  if (mode === 'bodyweight' || mode === 'duration') return 0;
   return (s.weight || 0) * (s.reps || 0);
 }
 
@@ -170,19 +173,43 @@ export function sleepHoursPerWeek(rows, numWeeks = 12) {
   return result;
 }
 
-/** Beste estimerte 1RM for en øvelses sett. */
+/** Beste estimerte 1RM for en øvelses sett (kun vektøvelser). */
 export function best1RM(sets) {
-  return sets.reduce((best, s) => Math.max(best, epley1RM(s.weight, s.reps)), 0);
+  return sets.reduce((best, s) => {
+    if ((s.logMode && s.logMode !== 'weight') || s.durationSec != null || !s.weight || !s.reps) return best;
+    return Math.max(best, epley1RM(s.weight, s.reps));
+  }, 0);
 }
 
-/** Personlig rekord: settet med høyest vekt (flest reps som tiebreak). */
+/** Personlig rekord (vekt): settet med høyest vekt (flest reps som tiebreak). */
 export function personalRecord(sets) {
   let pr = null;
   for (const s of sets) {
+    if ((s.logMode && s.logMode !== 'weight') || s.durationSec != null) continue;
     if (!s.weight) continue;
     if (!pr || s.weight > pr.weight || (s.weight === pr.weight && (s.reps || 0) > (pr.reps || 0))) {
       pr = s;
     }
+  }
+  return pr;
+}
+
+/** Beste reps (egenvekt). */
+export function personalRecordReps(sets) {
+  let pr = null;
+  for (const s of sets) {
+    if (s.logMode !== 'bodyweight' || s.reps == null) continue;
+    if (!pr || s.reps > pr.reps) pr = s;
+  }
+  return pr;
+}
+
+/** Lengste hold (varighet). */
+export function personalRecordDuration(sets) {
+  let pr = null;
+  for (const s of sets) {
+    if (s.durationSec == null) continue;
+    if (!pr || s.durationSec > pr.durationSec) pr = s;
   }
   return pr;
 }
@@ -372,7 +399,7 @@ function exerciseE1rmByWeekIndex(enrichedSets, weeks) {
   const weekIndex = new Map(weeks.map((w) => [w.week, w.index]));
   const byEx = new Map();
   for (const s of enrichedSets) {
-    if (!s.weight || !s.reps) continue;
+    if ((s.logMode && s.logMode !== 'weight') || s.durationSec != null || !s.weight || !s.reps) continue;
     const idx = weekIndex.get(isoWeekKey(parseDate(s.date)));
     if (idx == null) continue;
     const rm = epley1RM(s.weight, s.reps);

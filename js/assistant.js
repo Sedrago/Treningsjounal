@@ -1,12 +1,10 @@
 /**
- * assistant.js – den smarte treningsassistenten.
- *
- * Analyserer historikken og gir rådgivende meldinger og forslag.
- * Assistenten bestemmer aldri – den foreslår.
+ * assistant.js – journal-assistent: minner om hva som ikke er trent.
+ * Ingen progresjons- eller treningsråd – det er brukerens egen jobb.
  */
 
 import { KATEGORIER } from './store.js';
-import { daysSinceCategory, volumeTrend30, best1RM, groupBy } from './stats.js';
+import { daysSinceCategory, volumeTrend30, groupBy } from './stats.js';
 import { fmtNum } from './utils.js';
 
 /**
@@ -92,60 +90,6 @@ function patternImbalance(sets, aId, bId) {
       };
     }
   }
-  return null;
-}
-
-/**
- * Progresjonsforslag for en øvelse, basert på forrige økt og øvelsens mål.
- *
- * Regler:
- *  - Alle sett nådde øvre repsgrense (og RIR ≥ 1) → foreslå å øke vekten.
- *  - Estimert 1RM har falt >10 % fra beste av siste 5 økter → foreslå å redusere.
- *
- * @param {object} exercise  øvelsen (med goalSets/goalRepsMin/goalRepsMax)
- * @param {{date:string, sets:object[]}|null} lastSession
- * @param {object[]} exerciseSets  alle sett for øvelsen (beriket med dato)
- * @returns {{type:'increase'|'decrease'|null, text:string}|null}
- */
-export function progressionSuggestion(exercise, lastSession, exerciseSets) {
-  if (!lastSession || !lastSession.sets.length) return null;
-  const sets = lastSession.sets.filter((s) => s.weight != null && s.reps != null);
-  if (!sets.length) return null;
-
-  const goalMax = exercise.goalRepsMax || 10;
-  const goalSets = exercise.goalSets || 3;
-  const topWeight = Math.max(...sets.map((s) => s.weight));
-
-  // Regel 1: alle planlagte sett nådde øvre grense.
-  const complete = sets.length >= goalSets;
-  const allAtTop = sets.every((s) => s.reps >= goalMax);
-  const notGrinding = sets.every((s) => s.rir == null || s.rir >= 1);
-  if (complete && allAtTop && notGrinding) {
-    const increment = topWeight >= 60 ? 2.5 : 1.25;
-    const suggested = topWeight + increment;
-    return {
-      type: 'increase',
-      text: `Alle sett nådde ${goalMax} reps sist. Forsøk ${fmtNum(suggested)} kg i dag.`,
-      weight: suggested,
-    };
-  }
-
-  // Regel 2: betydelig fall i estimert 1RM.
-  const byDate = groupBy(exerciseSets, (s) => s.date);
-  const recentDates = [...byDate.keys()].sort().slice(-5);
-  if (recentDates.length >= 3) {
-    const bestRecent = Math.max(...recentDates.slice(0, -1).map((d) => best1RM(byDate.get(d))));
-    const lastRM = best1RM(byDate.get(recentDates[recentDates.length - 1]));
-    if (bestRecent > 0 && lastRM > 0 && lastRM < bestRecent * 0.9) {
-      const suggested = Math.round(topWeight * 0.9 / 2.5) * 2.5;
-      return {
-        type: 'decrease',
-        text: `Prestasjonen har falt siste øktene. Vurder å gå ned til ~${fmtNum(suggested)} kg og bygg opp igjen.`,
-        weight: suggested,
-      };
-    }
-  }
-
   return null;
 }
 

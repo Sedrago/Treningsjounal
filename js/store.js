@@ -132,6 +132,27 @@ export function aerobicTypeById(id) {
   return AEROBIC_TYPES.find((t) => t.id === id) || AEROBIC_TYPES[AEROBIC_TYPES.length - 1];
 }
 
+/** Hvordan en øvelse logges: vekt, egenvekt eller varighet. */
+export const LOG_MODES = [
+  { id: 'weight', name: 'Vekt + reps' },
+  { id: 'bodyweight', name: 'Egenvekt + reps' },
+  { id: 'duration', name: 'Varighet' },
+];
+
+export function logModeOf(exercise) {
+  const mode = exercise?.logMode || 'weight';
+  return LOG_MODES.some((m) => m.id === mode) ? mode : 'weight';
+}
+
+export function goalTextFor(exercise) {
+  const mode = logModeOf(exercise);
+  const sets = exercise.goalSets || 3;
+  const min = exercise.goalRepsMin;
+  const max = exercise.goalRepsMax;
+  if (mode === 'duration') return `${sets} × ${min}–${max} s`;
+  return `${sets} × ${min}–${max}`;
+}
+
 /* ---------- Innstillinger ---------- */
 
 const settingsCache = {};
@@ -184,6 +205,7 @@ export async function saveExercise(ex) {
     goalSets: Number(ex.goalSets) || Number(getSetting('defaultSets')),
     goalRepsMin: Number(ex.goalRepsMin) || Number(getSetting('defaultRepsMin')),
     goalRepsMax: Number(ex.goalRepsMax) || Number(getSetting('defaultRepsMax')),
+    logMode: logModeOf(ex),
     deleted: false,
     updatedAt: nowIso(),
   };
@@ -342,6 +364,7 @@ export async function saveSet(set) {
     weight: set.weight === '' || set.weight == null ? null : Number(set.weight),
     reps: set.reps === '' || set.reps == null ? null : Number(set.reps),
     rir: set.rir === '' || set.rir == null ? null : Number(set.rir),
+    durationSec: set.durationSec === '' || set.durationSec == null ? null : Number(set.durationSec),
     rest: set.rest == null ? null : Number(set.rest),
     comment: set.comment || '',
     deleted: false,
@@ -519,7 +542,7 @@ export async function getEnrichedSets() {
     .map((s) => {
       const w = woMap.get(s.workoutId);
       const e = exMap.get(s.exerciseId);
-      return { ...s, date: w.date, exerciseName: e.name, category: e.category };
+      return { ...s, date: w.date, exerciseName: e.name, category: e.category, logMode: logModeOf(e) };
     })
     .sort((a, b) => a.date.localeCompare(b.date) || a.setNumber - b.setNumber);
 }

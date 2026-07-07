@@ -465,7 +465,6 @@ select.inndata { appearance: none; }
 
 .sett-hode {
   display: grid;
-  grid-template-columns: 34px 1fr 1fr 1fr 44px 44px;
   gap: 8px;
   padding: 0 4px 4px;
   font-size: 0.78rem;
@@ -473,10 +472,25 @@ select.inndata { appearance: none; }
   font-weight: 600;
 }
 
+.logg-sett[data-mode="weight"] .sett-hode,
+.logg-sett[data-mode="weight"] .sett-rad,
+.logg-sett[data-mode="bodyweight"].med-vekt .sett-hode,
+.logg-sett[data-mode="bodyweight"].med-vekt .sett-rad {
+  grid-template-columns: 34px 1fr 1fr 1fr 44px 44px;
+}
+
+.logg-sett[data-mode="bodyweight"]:not(.med-vekt) .sett-hode,
+.logg-sett[data-mode="bodyweight"]:not(.med-vekt) .sett-rad,
+.logg-sett[data-mode="duration"] .sett-hode,
+.logg-sett[data-mode="duration"] .sett-rad {
+  grid-template-columns: 34px 1fr 1fr 44px 44px;
+}
+
+.logg-tilleggsvekt { margin-bottom: 10px; font-size: 0.92rem; }
+
 .sett-rad-gruppe { margin-bottom: 8px; }
 .sett-rad {
   display: grid;
-  grid-template-columns: 34px 1fr 1fr 1fr 44px 44px;
   gap: 8px;
   align-items: center;
 }
