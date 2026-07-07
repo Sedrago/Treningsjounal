@@ -10,19 +10,19 @@ import { todayStr } from './utils.js';
 const MIN_INTERVAL_MS = 4 * 60 * 60 * 1000;
 let promptOpen = false;
 
-/** Klokkeslett med fjes, medurs fra 7 til 5 (6 hoppes over). */
+/** Fjes på urskive (posisjon kl. 7→5, uten kl. 6). Viser 0–10, lagrer 0–100. */
 export const MOOD_CLOCK_SLOTS = [
-  { hour: 7, value: 0, emoji: '😠' },
-  { hour: 8, value: 10, emoji: '☹️' },
-  { hour: 9, value: 20, emoji: '😞' },
-  { hour: 10, value: 30, emoji: '🙁' },
-  { hour: 11, value: 40, emoji: '😕' },
-  { hour: 12, value: 50, emoji: '😐' },
-  { hour: 1, value: 60, emoji: '😐' },
-  { hour: 2, value: 70, emoji: '🙂' },
-  { hour: 3, value: 80, emoji: '😊' },
-  { hour: 4, value: 90, emoji: '😁' },
-  { hour: 5, value: 100, emoji: '😄' },
+  { hour: 7, label: 0, value: 0, emoji: '😠' },
+  { hour: 8, label: 1, value: 10, emoji: '☹️' },
+  { hour: 9, label: 2, value: 20, emoji: '😞' },
+  { hour: 10, label: 3, value: 30, emoji: '🙁' },
+  { hour: 11, label: 4, value: 40, emoji: '😕' },
+  { hour: 12, label: 5, value: 50, emoji: '😐' },
+  { hour: 1, label: 6, value: 60, emoji: '😐' },
+  { hour: 2, label: 7, value: 70, emoji: '🙂' },
+  { hour: 3, label: 8, value: 80, emoji: '😊' },
+  { hour: 4, label: 9, value: 90, emoji: '😁' },
+  { hour: 5, label: 10, value: 100, emoji: '😄' },
 ];
 
 /** Vinkel på urskive (0° = kl. 12 øverst, medurs). */
@@ -46,16 +46,23 @@ export function moodEmojiForValue(value) {
   return best.emoji;
 }
 
+function moodAriaLabel(label) {
+  if (label === 0) return '0, veldig dårlig';
+  if (label === 5) return '5, nøytral';
+  if (label === 10) return '10, veldig bra';
+  return String(label);
+}
+
 function moodClockHtml() {
-  const times = MOOD_CLOCK_SLOTS.map(({ hour, value, emoji }) => {
+  const times = MOOD_CLOCK_SLOTS.map(({ hour, label, value, emoji }) => {
     const angle = clockAngle(hour);
     return `
       <button type="button" class="mood-klokke-time"
         style="--vinkel: ${angle}deg"
         data-value="${value}"
-        aria-label="Klokken ${hour}, ${value === 0 ? 'veldig dårlig' : value === 100 ? 'veldig bra' : value === 50 ? 'nøytral' : ''}">
+        aria-label="${moodAriaLabel(label)}">
         <span class="mood-klokke-fjes" aria-hidden="true">${emoji}</span>
-        <span class="mood-klokke-time-tall" aria-hidden="true">${hour}</span>
+        <span class="mood-klokke-time-tall" aria-hidden="true">${label}</span>
       </button>`;
   }).join('');
 
