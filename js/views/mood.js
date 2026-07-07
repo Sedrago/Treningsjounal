@@ -4,17 +4,10 @@
 
 import * as store from '../store.js';
 import { moodSummarySince } from '../stats.js';
-import { showMoodPromptManual } from '../mood-prompt.js';
+import { showMoodPromptManual, moodEmojiForValue } from '../mood-prompt.js';
 import {
-  esc, fmtNum, formatDateShort, todayStr, toast, windowStartStr,
+  esc, fmtNum, formatDateShort, toast, windowStartStr,
 } from '../utils.js';
-
-function moodEmoji(value) {
-  if (value >= 75) return '😊';
-  if (value >= 50) return '🙂';
-  if (value >= 25) return '😐';
-  return '☹️';
-}
 
 function contextLabel(context) {
   switch (context) {
@@ -48,7 +41,7 @@ export async function render(container) {
       ${rows.map((m) => `
         <div class="kort mood-rad" data-id="${m.id}">
           <div>
-            <strong aria-hidden="true">${moodEmoji(m.value)}</strong>
+            <strong aria-hidden="true">${moodEmojiForValue(m.value)}</strong>
             <span class="dus"> · ${formatDateShort(m.date)}</span>
             ${m.context && m.context !== 'app' ? `<span class="dus"> · ${esc(contextLabel(m.context))}</span>` : ''}
           </div>

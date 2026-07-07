@@ -1,6 +1,6 @@
 /**
- * mood-prompt.js – «Hvordan føler du deg?»-modal med slider (0 = dårlig, 100 = bra).
- * Vises ved app-start og ved dagens økt, men aldri under sett-logging.
+ * mood-prompt.js – «Hvordan føler du deg?» som klokkeskive (7→5, uten 6).
+ * 0 = surt (kl. 7), 50 = nøytralt (kl. 12), 100 = glad (kl. 5). Lagres ved trykk.
  */
 
 import * as db from './db.js';
@@ -10,12 +10,67 @@ import { todayStr } from './utils.js';
 const MIN_INTERVAL_MS = 4 * 60 * 60 * 1000;
 let promptOpen = false;
 
+/** Klokkeslett med fjes, medurs fra 7 til 5 (6 hoppes over). */
+export const MOOD_CLOCK_SLOTS = [
+  { hour: 7, value: 0, emoji: '😠' },
+  { hour: 8, value: 10, emoji: '☹️' },
+  { hour: 9, value: 20, emoji: '😞' },
+  { hour: 10, value: 30, emoji: '🙁' },
+  { hour: 11, value: 40, emoji: '😕' },
+  { hour: 12, value: 50, emoji: '😐' },
+  { hour: 1, value: 60, emoji: '😐' },
+  { hour: 2, value: 70, emoji: '🙂' },
+  { hour: 3, value: 80, emoji: '😊' },
+  { hour: 4, value: 90, emoji: '😁' },
+  { hour: 5, value: 100, emoji: '😄' },
+];
+
+/** Vinkel på urskive (0° = kl. 12 øverst, medurs). */
+function clockAngle(hour) {
+  return (hour % 12) * 30;
+}
+
+/** Emoji for lagret verdi (0–100), avrundet til nærmeste klokkeposisjon. */
+export function moodEmojiForValue(value) {
+  const v = Number(value);
+  if (Number.isNaN(v)) return '😐';
+  let best = MOOD_CLOCK_SLOTS[0];
+  let diff = Math.abs(v - best.value);
+  for (const slot of MOOD_CLOCK_SLOTS) {
+    const d = Math.abs(v - slot.value);
+    if (d < diff) {
+      diff = d;
+      best = slot;
+    }
+  }
+  return best.emoji;
+}
+
+function moodClockHtml() {
+  const times = MOOD_CLOCK_SLOTS.map(({ hour, value, emoji }) => {
+    const angle = clockAngle(hour);
+    return `
+      <button type="button" class="mood-klokke-time"
+        style="--vinkel: ${angle}deg"
+        data-value="${value}"
+        aria-label="Klokken ${hour}, ${value === 0 ? 'veldig dårlig' : value === 100 ? 'veldig bra' : value === 50 ? 'nøytral' : ''}">
+        <span class="mood-klokke-fjes" aria-hidden="true">${emoji}</span>
+        <span class="mood-klokke-time-tall" aria-hidden="true">${hour}</span>
+      </button>`;
+  }).join('');
+
+  return `
+    <div class="mood-klokke" role="group" aria-labelledby="mood-tittel">
+      ${times}
+      <button type="button" class="mood-klokke-skip" data-hopp-over>Skip</button>
+    </div>`;
+}
+
 function parseHashRoute() {
   const hash = location.hash.replace(/^#\/?/, '');
   return hash.split('/').filter(Boolean)[0] || 'hjem';
 }
 
-/** Siste tidspunkt brukeren logget eller hoppet over. */
 async function lastMoodInteractionAt(entries) {
   const latest = entries[0];
   const dismissed = await db.getMeta('moodLastDismissedAt');
@@ -32,10 +87,6 @@ function hasWorkoutStartToday(entries, today) {
   return entries.some((m) => m.date === today && m.context === 'workout-start');
 }
 
-/**
- * Vurderer om mood-prompt skal vises etter rutebytte.
- * @param {string} [route] – aktiv rute (default: fra hash)
- */
 export async function maybeShowMoodPrompt(route = parseHashRoute()) {
   if (promptOpen) return;
   if (route === 'logg') return;
@@ -52,7 +103,6 @@ export async function maybeShowMoodPrompt(route = parseHashRoute()) {
   }
 
   if (route !== 'hjem') return;
-
   if (hasWorkoutStartToday(entries, today)) return;
 
   const lastAt = await lastMoodInteractionAt(entries);
@@ -61,17 +111,12 @@ export async function maybeShowMoodPrompt(route = parseHashRoute()) {
   await showMoodPrompt({ context: 'app', workoutId: null });
 }
 
-/**
- * Viser mood-modal. Returnerer når den lukkes.
- * @param {{ context: string, workoutId?: string|null, defaultValue?: number }} opts
- */
 export function showMoodPrompt(opts = {}) {
   if (promptOpen) return Promise.resolve(null);
   promptOpen = true;
 
   const context = opts.context || 'app';
   const workoutId = opts.workoutId || null;
-  const defaultValue = opts.defaultValue ?? 50;
 
   return new Promise((resolve) => {
     const host = document.createElement('div');
@@ -80,19 +125,7 @@ export function showMoodPrompt(opts = {}) {
       <div class="ark-bakgrunn" data-lukk></div>
       <div class="ark mood-ark" role="dialog" aria-labelledby="mood-tittel">
         <h2 id="mood-tittel" class="mood-tittel">Hvordan føler du deg?</h2>
-        <div class="mood-slider-wrap">
-          <div class="mood-emoji-rad" aria-hidden="true">
-            <span class="mood-emoji">☹️</span>
-            <span class="mood-emoji">😊</span>
-          </div>
-          <input type="range" class="mood-slider" id="mood-range"
-            min="0" max="100" step="1" value="${defaultValue}"
-            aria-label="Hvordan føler du deg? Dårlig til venstre, bra til høyre">
-        </div>
-        <div class="mood-knapper">
-          <button type="button" class="knapp sekundaer" data-hopp-over>Hopp over</button>
-          <button type="button" class="knapp primaer" data-lagre>Lagre</button>
-        </div>
+        ${moodClockHtml()}
       </div>`;
 
     document.body.appendChild(host);
@@ -103,17 +136,16 @@ export function showMoodPrompt(opts = {}) {
       resolve(result);
     };
 
-    const slider = host.querySelector('#mood-range');
-
-    host.querySelector('[data-lagre]').addEventListener('click', async () => {
-      const value = Number(slider.value);
-      const entry = await store.saveMoodEntry({
-        value,
-        context,
-        workoutId,
-        date: todayStr(),
+    host.querySelectorAll('.mood-klokke-time').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const entry = await store.saveMoodEntry({
+          value: Number(btn.dataset.value),
+          context,
+          workoutId,
+          date: todayStr(),
+        });
+        close(entry);
       });
-      close(entry);
     });
 
     const dismiss = async () => {
@@ -122,11 +154,10 @@ export function showMoodPrompt(opts = {}) {
     };
 
     host.querySelector('[data-hopp-over]').addEventListener('click', dismiss);
-    host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', dismiss));
+    host.querySelector('[data-lukk]').addEventListener('click', dismiss);
   });
 }
 
-/** For manuell visning fra humør-siden (samme slider, uten throttling). */
 export function showMoodPromptManual() {
   return showMoodPrompt({ context: 'manual', workoutId: null });
 }

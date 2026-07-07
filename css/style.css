@@ -690,7 +690,7 @@ select.inndata { appearance: none; }
 
 .timer-knapper { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
 
-/* ---------- Dagsform (humør-slider) ---------- */
+/* ---------- Dagsform (humør-klokke) ---------- */
 
 #mood-prompt-host { position: relative; z-index: 50; }
 
@@ -698,59 +698,73 @@ select.inndata { appearance: none; }
 
 .mood-tittel {
   font-size: 1.25rem;
-  margin: 0 0 20px;
+  margin: 0 0 16px;
 }
 
-.mood-slider-wrap { padding: 0 8px 8px; }
+.mood-klokke {
+  --klokke-stor: min(72vw, 300px);
+  --klokke-radius: calc(var(--klokke-stor) * 0.36);
+  position: relative;
+  width: var(--klokke-stor);
+  height: var(--klokke-stor);
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  background: var(--flate-2);
+  border: 2px solid var(--kant);
+  box-shadow: inset 0 0 0 6px var(--flate);
+}
 
-.mood-emoji-rad {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 1.75rem;
+.mood-klokke-time {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transform: rotate(var(--vinkel)) translateY(calc(-1 * var(--klokke-radius))) rotate(calc(-1 * var(--vinkel)));
+  transition: transform 0.12s ease;
+}
+
+.mood-klokke-time:active .mood-klokke-fjes { transform: scale(1.15); }
+
+.mood-klokke-fjes {
+  display: block;
+  font-size: 1.65rem;
+  line-height: 1;
+  transition: transform 0.12s ease;
+}
+
+.mood-klokke-time-tall {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--tekst-dus);
   line-height: 1;
 }
 
-.mood-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(to right, var(--advarsel), var(--flate-2) 50%, var(--aksent));
-  outline: none;
+.mood-klokke-skip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--kant);
+  background: var(--flate);
+  color: var(--tekst-dus);
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  z-index: 2;
 }
 
-.mood-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--tekst);
-  border: 3px solid var(--flate);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
-  cursor: grab;
-}
-
-.mood-slider::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--tekst);
-  border: 3px solid var(--flate);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
-  cursor: grab;
-}
-
-.mood-knapper {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.mood-knapper .knapp { flex: 1; }
+.mood-klokke-skip:active { background: var(--flate-2); }
 
 .mood-rad {
   display: flex;
