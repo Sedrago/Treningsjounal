@@ -15,7 +15,9 @@ import * as statistics from './views/statistics.js';
 import * as bodyweight from './views/bodyweight.js';
 import * as aerobic from './views/aerobic.js';
 import * as sleep from './views/sleep.js';
+import * as mood from './views/mood.js';
 import * as exercises from './views/exercises.js';
+import { maybeShowMoodPrompt } from './mood-prompt.js';
 import * as exerciseLibrary from './views/exercise-library.js';
 import * as settings from './views/settings.js';
 
@@ -30,6 +32,7 @@ const routes = {
   kroppsvekt: bodyweight.render,
   aerob: aerobic.render,
   sovn: sleep.render,
+  folelse: mood.render,
   ovelser: exercises.render,
   bibliotek: exerciseLibrary.render,
   innstillinger: settings.render,
@@ -63,6 +66,7 @@ async function renderRoute() {
   window.scrollTo(0, 0);
   try {
     await renderFn(main, params, query);
+    await maybeShowMoodPrompt(route);
   } catch (err) {
     console.error(err);
     main.innerHTML = `<p class="tomt">Noe gikk galt: ${err.message}</p>`;
@@ -101,7 +105,10 @@ async function main() {
   window.addEventListener('hashchange', renderRoute);
   window.addEventListener('content-updated', () => renderRoute());
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') checkContentUpdate();
+    if (document.visibilityState === 'visible') {
+      checkContentUpdate();
+      maybeShowMoodPrompt(parseHash().route);
+    }
   });
   await renderRoute();
 

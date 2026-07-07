@@ -22,6 +22,7 @@ export async function render(container) {
   const workouts = await store.getWorkouts();
   const aerobic = await store.getAerobicSessions();
   const sleepRows = await store.getSleepEntries();
+  const moodRows = await store.getMoodEntries();
   const bodyweights = await store.getBodyweights();
   const units = store.getSetting('units');
   const unit = weightUnit(units);
@@ -50,6 +51,8 @@ export async function render(container) {
   const latest = saldo.latest;
   const sleepWeeks = stats.sleepHoursPerWeek(sleepRows);
   const hasSleepChart = sleepWeeks.filter((w) => w.value != null).length >= 2;
+  const moodWeeks = stats.moodValuePerWeek(moodRows);
+  const hasMoodChart = moodWeeks.filter((w) => w.value != null).length >= 2;
 
   container.innerHTML = `
     <header class="side-topp">
@@ -80,6 +83,13 @@ export async function render(container) {
     <section class="kort">
       <h2 class="kort-tittel">Søvn (snitt timer/natt)</h2>
       <div id="sovn-graf"></div>
+    </section>` : ''}
+
+    ${hasMoodChart ? `
+    <section class="kort">
+      <h2 class="kort-tittel">Dagsform (snitt 0–100)</h2>
+      <p class="dus liten">100 = veldig bra, 0 = veldig dårlig.</p>
+      <div id="mood-graf"></div>
     </section>` : ''}
 
     <section class="kort">
@@ -134,6 +144,13 @@ export async function render(container) {
     lineChart(
       container.querySelector('#sovn-graf'),
       sleepWeeks.filter((w) => w.value != null).map((w) => ({ label: w.label, value: w.value })),
+    );
+  }
+
+  if (hasMoodChart) {
+    lineChart(
+      container.querySelector('#mood-graf'),
+      moodWeeks.filter((w) => w.value != null).map((w) => ({ label: w.label, value: w.value })),
     );
   }
 

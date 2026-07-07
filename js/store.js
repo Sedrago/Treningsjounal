@@ -468,6 +468,39 @@ export async function deleteSleepEntry(id) {
   await queueOp('sleep', 'upsert', row);
 }
 
+/* ---------- Dagsform (humør) ---------- */
+
+export async function getMoodEntries() {
+  const all = await db.getAll('mood');
+  return all
+    .filter((m) => !m.deleted)
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+}
+
+export async function saveMoodEntry(entry) {
+  const record = {
+    id: entry.id || uuid(),
+    date: entry.date || todayStr(),
+    value: Math.min(100, Math.max(0, Math.round(Number(entry.value) || 0))),
+    context: entry.context || 'app',
+    workoutId: entry.workoutId || null,
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  await db.put('mood', record);
+  await queueOp('mood', 'upsert', record);
+  return record;
+}
+
+export async function deleteMoodEntry(id) {
+  const row = await db.get('mood', id);
+  if (!row) return;
+  row.deleted = true;
+  row.updatedAt = nowIso();
+  await db.put('mood', row);
+  await queueOp('mood', 'upsert', row);
+}
+
 /* ---------- Sammensatte spørringer ---------- */
 
 /**
@@ -516,7 +549,7 @@ export async function getLastSessionForExercise(exerciseId, beforeDate = null) {
 
 /** Sletter alle lokale data (brukes fra innstillinger). */
 export async function wipeLocalData() {
-  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'settings', 'queue', 'meta']) {
+  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'mood', 'settings', 'queue', 'meta']) {
     await db.clearStore(s);
   }
   Object.assign(settingsCache, DEFAULT_SETTINGS);

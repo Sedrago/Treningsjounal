@@ -116,6 +116,38 @@ export function sleepSummarySince(rows, sinceDate) {
   };
 }
 
+/** Oppsummert dagsform siden gitt dato (0–100, høyere = bedre). */
+export function moodSummarySince(rows, sinceDate) {
+  const recent = rows.filter((r) => r.date >= sinceDate);
+  if (!recent.length) return null;
+  const avgValue = recent.reduce((sum, r) => sum + (Number(r.value) || 0), 0) / recent.length;
+  return {
+    count: recent.length,
+    avgValue: Math.round(avgValue),
+  };
+}
+
+/** Gjennomsnittlig dagsform per ISO-uke (siste `numWeeks`). */
+export function moodValuePerWeek(rows, numWeeks = 12) {
+  const result = [];
+  const cursor = startOfWeek(new Date());
+  cursor.setDate(cursor.getDate() - 7 * (numWeeks - 1));
+  const byWeek = groupBy(rows, (r) => isoWeekKey(parseDate(r.date)));
+  for (let i = 0; i < numWeeks; i++) {
+    const key = isoWeekKey(cursor);
+    const weekRows = byWeek.get(key) || [];
+    const value = weekRows.length
+      ? weekRows.reduce((sum, r) => sum + (Number(r.value) || 0), 0) / weekRows.length
+      : null;
+    result.push({
+      label: `${cursor.getDate()}.${String(cursor.getMonth() + 1).padStart(2, '0')}`,
+      value: value != null ? Math.round(value) : null,
+    });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return result;
+}
+
 /** Gjennomsnittlig søvntimer per ISO-uke (siste `numWeeks`). */
 export function sleepHoursPerWeek(rows, numWeeks = 12) {
   const result = [];

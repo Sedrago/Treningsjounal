@@ -690,6 +690,77 @@ select.inndata { appearance: none; }
 
 .timer-knapper { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
 
+/* ---------- Dagsform (humør-slider) ---------- */
+
+#mood-prompt-host { position: relative; z-index: 50; }
+
+.mood-ark { text-align: center; }
+
+.mood-tittel {
+  font-size: 1.25rem;
+  margin: 0 0 20px;
+}
+
+.mood-slider-wrap { padding: 0 8px 8px; }
+
+.mood-emoji-rad {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.mood-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--advarsel), var(--flate-2) 50%, var(--aksent));
+  outline: none;
+  cursor: pointer;
+}
+
+.mood-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--tekst);
+  border: 3px solid var(--flate);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+  cursor: grab;
+}
+
+.mood-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--tekst);
+  border: 3px solid var(--flate);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+  cursor: grab;
+}
+
+.mood-knapper {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.mood-knapper .knapp { flex: 1; }
+
+.mood-rad {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mood-oppsummert { margin: 0 0 12px; padding: 0 4px; }
+
 /* ---------- Større skjermer ---------- */
 
 @media (min-width: 700px) {

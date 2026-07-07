@@ -2,14 +2,14 @@
  * db.js – tynn promise-basert innpakning rundt IndexedDB.
  *
  * Lagre (object stores):
- *   exercises, workouts, sets, bodyweight, aerobic, sleep  – data (keyPath: id)
+ *   exercises, workouts, sets, bodyweight, aerobic, sleep, mood  – data (keyPath: id)
  *   settings                               – nøkkel/verdi (keyPath: key)
  *   queue                                  – synk-kø (autoIncrement)
  *   meta                                   – intern metadata (keyPath: key)
  */
 
 const DB_NAME = 'treningsjournal';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise = null;
 
@@ -41,6 +41,11 @@ function open() {
       if (oldVersion < 3 && !db.objectStoreNames.contains('sleep')) {
         const sl = db.createObjectStore('sleep', { keyPath: 'id' });
         sl.createIndex('date', 'date');
+      }
+      if (oldVersion < 4 && !db.objectStoreNames.contains('mood')) {
+        const md = db.createObjectStore('mood', { keyPath: 'id' });
+        md.createIndex('date', 'date');
+        md.createIndex('workoutId', 'workoutId');
       }
     };
     req.onsuccess = () => resolve(req.result);
