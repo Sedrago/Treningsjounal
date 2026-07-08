@@ -139,8 +139,29 @@ export const LOG_MODES = [
   { id: 'duration', name: 'Varighet' },
 ];
 
+const LOG_MODE_IDS = new Set(LOG_MODES.map((m) => m.id));
+
+/**
+ * Retter øvelser der logMode havnet i deleted-feltet etter skjemaskift i Sheets.
+ * (Egen øvelse opprettet etterpå, f.eks. Leggmaskin, er som regel allerede riktig.)
+ */
+export function repairExerciseFromSheet(ex) {
+  if (!ex || !LOG_MODE_IDS.has(ex.deleted)) return ex;
+  const ts = typeof ex.catalogId === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(ex.catalogId)
+    ? ex.catalogId
+    : null;
+  return {
+    ...ex,
+    logMode: ex.deleted,
+    deleted: ex.updatedAt === true,
+    updatedAt: ts || (typeof ex.updatedAt === 'string' ? ex.updatedAt : ex.updatedAt),
+    catalogId: (ex.catalogId && !ts ? ex.catalogId : null) || ex.id,
+  };
+}
+
 export function logModeOf(exercise) {
-  const mode = exercise?.logMode || 'weight';
+  const ex = repairExerciseFromSheet(exercise);
+  const mode = ex?.logMode || 'weight';
   return LOG_MODES.some((m) => m.id === mode) ? mode : 'weight';
 }
 
@@ -178,6 +199,7 @@ export async function setSetting(key, value) {
 export async function getExercises({ includeInactive = false } = {}) {
   const all = await db.getAll('exercises');
   return all
+    .map(repairExerciseFromSheet)
     .filter((e) => !e.deleted && (includeInactive || e.active !== false))
     .sort((a, b) => a.name.localeCompare(b.name, 'no'));
 }
@@ -188,7 +210,7 @@ export async function getExercisesByCategory(categoryId, opts) {
 }
 
 export function getExercise(id) {
-  return db.get('exercises', id);
+  return db.get('exercises', id).then(repairExerciseFromSheet);
 }
 
 /** Lagrer en øvelse (ny eller endret). catalogId settes kun ved opprettelse eller migrering. */

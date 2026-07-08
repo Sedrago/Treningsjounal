@@ -88,6 +88,7 @@ export async function pull() {
     state.lastError = null;
     state.lastSync = new Date().toISOString();
     await db.setMeta('lastSync', state.lastSync);
+    window.dispatchEvent(new CustomEvent('sync-complete'));
     return true;
   } catch (err) {
     state.lastError = err.message;
@@ -112,7 +113,7 @@ export function scheduleFlush() {
   flushTimer = setTimeout(() => flush(), 3000);
 }
 
-/** Kobler opp automatisk synkronisering. */
+/** Kobler opp automatisk synkronisering. Blokkerer ikke UI. */
 export async function init() {
   state.lastSync = await db.getMeta('lastSync');
   window.addEventListener('online', () => { notify(); flush(); });
@@ -122,6 +123,7 @@ export async function init() {
   });
   notify();
   if (api.isConfigured() && navigator.onLine) {
-    await fullSync();
+    // Send ventende endringer i bakgrunnen – ikke full henting (treg GAS-kall).
+    flush().finally(() => notify());
   }
 }

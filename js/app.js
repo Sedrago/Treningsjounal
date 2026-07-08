@@ -5,7 +5,7 @@
 import * as store from './store.js';
 import * as sync from './sync.js';
 import * as api from './api.js';
-import { initContent, checkContentUpdate } from './content.js';
+import { initContent, initContentFromCache, checkContentUpdate } from './content.js';
 
 import * as home from './views/home.js';
 import * as workout from './views/workout.js';
@@ -96,21 +96,28 @@ async function main() {
     if (store.getSetting('theme') === 'auto') applyTheme();
   });
 
-  await initContent({ force: true });
-  await sync.init();
-  await store.ensureDefaultExercises();
-  await store.migrateExerciseCatalogIds();
   setupSyncBadge();
 
   window.addEventListener('hashchange', renderRoute);
   window.addEventListener('content-updated', () => renderRoute());
+  window.addEventListener('sync-complete', () => renderRoute());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkContentUpdate();
       maybeShowMoodPrompt(parseHash().route);
     }
   });
+
+  // Vis UI raskt – cache først, nett og synk i bakgrunnen.
+  await initContentFromCache();
+  await store.ensureDefaultExercises();
+  await store.migrateExerciseCatalogIds();
   await renderRoute();
+
+  sync.init();
+  initContent({ force: false }).then((ok) => {
+    if (ok) renderRoute();
+  });
 
   // Førstegangsbruk: pek mot innstillinger hvis tilkobling mangler.
   if (!api.isConfigured() && !sessionStorage.getItem('tj_hintVist')) {

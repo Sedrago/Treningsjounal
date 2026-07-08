@@ -61,6 +61,15 @@ async function loadFromCacheFallback() {
 }
 
 /**
+ * Laster innholdspakke fra service worker-cache (rask oppstart).
+ * @returns {boolean}
+ */
+export async function initContentFromCache() {
+  if (pack?.version >= MIN_CONTENT_VERSION) return true;
+  return loadFromCacheFallback();
+}
+
+/**
  * Henter innholdspakke fra nettet og oppdaterer hvis versjonen er nyere.
  * @param {{ force?: boolean }} opts force=true hopper over throttle
  * @returns {boolean} true hvis brukbar pakke finnes
