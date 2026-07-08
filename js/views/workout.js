@@ -4,7 +4,7 @@
  */
 
 import * as store from '../store.js';
-import { esc, fmtNum, formatDateLong, relativeDays, todayStr, debounce, toast, summarizeSet } from '../utils.js';
+import { esc, formatDateLong, relativeDays, todayStr, debounce, toast, summarizeSet } from '../utils.js';
 import { groupBy } from '../stats.js';
 
 /** Finner forrige økt-informasjon per kategori (før i dag). */
@@ -123,8 +123,10 @@ async function openPicker(host, categoryId) {
     if (exSets.length) {
       const lastDate = exSets[exSets.length - 1].date;
       const daySets = exSets.filter((s) => s.date === lastDate);
-      const top = Math.max(...daySets.map((s) => s.weight || 0));
-      info = `${relativeDays(lastDate)}${top ? ` · ${fmtNum(toDisplayWeight(top, units))} ${weightUnit(units)}` : ''}`;
+      const mode = e.logMode || daySets[0].logMode || 'weight';
+      const summary = daySets.sort((a, b) => a.setNumber - b.setNumber)
+        .map((s) => summarizeSet(s, mode, units)).join(' · ');
+      info = `${relativeDays(lastDate)} · ${summary}`;
     }
     return `
       <button type="button" class="velger-rad" data-id="${e.id}">
