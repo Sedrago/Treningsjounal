@@ -30,7 +30,7 @@ var COLUMNS = {
   Sets: ['id', 'workoutId', 'exerciseId', 'setNumber', 'weight', 'reps', 'rir', 'durationSec',
     'rest', 'comment', 'deleted', 'updatedAt'],
   Bodyweight: ['id', 'date', 'weight', 'fatPct', 'comment', 'deleted', 'updatedAt'],
-  Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt'],
+  Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt', 'intensity'],
   Sleep: ['id', 'date', 'hours', 'quality', 'comment', 'deleted', 'updatedAt'],
   Mood: ['id', 'date', 'value', 'context', 'workoutId', 'deleted', 'updatedAt'],
   Categories: ['id', 'name', 'icon', 'priority'],

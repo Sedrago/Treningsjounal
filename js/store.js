@@ -132,6 +132,20 @@ export function aerobicTypeById(id) {
   return AEROBIC_TYPES.find((t) => t.id === id) || AEROBIC_TYPES[AEROBIC_TYPES.length - 1];
 }
 
+/** Subjektiv intensitet for aerob økt (1–5). */
+export const AEROBIC_INTENSITY = [
+  { value: 1, name: 'Veldig lett' },
+  { value: 2, name: 'Lett' },
+  { value: 3, name: 'Moderat' },
+  { value: 4, name: 'Hard' },
+  { value: 5, name: 'Veldig hard' },
+];
+
+export function aerobicIntensityLabel(value) {
+  if (value == null || value === '') return null;
+  return AEROBIC_INTENSITY.find((q) => q.value === Number(value))?.name || null;
+}
+
 /** Hvordan en øvelse logges: vekt, egenvekt eller varighet. */
 export const LOG_MODES = [
   { id: 'weight', name: 'Vekt + reps' },
@@ -450,6 +464,7 @@ export async function saveAerobicSession(entry) {
     date: entry.date || todayStr(),
     minutes: Math.max(1, Number(entry.minutes) || 0),
     activity: entry.activity || 'other',
+    intensity: entry.intensity === '' || entry.intensity == null ? null : Number(entry.intensity),
     comment: entry.comment || '',
     deleted: false,
     updatedAt: nowIso(),

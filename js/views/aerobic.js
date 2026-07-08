@@ -36,6 +36,10 @@ export async function render(container) {
       <select class="inndata" id="ae-type">
         ${store.AEROBIC_TYPES.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}
       </select>
+      <label class="felt-navn" for="ae-intensitet">Intensitet</label>
+      <select class="inndata" id="ae-intensitet" required>
+        ${store.AEROBIC_INTENSITY.map((q) => `<option value="${q.value}"${q.value === 3 ? ' selected' : ''}>${q.name}</option>`).join('')}
+      </select>
       <label class="felt-navn" for="ae-kommentar">Kommentar <span class="dus">(valgfritt)</span></label>
       <input type="text" class="inndata" id="ae-kommentar" placeholder="F.eks. rolig joggetur …">
       <button type="submit" class="knapp primaer bred">Lagre</button>
@@ -47,6 +51,7 @@ export async function render(container) {
           <div>
             <strong>${a.minutes} min</strong>
             <span class="dus"> · ${esc(store.aerobicTypeById(a.activity).name)} · ${formatDateShort(a.date)}</span>
+            ${a.intensity != null ? `<span class="dus"> · ${esc(store.aerobicIntensityLabel(a.intensity))}</span>` : ''}
             ${a.comment ? `<p class="dus liten">«${esc(a.comment)}»</p>` : ''}
           </div>
           <button type="button" class="ikon-knapp" data-slett="${a.id}" aria-label="Slett registrering">✕</button>
@@ -62,6 +67,7 @@ export async function render(container) {
       date: container.querySelector('#ae-dato').value,
       minutes,
       activity: container.querySelector('#ae-type').value,
+      intensity: container.querySelector('#ae-intensitet').value,
       comment: container.querySelector('#ae-kommentar').value.trim(),
     });
     toast('Aerob trening lagret', 'suksess');

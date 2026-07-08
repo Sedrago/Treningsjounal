@@ -20,6 +20,7 @@
   --radius: 16px;
   --radius-liten: 10px;
   --trykk: 52px; /* minste trykkflate */
+  --hm-tom: #1d242f;
 }
 
 [data-theme="light"] {
@@ -28,6 +29,7 @@
   --flate-2: #eef1f5;
   --kant: #d5dbe4;
   --tekst: #16202c;
+  --hm-tom: #e2e8f0;
   --tekst-dus: #5a6675;
   --aksent: #0e9f6e;
   --aksent-dyp: #0b8a5f;
@@ -581,12 +583,73 @@ select.inndata { appearance: none; }
 .saldo-farge.intensitet { background: #e8a838; }
 .saldo-farge.styrke { background: #6bc98a; }
 
-.heatmap { width: 100%; height: auto; display: block; }
+.heatmap { width: 100%; height: auto; display: block; min-width: 640px; }
+.heatmap-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.heatmap-maned { fill: var(--tekst-dus); font-size: 10px; font-family: inherit; }
+.heatmap-forklaring {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 12px;
+  font-size: 0.82rem;
+  color: var(--tekst-dus);
+}
+.heatmap-forklaring-rad { display: inline-flex; align-items: center; gap: 4px; }
+.heatmap-legend-brikke {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.heatmap-legend-brikke.aerob {
+  box-shadow: 0 0 0 3px hsla(210, 75%, 52%, 0.45);
+  background: var(--hm-tom);
+}
+.heatmap-legend-label { margin: 0 2px; }
+
 .hm-celle.hm-0 { fill: var(--flate-2); }
 .hm-celle.hm-1 { fill: color-mix(in srgb, var(--aksent) 30%, var(--flate-2)); }
 .hm-celle.hm-2 { fill: color-mix(in srgb, var(--aksent) 55%, var(--flate-2)); }
 .hm-celle.hm-3 { fill: color-mix(in srgb, var(--aksent) 80%, var(--flate-2)); }
 .hm-celle.hm-4 { fill: var(--aksent); }
+
+/* ---------- Progresjon ---------- */
+
+.progresjon-faner {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.progresjon-fane {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  background: var(--flate-2);
+  color: var(--tekst-dus);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.progresjon-fane.aktiv {
+  background: var(--aksent);
+  color: var(--aksent-tekst);
+  border-color: var(--aksent-dyp);
+}
+.progresjon-intro { margin: 0 0 10px; }
+.progresjon-intro.skjult { display: none; }
+
+.graf-linje-progresjon { stroke: var(--aksent); stroke-width: 2.5; stroke-linejoin: round; }
+.graf-linje-styrke { stroke: #6bc98a; stroke-width: 2.5; stroke-linejoin: round; }
+.graf-linje-sovn { stroke: #7eb8e8; stroke-width: 2.5; stroke-linejoin: round; }
+.graf-linje-dagsform { stroke: #c89ae0; stroke-width: 2.5; stroke-linejoin: round; }
+.graf-linje-baseline { stroke: var(--tekst-dus); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.65; }
+.graf-punkt-progresjon { fill: var(--aksent); }
+.graf-punkt-styrke { fill: #6bc98a; }
+.graf-punkt-sovn { fill: #7eb8e8; }
+.graf-punkt-dagsform { fill: #c89ae0; }
 
 /* ---------- Kroppsvekt ---------- */
 

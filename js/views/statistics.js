@@ -1,21 +1,14 @@
 /**
- * views/statistics.js – statistikkskjermen: saldo, heatmap og detaljer.
+ * views/statistics.js – statistikkskjermen: aktivitet, progresjon og detaljer.
  */
 
 import * as store from '../store.js';
 import * as stats from '../stats.js';
-import { saldoChart, heatmap, lineChart } from '../charts.js';
+import { activityHeatmap, progressionChart, lineChart } from '../charts.js';
 import {
-  esc, fmtNum, fmtDuration, todayStr,
+  esc, fmtNum, fmtDuration,
   toDisplayWeight, weightUnit,
 } from '../utils.js';
-
-function saldoVerdi(v) {
-  if (v == null) return '–';
-  const diff = v - 100;
-  const sign = diff > 0 ? '+' : '';
-  return `${fmtNum(v, 0)} (${sign}${fmtNum(diff, 0)})`;
-}
 
 export async function render(container) {
   const enriched = await store.getEnrichedSets();
@@ -32,7 +25,6 @@ export async function render(container) {
 
   const dates = stats.workoutDates(enriched);
   const totalTime = workouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-  const saldo = stats.saldoHistory(enriched, aerobic, { maxRir, numWeeks: 12 });
   const favorites = stats.favoriteExercises(enriched);
   const perCategory = stats.sessionsPerCategory(enriched);
 
@@ -48,11 +40,14 @@ export async function render(container) {
     .sort((a, b) => b.oneRM - a.oneRM)
     .slice(0, 8);
 
-  const latest = saldo.latest;
-  const sleepWeeks = stats.sleepHoursPerWeek(sleepRows);
-  const hasSleepChart = sleepWeeks.filter((w) => w.value != null).length >= 2;
-  const moodWeeks = stats.moodValuePerWeek(moodRows);
-  const hasMoodChart = moodWeeks.filter((w) => w.value != null).length >= 2;
+  const heatmapData = stats.activityHeatmapData(enriched, aerobic, { maxRir, days: 364 });
+  const strengthPts = stats.strengthProgression(enriched);
+  const sleepPts = stats.sleepProgression(sleepRows);
+  const moodPts = stats.moodProgression(moodRows);
+
+  const hasStrength = strengthPts.filter((p) => p.value != null).length >= 2;
+  const hasSleep = sleepPts.filter((p) => p.value != null).length >= 2;
+  const hasMood = moodPts.filter((p) => p.value != null).length >= 2;
 
   container.innerHTML = `
     <header class="side-topp">
@@ -66,36 +61,23 @@ export async function render(container) {
       <div class="nokkel"><span class="nokkel-verdi">${fmtDuration(totalTime)}</span><span class="nokkel-navn">Tid totalt</span></div>
     </div>
 
-    <section class="kort" aria-label="Treningsutvikling">
-      <h2 class="kort-tittel">Treningsutvikling</h2>
-      <p class="dus liten saldo-intro">100 = ditt vanlige nivå. Styrke bygges fra e1RM per øvelse mot egen historikk.</p>
-      ${latest ? `
-      <div class="nokkeltal saldo-nokkeltal">
-        <div class="nokkel"><span class="nokkel-verdi">${saldoVerdi(latest.volume)}</span><span class="nokkel-navn">Mengde</span></div>
-        <div class="nokkel"><span class="nokkel-verdi">${saldoVerdi(latest.intensity)}</span><span class="nokkel-navn">Intensitet</span></div>
-        <div class="nokkel"><span class="nokkel-verdi">${saldoVerdi(latest.strength)}</span><span class="nokkel-navn">Styrke</span></div>
-      </div>
-      ${latest.strengthExercises ? `<p class="dus liten">Styrke basert på ${latest.strengthExercises} øvelse${latest.strengthExercises === 1 ? '' : 'r'} denne uken.</p>` : ''}` : ''}
-      <div id="saldo-graf"></div>
+    <section class="kort" aria-label="Aktivitet">
+      <h2 class="kort-tittel">Aktivitet</h2>
+      <p class="dus liten">Grønt = mengde · Oransje = hardere · Blå glød = aerob samme dag.</p>
+      <div id="heatmap"></div>
     </section>
 
-    ${hasSleepChart ? `
-    <section class="kort">
-      <h2 class="kort-tittel">Søvn (snitt timer/natt)</h2>
-      <div id="sovn-graf"></div>
-    </section>` : ''}
-
-    ${hasMoodChart ? `
-    <section class="kort">
-      <h2 class="kort-tittel">Dagsform (snitt 0–100)</h2>
-      <p class="dus liten">100 = veldig bra, 0 = veldig dårlig.</p>
-      <div id="mood-graf"></div>
-    </section>` : ''}
-
-    <section class="kort">
-      <h2 class="kort-tittel">Aktivitet siste 6 måneder</h2>
-      <p class="dus liten">Farge = arbeidssett den dagen.</p>
-      <div id="heatmap"></div>
+    <section class="kort" aria-label="Progresjon">
+      <h2 class="kort-tittel">Progresjon</h2>
+      <div class="progresjon-faner" role="tablist">
+        <button type="button" class="progresjon-fane aktiv" data-fane="styrke" role="tab" aria-selected="true">Styrke</button>
+        <button type="button" class="progresjon-fane" data-fane="sovn" role="tab" aria-selected="false">Søvn</button>
+        <button type="button" class="progresjon-fane" data-fane="dagsform" role="tab" aria-selected="false">Dagsform</button>
+      </div>
+      <p class="dus liten progresjon-intro" data-intro="styrke">Utvikling mot egen historikk — uten konkrete tall.</p>
+      <p class="dus liten progresjon-intro skjult" data-intro="sovn">Timer per natt. Kvalitet forsterker utslaget. Stiplet linje = ditt snitt.</p>
+      <p class="dus liten progresjon-intro skjult" data-intro="dagsform">100 = ditt vanlige nivå.</p>
+      <div id="progresjon-graf"></div>
     </section>
 
     ${bodyweights.length >= 2 ? `
@@ -128,31 +110,62 @@ export async function render(container) {
     </section>
   `;
 
-  saldoChart(container.querySelector('#saldo-graf'), saldo.weeks);
-  heatmap(
-    container.querySelector('#heatmap'),
-    stats.heatmapActivityData(enriched, maxRir),
-    26,
-    {
-      valueLabel: (n, key) => (n > 0
-        ? `${key}: ${Math.round(n)} arbeidssett`
-        : `${key}: ingen styrke`),
-    },
-  );
+  activityHeatmap(container.querySelector('#heatmap'), heatmapData, 52);
 
-  if (hasSleepChart) {
-    lineChart(
-      container.querySelector('#sovn-graf'),
-      sleepWeeks.filter((w) => w.value != null).map((w) => ({ label: w.label, value: w.value })),
-    );
+  const progHost = container.querySelector('#progresjon-graf');
+  const intros = container.querySelectorAll('[data-intro]');
+  const tabs = container.querySelectorAll('.progresjon-fane');
+
+  function renderProgression(mode) {
+    tabs.forEach((t) => {
+      const on = t.dataset.fane === mode;
+      t.classList.toggle('aktiv', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    intros.forEach((p) => {
+      p.classList.toggle('skjult', p.dataset.intro !== mode);
+    });
+
+    if (mode === 'styrke') {
+      if (!hasStrength) {
+        progHost.innerHTML = '<p class="tomt">Logg styrkeøvelser over flere uker for å se utvikling.</p>';
+        return;
+      }
+      progressionChart(progHost, strengthPts, {
+        hideYAxis: true,
+        referenceLine: 100,
+        lineClass: 'graf-linje-styrke',
+        pointClass: 'graf-punkt-styrke',
+      });
+    } else if (mode === 'sovn') {
+      if (!hasSleep) {
+        progHost.innerHTML = '<p class="tomt">Logg søvn over flere uker for å se utvikling.</p>';
+        return;
+      }
+      progressionChart(progHost, sleepPts, {
+        hideYAxis: false,
+        showBaseline: true,
+        lineClass: 'graf-linje-sovn',
+        pointClass: 'graf-punkt-sovn',
+      });
+    } else {
+      if (!hasMood) {
+        progHost.innerHTML = '<p class="tomt">Logg dagsform over flere uker for å se utvikling.</p>';
+        return;
+      }
+      progressionChart(progHost, moodPts, {
+        hideYAxis: true,
+        referenceLine: 100,
+        lineClass: 'graf-linje-dagsform',
+        pointClass: 'graf-punkt-dagsform',
+      });
+    }
   }
 
-  if (hasMoodChart) {
-    lineChart(
-      container.querySelector('#mood-graf'),
-      moodWeeks.filter((w) => w.value != null).map((w) => ({ label: w.label, value: w.value })),
-    );
-  }
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => renderProgression(tab.dataset.fane));
+  });
+  renderProgression('styrke');
 
   if (bodyweights.length >= 2) {
     const points = [...bodyweights].reverse().slice(-30).map((b) => ({

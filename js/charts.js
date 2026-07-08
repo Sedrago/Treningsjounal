@@ -204,10 +204,231 @@ export function saldoChart(container, weeks) {
 }
 
 /**
- * Aktivitets-heatmap à la GitHub: siste ~26 uker, én kolonne per uke.
+ * Glatt kurve gjennom datapunkter (Catmull-Rom → cubic bezier).
+ */
+function smoothPath(pts, xFn, yFn) {
+  if (pts.length < 2) return '';
+  if (pts.length === 2) {
+    return `M ${xFn(pts[0].i)},${yFn(pts[0].v)} L ${xFn(pts[1].i)},${yFn(pts[1].v)}`;
+  }
+  let d = `M ${xFn(pts[0].i)},${yFn(pts[0].v)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = xFn(p1.i) + (xFn(p2.i) - xFn(p0.i)) / 6;
+    const cp1y = yFn(p1.v) + (yFn(p2.v) - yFn(p0.v)) / 6;
+    const cp2x = xFn(p2.i) - (xFn(p3.i) - xFn(p1.i)) / 6;
+    const cp2y = yFn(p2.v) - (yFn(p3.v) - yFn(p1.v)) / 6;
+    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${xFn(p2.i)},${yFn(p2.v)}`;
+  }
+  return d;
+}
+
+/** Farge for aktivitets-celle: mengde → metning, intensitet → grønt mot oransje. */
+function activityCellFill(volume, intensity) {
+  if (volume <= 0) return 'var(--hm-tom)';
+  const hue = 128 - intensity * 88;
+  const sat = 35 + volume * 60;
+  const light = 18 + volume * 32;
+  return `hsl(${hue} ${sat}% ${light}%)`;
+}
+
+/**
+ * Progresjonsgraf med glatt kurve. Y-akse kan skjules (kun utvikling, ikke tall).
  * @param {HTMLElement} container
- * @param {Map<string, number>} data  'YYYY-MM-DD' → aktivitetsverdi
- * @param {{ valueLabel?: (n:number)=>string }} opts
+ * @param {Array<{label:string, value:number|null, baseline?:number|null}>} points
+ * @param {{ hideYAxis?: boolean, referenceLine?: number, lineClass?: string, showBaseline?: boolean }} opts
+ */
+export function progressionChart(container, points, opts = {}) {
+  container.innerHTML = '';
+  const valid = points.filter((p) => p.value != null);
+  if (valid.length < 2) {
+    container.innerHTML = '<p class="tomt">Trenger minst to uker med data.</p>';
+    return;
+  }
+
+  const W = 600; const H = opts.height || 200;
+  const pad = { t: 16, r: 14, b: 28, l: opts.hideYAxis ? 14 : 44 };
+
+  const values = valid.map((p) => p.value);
+  const baselineVals = opts.showBaseline
+    ? points.filter((p) => p.baseline != null).map((p) => p.baseline)
+    : [];
+  let min = Math.min(...values, ...(baselineVals.length ? baselineVals : values));
+  let max = Math.max(...values, ...(baselineVals.length ? baselineVals : values));
+  if (opts.referenceLine != null) {
+    min = Math.min(min, opts.referenceLine);
+    max = Math.max(max, opts.referenceLine);
+  }
+  if (min === max) { min -= 1; max += 1; }
+  const span = max - min;
+  min -= span * 0.12;
+  max += span * 0.12;
+
+  const indices = points.map((_, i) => i);
+  const x = (i) => pad.l + (i / Math.max(1, points.length - 1)) * (W - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - (v - min) / (max - min)) * (H - pad.t - pad.b);
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'graf progresjon-graf', role: 'img' });
+  const lineClass = opts.lineClass || 'graf-linje-progresjon';
+
+  if (!opts.hideYAxis) {
+    for (let i = 0; i <= 3; i++) {
+      const v = min + ((max - min) * i) / 3;
+      const yy = y(v);
+      svg.appendChild(svgEl('line', { x1: pad.l, y1: yy, x2: W - pad.r, y2: yy, class: 'graf-grid' }));
+      const label = svgEl('text', { x: pad.l - 6, y: yy + 4, class: 'graf-akse', 'text-anchor': 'end' });
+      label.textContent = v.toFixed(1).replace('.', ',');
+      svg.appendChild(label);
+    }
+  } else {
+    svg.appendChild(svgEl('line', { x1: pad.l, y1: y(min + (max - min) * 0.5), x2: W - pad.r, y2: y(min + (max - min) * 0.5), class: 'graf-grid' }));
+  }
+
+  if (opts.referenceLine != null) {
+    const yy = y(opts.referenceLine);
+    svg.appendChild(svgEl('line', {
+      x1: pad.l, y1: yy, x2: W - pad.r, y2: yy,
+      class: 'graf-baseline',
+    }));
+  }
+
+  if (opts.showBaseline) {
+    const basePts = points
+      .map((p, i) => (p.baseline != null ? { i, v: p.baseline } : null))
+      .filter(Boolean);
+    if (basePts.length >= 2) {
+      const basePath = smoothPath(basePts, x, y);
+      svg.appendChild(svgEl('path', { d: basePath, class: 'graf-linje-baseline', fill: 'none' }));
+    }
+  }
+
+  const pts = points.map((p, i) => (p.value != null ? { i, v: p.value } : null)).filter(Boolean);
+  const pathD = smoothPath(pts, x, y);
+  svg.appendChild(svgEl('path', { d: pathD, class: lineClass, fill: 'none' }));
+
+  pts.forEach((p) => {
+    svg.appendChild(svgEl('circle', {
+      cx: x(p.i), cy: y(p.v), r: 3.5,
+      class: opts.pointClass || 'graf-punkt-progresjon',
+    }));
+  });
+
+  const step = Math.max(1, Math.ceil(points.length / 6));
+  points.forEach((p, i) => {
+    if (i % step !== 0 && i !== points.length - 1) return;
+    const label = svgEl('text', { x: x(i), y: H - 8, class: 'graf-akse', 'text-anchor': 'middle' });
+    label.textContent = p.label;
+    svg.appendChild(label);
+  });
+
+  container.appendChild(svg);
+}
+
+/**
+ * Aktivitets-heatmap à la GitHub: mengde (grønt) + intensitet (oransje) + aerob-glød (blått).
+ * @param {HTMLElement} container
+ * @param {Map<string, {volume:number, intensity:number, aerobic:number}>} data
+ * @param {number} weeks
+ */
+export function activityHeatmap(container, data, weeks = 52) {
+  container.innerHTML = '';
+  const cell = 11; const gap = 3; const padTop = 18;
+  const W = weeks * (cell + gap);
+  const H = padTop + 7 * (cell + gap);
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - (weeks - 1) * 7);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'heatmap-wrap';
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'heatmap', role: 'img' });
+  svg.setAttribute('aria-label', 'Aktivitet siste året');
+
+  const defs = svgEl('defs');
+  const filter = svgEl('filter', { id: 'hm-aerob-glow', x: '-50%', y: '-50%', width: '200%', height: '200%' });
+  filter.appendChild(svgEl('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: '1.6' }));
+  defs.appendChild(filter);
+  svg.appendChild(defs);
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Des'];
+  let lastMonth = -1;
+  const today = todayStr();
+  const d = new Date(start.getTime());
+
+  for (let w = 0; w < weeks; w++) {
+    const weekStart = new Date(d.getTime());
+    if (weekStart.getMonth() !== lastMonth) {
+      lastMonth = weekStart.getMonth();
+      const label = svgEl('text', {
+        x: w * (cell + gap), y: 12,
+        class: 'heatmap-maned',
+      });
+      label.textContent = monthNames[lastMonth];
+      svg.appendChild(label);
+    }
+
+    for (let day = 0; day < 7; day++) {
+      const key = todayStr(d);
+      if (key > today) break;
+      const cx = w * (cell + gap);
+      const cy = padTop + day * (cell + gap);
+      const dayData = data.get(key) || { volume: 0, intensity: 0, aerobic: 0 };
+
+      if (dayData.aerobic > 0) {
+        const glowPad = 2 + dayData.aerobic * 3;
+        const glow = svgEl('rect', {
+          x: cx - glowPad, y: cy - glowPad,
+          width: cell + glowPad * 2, height: cell + glowPad * 2,
+          rx: 4,
+          fill: `hsla(210, 75%, 52%, ${0.2 + dayData.aerobic * 0.45})`,
+          filter: 'url(#hm-aerob-glow)',
+          class: 'hm-aerob-glow',
+        });
+        svg.appendChild(glow);
+      }
+
+      const fill = activityCellFill(dayData.volume, dayData.intensity);
+      svg.appendChild(svgEl('rect', {
+        x: cx, y: cy,
+        width: cell, height: cell, rx: 3,
+        fill,
+        class: dayData.volume > 0 ? 'hm-celle aktiv' : 'hm-celle tom',
+      }));
+
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  wrap.appendChild(svg);
+
+  const legend = document.createElement('div');
+  legend.className = 'heatmap-forklaring';
+  legend.innerHTML = `
+    <span class="heatmap-forklaring-rad">
+      <span class="heatmap-legend-label">Mindre</span>
+      ${[0.2, 0.45, 0.7, 1].map((v) =>
+        `<span class="heatmap-legend-brikke" style="background:${activityCellFill(v, 0)}"></span>`,
+      ).join('')}
+      <span class="heatmap-legend-label">Mer</span>
+    </span>
+    <span class="heatmap-forklaring-rad">
+      <span class="heatmap-legend-brikke intens" style="background:${activityCellFill(0.8, 0.85)}"></span>
+      <span class="heatmap-legend-label">Hardere</span>
+      <span class="heatmap-legend-brikke aerob" aria-hidden="true"></span>
+      <span class="heatmap-legend-label">Aerob</span>
+    </span>`;
+  wrap.appendChild(legend);
+  container.appendChild(wrap);
+}
+
+/**
+ * Aktivitets-heatmap à la GitHub: siste ~26 uker, én kolonne per uke.
+ * @deprecated Bruk activityHeatmap.
  */
 export function heatmap(container, data, weeks = 26, opts = {}) {
   container.innerHTML = '';

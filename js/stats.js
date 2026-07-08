@@ -507,3 +507,160 @@ export function heatmapActivityData(sets, maxRir = 4, days = 182) {
   }
   return map;
 }
+
+/* ---------- Aktivitets-heatmap v2 + progresjon ---------- */
+
+function clamp(v, lo, hi) {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+/** Mengdescore for én dag (favoriserer kategorier og øvelser). */
+export function dayVolumeScore(daySets, maxRir = 4) {
+  if (!daySets.length) return 0;
+  const categories = new Set(daySets.map((s) => s.category)).size;
+  const exercises = new Set(daySets.map((s) => s.exerciseId)).size;
+  const working = countWorkingSets(daySets, maxRir);
+  return categories * 3 + exercises * 1.5 + working * 0.5;
+}
+
+/** Innsats-score for én dag (høyere = hardere). */
+export function dayIntensityRaw(daySets, maxRir = 4) {
+  const working = daySets.filter((s) => isWorkingSet(s, maxRir) && s.rir != null);
+  if (!working.length) return null;
+  const avg = avgRir(working);
+  return avg == null ? null : 10 - avg;
+}
+
+/** Aerob-score for én dag (minutter × intensitet). */
+export function dayAerobicScore(sessions) {
+  if (!sessions?.length) return 0;
+  return sessions.reduce((sum, r) => {
+    const mins = Number(r.minutes) || 0;
+    const intensity = Number(r.intensity) || 3;
+    return sum + mins * (intensity / 3);
+  }, 0);
+}
+
+/**
+ * Heatmap-data per dag: mengde, intensitet (0–1) og aerob-glød (0–1).
+ * @returns {Map<string, { volume: number, intensity: number, aerobic: number }>}
+ */
+export function activityHeatmapData(enrichedSets, aerobicRows, { maxRir = 4, days = 364 } = {}) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = todayStr(cutoff);
+
+  const setsByDate = groupBy(
+    enrichedSets.filter((s) => s.date >= cutoffStr),
+    (s) => s.date,
+  );
+  const aerobByDate = groupBy(
+    (aerobicRows || []).filter((r) => r.date >= cutoffStr && !r.deleted),
+    (r) => r.date,
+  );
+
+  const dates = [...new Set([...setsByDate.keys(), ...aerobByDate.keys()])].sort();
+  const rawVolume = [];
+  const rawIntensity = [];
+  const rawAerobic = [];
+
+  for (const date of dates) {
+    const daySets = setsByDate.get(date) || [];
+    rawVolume.push({ date, value: dayVolumeScore(daySets, maxRir) });
+    rawIntensity.push({ date, value: dayIntensityRaw(daySets, maxRir) });
+    rawAerobic.push({ date, value: dayAerobicScore(aerobByDate.get(date)) });
+  }
+
+  const map = new Map();
+
+  for (let i = 0; i < dates.length; i++) {
+    const date = dates[i];
+    const vol = rawVolume[i].value;
+    const priorVols = rawVolume.slice(0, i).filter((d) => d.value > 0).map((d) => d.value);
+    const volBase = priorVols.length ? median(priorVols.slice(-56)) : vol || 1;
+    const volumeNorm = vol > 0 ? clamp(vol / (volBase || 1), 0, 1.5) / 1.5 : 0;
+
+    const intRaw = rawIntensity[i].value;
+    let intensityNorm = 0;
+    if (intRaw != null) {
+      const priorInts = rawIntensity.slice(0, i).filter((d) => d.value != null).map((d) => d.value);
+      const intBase = priorInts.length ? median(priorInts.slice(-56)) : intRaw;
+      if (intBase > 0) {
+        intensityNorm = clamp((intRaw - intBase * 0.85) / (intBase * 0.5), 0, 1);
+      }
+    }
+
+    const aerRaw = rawAerobic[i].value;
+    const priorAer = rawAerobic.slice(0, i).filter((d) => d.value > 0).map((d) => d.value);
+    const aerBase = priorAer.length ? median(priorAer.slice(-56)) : aerRaw || 1;
+    const aerobicNorm = aerRaw > 0 ? clamp(aerRaw / (aerBase || 1), 0, 1.5) / 1.5 : 0;
+
+    map.set(date, { volume: volumeNorm, intensity: intensityNorm, aerobic: aerobicNorm });
+  }
+
+  return map;
+}
+
+/** Ukentlig styrke-progresjon (100 = vanlig nivå). */
+export function strengthProgression(enrichedSets, { numWeeks = 16 } = {}) {
+  const weeks = recentWeeks(numWeeks);
+  const exByWeekIdx = exerciseE1rmByWeekIndex(enrichedSets, weeks);
+  const raw = weeks.map(({ index }) => {
+    const ratio = weekStrengthRatio(index, exByWeekIdx);
+    return ratio == null ? null : Math.round(ratio * 1000) / 10;
+  });
+  return weeks.map((w, i) => ({ label: w.label, value: raw[i] }));
+}
+
+/**
+ * Ukentlig søvn-progresjon på absolutt skala (timer).
+ * Kvalitet forsterker utslaget rundt baseline.
+ */
+export function sleepProgression(rows, { numWeeks = 16 } = {}) {
+  const cursor = startOfWeek(new Date());
+  cursor.setDate(cursor.getDate() - 7 * (numWeeks - 1));
+  const byWeek = groupBy(rows, (r) => isoWeekKey(parseDate(r.date)));
+  const result = [];
+
+  for (let i = 0; i < numWeeks; i++) {
+    const key = isoWeekKey(cursor);
+    const weekRows = byWeek.get(key) || [];
+    let value = null;
+    let baseline = null;
+
+    if (weekRows.length) {
+      const avgHours = weekRows.reduce((s, r) => s + (Number(r.hours) || 0), 0) / weekRows.length;
+      const withQ = weekRows.filter((r) => r.quality != null && r.quality !== '');
+      const avgQ = withQ.length
+        ? withQ.reduce((s, r) => s + Number(r.quality), 0) / withQ.length
+        : null;
+      const qualityBoost = avgQ != null ? (avgQ - 3) * 0.25 : 0;
+      value = Math.round((avgHours + qualityBoost) * 10) / 10;
+
+      const priors = result.filter((p) => p.hours != null).map((p) => p.hours);
+      baseline = priors.length ? median(priors.slice(-8)) : avgHours;
+    }
+
+    result.push({
+      label: `${cursor.getDate()}.${String(cursor.getMonth() + 1).padStart(2, '0')}`,
+      value,
+      baseline: baseline != null ? Math.round(baseline * 10) / 10 : null,
+      hours: weekRows.length
+        ? Math.round(weekRows.reduce((s, r) => s + (Number(r.hours) || 0), 0) / weekRows.length * 10) / 10
+        : null,
+    });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return result;
+}
+
+/** Ukentlig dagsform-progresjon (100 = vanlig nivå). */
+export function moodProgression(rows, { numWeeks = 16 } = {}) {
+  const weeks = moodValuePerWeek(rows, numWeeks);
+  const values = weeks.map((w) => w.value);
+  const indexed = toSaldoIndex(values);
+  return weeks.map((w, i) => ({
+    label: w.label,
+    value: indexed[i],
+  }));
+}
