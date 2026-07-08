@@ -3,13 +3,10 @@
  *
  * Strategi (lokal-først):
  *   1. Alle skriv går til IndexedDB + synk-kø umiddelbart.
- *   2. flush() sender køen til serveren når det er nett.
- *   3. pull() henter hele datasettet og erstatter lokale lagre
- *      (Google Sheets er sannhetskilden). Pull gjøres kun når køen er tom,
- *      slik at lokale endringer aldri overskrives.
+ *   2. flush() sender køen til serveren (fortløpende, debounced).
+ *   3. pull() henter hele datasettet – kun ved oppstart og manuell synk.
  *
- * Synk trigges: ved oppstart, når appen får nett igjen, når appen
- * hentes frem (visibilitychange) og etter skriv (debounced).
+ * Synk skjer stille i bakgrunnen og blokkerer ikke UI.
  */
 
 import * as db from './db.js';
@@ -18,9 +15,10 @@ import * as api from './api.js';
 const listeners = new Set();
 let syncing = false;
 let flushTimer = null;
+let startupSyncStarted = false;
 
 export const state = {
-  lastSync: null,      // ISO-tidspunkt for siste vellykkede synk
+  lastSync: null,      // ISO – siste vellykkede henting fra server (pull)
   lastError: null,
   pending: 0,
   online: navigator.onLine,
@@ -38,22 +36,19 @@ async function notify() {
   listeners.forEach((fn) => fn(state));
 }
 
-/** Sender køen til serveren. Returnerer true hvis alt gikk bra. */
+/** Sender køen til serveren. Oppdaterer ikke lastSync (kun opplasting). */
 export async function flush() {
   if (!api.isConfigured() || !navigator.onLine || syncing) return false;
   const queue = await db.getQueue();
   if (!queue.length) return true;
   syncing = true;
   try {
-    // Send i bolker på 50 for å holde hvert kall raskt.
     for (let i = 0; i < queue.length; i += 50) {
       const batch = queue.slice(i, i + 50);
       await api.push(batch.map(({ entity, op, data }) => ({ entity, op, data })));
       await db.removeQueueItems(batch.map((q) => q.qid));
     }
     state.lastError = null;
-    state.lastSync = new Date().toISOString();
-    await db.setMeta('lastSync', state.lastSync);
     return true;
   } catch (err) {
     state.lastError = err.message;
@@ -79,19 +74,25 @@ export async function pull() {
     await db.replaceAll('aerobic', data.aerobic || []);
     await db.replaceAll('sleep', data.sleep || []);
     await db.replaceAll('mood', data.mood || []);
-    // Innstillinger flettes (server vinner), apiKey holdes utenfor klienten.
     const settings = data.settings || {};
     for (const [key, value] of Object.entries(settings)) {
       if (key === 'apiKey') continue;
       await db.put('settings', { key, value });
     }
+    const { initSettings, ensureDefaultExercises } = await import('./store.js');
+    await initSettings();
+    const hasExercises = (data.exercises || []).some((e) => e.deleted !== true);
+    if (!hasExercises) await ensureDefaultExercises();
+
     state.lastError = null;
     state.lastSync = new Date().toISOString();
     await db.setMeta('lastSync', state.lastSync);
+    await db.setMeta('lastSyncError', '');
     window.dispatchEvent(new CustomEvent('sync-complete'));
     return true;
   } catch (err) {
     state.lastError = err.message;
+    await db.setMeta('lastSyncError', state.lastError);
     return false;
   } finally {
     syncing = false;
@@ -99,31 +100,49 @@ export async function pull() {
   }
 }
 
-/** Full synk: send kø, hent deretter ferske data. */
+/** Full synk: send kø, hent deretter ferske data (manuell knapp). */
 export async function fullSync() {
   const flushed = await flush();
-  if (flushed) await pull();
-  return !state.lastError;
+  if (!flushed) return false;
+  const pulled = await pull();
+  return pulled && !state.lastError;
 }
 
-/** Planlegger en flush litt frem i tid (kalles etter skriv). */
+/** Planlegger opplasting litt frem i tid (kalles etter hvert skriv). */
 export function scheduleFlush() {
   notify();
   clearTimeout(flushTimer);
   flushTimer = setTimeout(() => flush(), 3000);
 }
 
+/** Flush + pull ved oppstart – blokkerer ikke UI. */
+function runStartupSync() {
+  if (startupSyncStarted || !api.isConfigured() || !navigator.onLine) return;
+  startupSyncStarted = true;
+  (async () => {
+    await flush();
+    await pull();
+  })().finally(() => notify());
+}
+
 /** Kobler opp automatisk synkronisering. Blokkerer ikke UI. */
 export async function init() {
   state.lastSync = await db.getMeta('lastSync');
-  window.addEventListener('online', () => { notify(); flush(); });
-  window.addEventListener('offline', () => notify());
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') flush();
+  state.lastError = (await db.getMeta('lastSyncError')) || null;
+
+  window.addEventListener('online', () => {
+    notify();
+    flush();
   });
+  window.addEventListener('offline', () => notify());
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      clearTimeout(flushTimer);
+      flush();
+    }
+  });
+
   notify();
-  if (api.isConfigured() && navigator.onLine) {
-    // Send ventende endringer i bakgrunnen – ikke full henting (treg GAS-kall).
-    flush().finally(() => notify());
-  }
+  runStartupSync();
 }
