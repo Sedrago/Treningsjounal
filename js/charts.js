@@ -422,8 +422,20 @@ export function activityHeatmap(container, data, weeks = 52) {
       <span class="heatmap-legend-brikke aerob" aria-hidden="true"></span>
       <span class="heatmap-legend-label">Aerob</span>
     </span>`;
-  wrap.appendChild(legend);
-  container.appendChild(wrap);
+
+  const outer = document.createElement('div');
+  outer.className = 'heatmap-outer';
+  outer.appendChild(wrap);
+  outer.appendChild(legend);
+  container.appendChild(outer);
+
+  // Vis nyeste uker først (siste kolonner til høyre).
+  const scrollToEnd = () => { wrap.scrollLeft = wrap.scrollWidth - wrap.clientWidth; };
+  scrollToEnd();
+  requestAnimationFrame(() => {
+    scrollToEnd();
+    requestAnimationFrame(scrollToEnd);
+  });
 }
 
 /**
