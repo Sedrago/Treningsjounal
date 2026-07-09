@@ -68,7 +68,8 @@ export async function render(container) {
   });
 }
 
-function openForm(host, exercise, onDone) {
+/** Redigeringsskjema for øvelse (gjenbrukes fra planleggeren). */
+export function openForm(host, exercise, onDone) {
   const isNew = !exercise;
   const e = exercise || {
     name: '', category: store.KATEGORIER[0].id, notes: '', video: '', active: true,

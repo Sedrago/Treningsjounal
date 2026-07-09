@@ -9,6 +9,7 @@ import { initContent, initContentFromCache, checkContentUpdate } from './content
 
 import * as home from './views/home.js';
 import * as workout from './views/workout.js';
+import * as plan from './views/plan.js';
 import * as logging from './views/logging.js';
 import * as history from './views/history.js';
 import * as statistics from './views/statistics.js';
@@ -25,6 +26,7 @@ import * as settings from './views/settings.js';
 const routes = {
   hjem: home.render,
   okt: workout.render,
+  planlegg: plan.render,
   logg: logging.render,
   historikk: history.render,
   ovelse: history.renderExercise,

@@ -9,7 +9,7 @@
  */
 
 const DB_NAME = 'treningsjournal';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbPromise = null;
 
@@ -46,6 +46,9 @@ function open() {
         const md = db.createObjectStore('mood', { keyPath: 'id' });
         md.createIndex('date', 'date');
         md.createIndex('workoutId', 'workoutId');
+      }
+      if (oldVersion < 5 && !db.objectStoreNames.contains('plans')) {
+        db.createObjectStore('plans', { keyPath: 'id' });
       }
     };
     req.onsuccess = () => resolve(req.result);

@@ -25,6 +25,8 @@ export async function render(container) {
   const aerobMin = aerobicMinutesSince(aerobic, since7);
   const sleepSum = sleepSummarySince(sleepRows, since7);
   const moodSum = moodSummarySince(moodRows, since7);
+  const plan = await store.getActivePlan();
+  const planCount = plan?.items?.length || 0;
 
   const streakLabel = streakMode === 'calendar'
     ? (streak === 1 ? 'uke' : 'uker')
@@ -51,6 +53,9 @@ export async function render(container) {
     </header>
 
     <a href="#/okt" class="knapp primaer stor" id="start-okt">Start dagens økt</a>
+    <a href="#/planlegg" class="knapp sekundaer bred" id="planlegg-okt">
+      📋 ${planCount ? `Planlagt økt klar (${planCount} øvelse${planCount === 1 ? '' : 'r'})` : 'Planlegg økt'}
+    </a>
     <div class="knapp-rad hjem-ekstra">
       <a href="#/aerob" class="knapp sekundaer">🏃 Aerob</a>
       <a href="#/sovn" class="knapp sekundaer">😴 Søvn</a>

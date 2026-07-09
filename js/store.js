@@ -561,6 +561,76 @@ export async function deleteMoodEntry(id) {
   await queueOp('mood', 'upsert', row);
 }
 
+/* ---------- Planlagt økt ---------- */
+
+/** Parser items-feltet (lagres som JSON-streng for Sheets-kompatibilitet). */
+function parsePlanItems(plan) {
+  if (!plan) return plan;
+  let items = plan.items;
+  if (typeof items === 'string') {
+    try { items = JSON.parse(items); } catch { items = []; }
+  }
+  return { ...plan, items: Array.isArray(items) ? items : [] };
+}
+
+/** Aktiv (ikke fullført) plan, eller null. */
+export async function getActivePlan() {
+  const all = await db.getAll('plans');
+  const active = all
+    .filter((p) => !p.deleted && p.status === 'aktiv')
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  return active.length ? parsePlanItems(active[0]) : null;
+}
+
+/**
+ * Lagrer planen. items: [{exerciseId, goalSets}] i ønsket rekkefølge.
+ * Kun én aktiv plan om gangen – tidligere aktive markeres fullført.
+ */
+export async function savePlan(plan) {
+  if (!plan.id) {
+    const all = await db.getAll('plans');
+    for (const p of all) {
+      if (!p.deleted && p.status === 'aktiv') {
+        p.status = 'fullfort';
+        p.updatedAt = nowIso();
+        await db.put('plans', p);
+        await queueOp('plan', 'upsert', p);
+      }
+    }
+  }
+  const record = {
+    id: plan.id || uuid(),
+    date: plan.date || todayStr(),
+    items: JSON.stringify(plan.items || []),
+    status: plan.status || 'aktiv',
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  await db.put('plans', record);
+  await queueOp('plan', 'upsert', record);
+  return parsePlanItems(record);
+}
+
+/** Markerer planen som fullført (ved avsluttet økt). */
+export async function completePlan(id) {
+  const p = await db.get('plans', id);
+  if (!p || p.deleted) return;
+  p.status = 'fullfort';
+  p.updatedAt = nowIso();
+  await db.put('plans', p);
+  await queueOp('plan', 'upsert', p);
+}
+
+/** Sletter (forkaster) planen. */
+export async function deletePlan(id) {
+  const p = await db.get('plans', id);
+  if (!p) return;
+  p.deleted = true;
+  p.updatedAt = nowIso();
+  await db.put('plans', p);
+  await queueOp('plan', 'upsert', p);
+}
+
 /* ---------- Sammensatte spørringer ---------- */
 
 /**
@@ -609,7 +679,7 @@ export async function getLastSessionForExercise(exerciseId, beforeDate = null) {
 
 /** Sletter alle lokale data (brukes fra innstillinger). */
 export async function wipeLocalData() {
-  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'mood', 'settings', 'queue', 'meta']) {
+  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'mood', 'plans', 'settings', 'queue', 'meta']) {
     await db.clearStore(s);
   }
   Object.assign(settingsCache, DEFAULT_SETTINGS);

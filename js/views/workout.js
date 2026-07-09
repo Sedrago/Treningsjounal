@@ -34,6 +34,44 @@ function lastPerCategory(enriched) {
   return result;
 }
 
+/** Plan-seksjonen: nummerert liste med status og neste-markering. */
+function planSectionHtml(plan, exMap, todaySets) {
+  const setsByEx = groupBy(todaySets, (s) => s.exerciseId);
+  let nextMarked = false;
+  const rows = plan.items.map((item, i) => {
+    const ex = exMap.get(item.exerciseId);
+    if (!ex) return '';
+    const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
+    const done = logged >= item.goalSets;
+    const isNext = !done && !nextMarked;
+    if (isNext) nextMarked = true;
+    return `
+      <div class="plan-okt-rad ${done ? 'ferdig' : ''} ${isNext ? 'neste' : ''}" data-idx="${i}">
+        <a href="#/logg/${ex.id}" class="plan-okt-lenke">
+          <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
+          <span class="plan-okt-info">
+            <span class="plan-navn">${esc(ex.name)}</span>
+            <span class="dus liten">${logged}/${item.goalSets} sett${isNext ? ' · neste' : ''}</span>
+          </span>
+        </a>
+        <span class="plan-rad-handlinger">
+          <button type="button" class="ikon-knapp" data-handling="opp" aria-label="Flytt opp" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="ikon-knapp" data-handling="ned" aria-label="Flytt ned" ${i === plan.items.length - 1 ? 'disabled' : ''}>↓</button>
+          <button type="button" class="ikon-knapp" data-handling="fjern" aria-label="Fjern fra plan">✕</button>
+        </span>
+      </div>`;
+  }).join('');
+
+  return `
+    <section class="kort plan-okt" aria-label="Planlagt økt">
+      <div class="plan-okt-hode">
+        <h2 class="kort-tittel">Planlagt økt</h2>
+        <a href="#/planlegg" class="dus liten">Rediger plan</a>
+      </div>
+      ${rows}
+    </section>`;
+}
+
 export async function render(container) {
   const enriched = await store.getEnrichedSets();
   const today = todayStr();
@@ -43,6 +81,10 @@ export async function render(container) {
   const last = lastPerCategory(enriched);
   const workouts = await store.getWorkouts();
   const todayWorkout = workouts.find((w) => w.date === today) || null;
+  const plan = await store.getActivePlan();
+  const exercises = await store.getExercises({ includeInactive: true });
+  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const hasPlan = Boolean(plan?.items?.length);
 
   const cards = store.KATEGORIER.map((k) => {
     const done = todayByCat.get(k.id);
@@ -80,6 +122,8 @@ export async function render(container) {
         <p class="dus">${formatDateLong(today)}</p>
       </div>
     </header>
+    ${hasPlan ? planSectionHtml(plan, exMap, todaySets) : `
+    <a href="#/planlegg" class="knapp sekundaer bred">📋 Planlegg økten først</a>`}
     <div class="kategori-liste">${cards}</div>
     <section class="kort">
       <label class="felt-navn" for="okt-notat">Notat for økten</label>
@@ -101,8 +145,33 @@ export async function render(container) {
   container.querySelector('#avslutt')?.addEventListener('click', async () => {
     const w = await store.getOrCreateTodayWorkout();
     await store.touchWorkoutDuration(w.id);
+    if (plan) await store.completePlan(plan.id);
     toast('Økt lagret. Godt jobbet!', 'suksess');
     location.hash = '#/hjem';
+  });
+
+  // Plan-handlinger: flytt / fjern.
+  container.querySelectorAll('.plan-okt-rad [data-handling]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = Number(btn.closest('.plan-okt-rad').dataset.idx);
+      const next = plan.items.map((it) => ({ ...it }));
+      const action = btn.dataset.handling;
+      if (action === 'fjern') {
+        next.splice(idx, 1);
+      } else if (action === 'opp' && idx > 0) {
+        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      } else if (action === 'ned' && idx < next.length - 1) {
+        [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+      }
+      if (next.length) {
+        await store.savePlan({ ...plan, items: next });
+      } else {
+        await store.deletePlan(plan.id);
+      }
+      render(container);
+    });
   });
 
   container.querySelectorAll('.kategori-kort').forEach((card) => {

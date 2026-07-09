@@ -19,6 +19,7 @@ var SHEETS = {
   aerobic: 'Aerobic',
   sleep: 'Sleep',
   mood: 'Mood',
+  plan: 'Plans',
   category: 'Categories',
   setting: 'Settings',
 };
@@ -33,6 +34,7 @@ var COLUMNS = {
   Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt', 'intensity'],
   Sleep: ['id', 'date', 'hours', 'quality', 'comment', 'deleted', 'updatedAt'],
   Mood: ['id', 'date', 'value', 'context', 'workoutId', 'deleted', 'updatedAt'],
+  Plans: ['id', 'date', 'items', 'status', 'deleted', 'updatedAt'],
   Categories: ['id', 'name', 'icon', 'priority'],
   Settings: ['key', 'value'],
   Statistics: ['key', 'value'],
@@ -417,6 +419,7 @@ function pullAll_() {
     aerobic: readAll_('Aerobic'),
     sleep: readAll_('Sleep'),
     mood: readAll_('Mood'),
+    plans: readAll_('Plans'),
     categories: readAll_('Categories'),
     settings: settings,
   };
