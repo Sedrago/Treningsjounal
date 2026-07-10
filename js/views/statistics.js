@@ -7,7 +7,7 @@ import * as stats from '../stats.js';
 import { activityHeatmap, progressionChart, lineChart } from '../charts.js';
 import {
   esc, fmtNum, fmtDuration,
-  toDisplayWeight, weightUnit,
+  toDisplayWeight, weightUnit, categoryIconHtml,
 } from '../utils.js';
 
 export async function render(container) {
@@ -105,7 +105,7 @@ export async function render(container) {
     <section class="kort">
       <h2 class="kort-tittel">Økter per kategori</h2>
       ${store.KATEGORIER.map((k) => `
-        <p class="pr-rad"><span>${k.icon} ${esc(k.name)}</span>
+        <p class="pr-rad"><span class="kategori-tittel">${categoryIconHtml(k, 'kategori-ikon liten')} ${esc(k.name)}</span>
           <span class="dus">${perCategory.get(k.id) || 0}</span></p>`).join('')}
     </section>
   `;

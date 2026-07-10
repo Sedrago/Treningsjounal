@@ -183,6 +183,16 @@ export function esc(str) {
     .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 }
 
+/** Rendrer kategori-ikon som bilde eller emoji (fallback). */
+export function categoryIconHtml(category, className = 'kategori-ikon') {
+  const icon = category?.icon;
+  if (!icon) return '';
+  if (/\.(jpg|jpeg|png|webp|svg)$/i.test(icon) || icon.includes('/')) {
+    return `<img class="${esc(className)}" src="${esc(icon)}" alt="" aria-hidden="true" loading="lazy">`;
+  }
+  return `<span class="${esc(className)}" aria-hidden="true">${icon}</span>`;
+}
+
 /** Debounce. */
 export function debounce(fn, ms = 400) {
   let t;

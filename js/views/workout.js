@@ -4,7 +4,7 @@
  */
 
 import * as store from '../store.js';
-import { esc, formatDateLong, relativeDays, todayStr, debounce, toast, summarizeSet } from '../utils.js';
+import { esc, formatDateLong, relativeDays, todayStr, debounce, toast, summarizeSet, categoryIconHtml } from '../utils.js';
 import { groupBy } from '../stats.js';
 
 /** Finner forrige økt-informasjon per kategori (før i dag). */
@@ -108,7 +108,7 @@ export async function render(container) {
     }
     return `
       <button type="button" class="kort kategori-kort ${done ? 'utfort' : ''}" data-kategori="${k.id}">
-        <span class="kategori-topp"><span class="kategori-ikon" aria-hidden="true">${k.icon}</span>
+        <span class="kategori-topp">${categoryIconHtml(k)}
         <span class="kategori-navn">${esc(k.name)}</span></span>
         ${body}
       </button>`;
@@ -208,7 +208,7 @@ async function openPicker(host, categoryId) {
     <div class="ark-bakgrunn" data-lukk></div>
     <div class="ark" role="dialog" aria-label="Velg øvelse for ${esc(category.name)}">
       <div class="ark-hode">
-        <h2>${category.icon} ${esc(category.name)}</h2>
+        <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
       ${items || '<p class="tomt">Ingen øvelser i denne kategorien ennå.</p>'}

@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'treningsjournal-v28';
+const CACHE = 'treningsjournal-v29';
 
 const ASSETS = [
   './',
@@ -41,6 +41,15 @@ const ASSETS = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
+  'images/core.jpg',
+  'images/hinge.jpg',
+  'images/horisontal_pull.jpg',
+  'images/horisontal_push.jpg',
+  'images/squat.jpg',
+  'images/utholdenhet.jpg',
+  'images/valgfri.jpg',
+  'images/vertikal_pull.jpg',
+  'images/vertikal_push.jpg',
 ];
 
 /** Lagrer innholdspakke under stabil nøkkel (uten t= cache-bust). */

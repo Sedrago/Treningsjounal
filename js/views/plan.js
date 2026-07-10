@@ -7,7 +7,7 @@ import * as store from '../store.js';
 import { initContent, getCatalogByCategory, getCatalogEntry } from '../content.js';
 import { openForm } from './exercises.js';
 import { groupBy } from '../stats.js';
-import { esc, formatDateShort, relativeDays, todayStr, toast, windowStartStr } from '../utils.js';
+import { esc, formatDateShort, relativeDays, todayStr, toast, windowStartStr, categoryIconHtml } from '../utils.js';
 
 /** Statistikk per kategori: dager siden sist + økter siste 14 dager. */
 function categoryStats(enriched) {
@@ -61,7 +61,7 @@ export async function render(container) {
       <div class="plan-rad" data-idx="${i}">
         <span class="plan-rekkefolge">${i + 1}</span>
         <div class="plan-rad-info">
-          <span class="plan-navn">${cat ? `${cat.icon} ` : ''}${esc(name)}</span>
+          <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
           <span class="plan-sett-velger">
             <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
             <span class="plan-sett-antall">${item.goalSets} sett</span>
@@ -83,7 +83,7 @@ export async function render(container) {
     return `
       <button type="button" class="kort kategori-kort plan-kategori" data-kategori="${k.id}">
         <span class="kategori-topp">
-          <span class="kategori-ikon" aria-hidden="true">${k.icon}</span>
+          ${categoryIconHtml(k)}
           <span class="kategori-navn">${esc(k.name)}</span>
           ${inPlan ? `<span class="plan-kategori-badge">${inPlan} i planen</span>` : ''}
         </span>
@@ -212,7 +212,7 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
     <div class="ark-bakgrunn" data-lukk></div>
     <div class="ark" role="dialog" aria-label="Velg øvelse for ${esc(category.name)}">
       <div class="ark-hode">
-        <h2>${category.icon} ${esc(category.name)}</h2>
+        <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
       ${mineRows || '<p class="dus liten">Ingen egne øvelser i kategorien ennå.</p>'}

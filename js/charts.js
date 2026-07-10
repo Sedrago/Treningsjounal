@@ -3,7 +3,7 @@
  * Linjediagram, stolpediagram og aktivitets-heatmap.
  */
 
-import { esc, todayStr } from './utils.js';
+import { esc, todayStr, categoryIconHtml } from './utils.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -484,13 +484,13 @@ export function heatmap(container, data, weeks = 26, opts = {}) {
 
 /**
  * Mini-søylevisning for ukentlig kategoribalanse (ren HTML).
- * @param {Array<{icon:string, name:string, count:number}>} items
+ * @param {Array<{category:object, name:string, count:number}>} items
  */
 export function balanceBars(items) {
   const max = Math.max(1, ...items.map((i) => i.count));
   return items.map((i) => `
     <div class="balanse-rad">
-      <span class="balanse-ikon" aria-hidden="true">${i.icon}</span>
+      ${categoryIconHtml(i.category, 'balanse-ikon')}
       <span class="balanse-navn">${esc(i.name)}</span>
       <span class="balanse-spor"><span class="balanse-fyll ${i.count ? '' : 'tom'}" style="width:${(i.count / max) * 100}%"></span></span>
       <span class="balanse-tall">${i.count}</span>

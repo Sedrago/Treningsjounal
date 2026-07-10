@@ -4,7 +4,7 @@
 
 import * as store from '../store.js';
 import { initContent, getCatalogByCategory, getCatalogEntry, isContentLoaded } from '../content.js';
-import { esc, toast } from '../utils.js';
+import { esc, toast, categoryIconHtml } from '../utils.js';
 
 /** Kort utdrag av beskrivelse til listevisning. */
 function excerpt(text, max = 140) {
@@ -55,7 +55,7 @@ async function renderCategories(container) {
     return `
       <a href="#/bibliotek/${k.id}" class="kort kategori-kort bib-kategori">
         <span class="kategori-topp">
-          <span class="kategori-ikon" aria-hidden="true">${k.icon}</span>
+          ${categoryIconHtml(k)}
           <span class="kategori-navn">${esc(k.name)}</span>
         </span>
         <p class="dus liten">${inApp} av ${count} i appen</p>
@@ -99,7 +99,7 @@ async function renderCategory(container, categoryId) {
     <header class="side-topp">
       <a href="#/bibliotek" class="tilbake" aria-label="Tilbake til kategorier">‹</a>
       <div>
-        <h1>${category.icon} ${esc(category.name)}</h1>
+        <h1 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h1>
         <p class="dus">${catalog.length} øvelser i biblioteket</p>
       </div>
     </header>

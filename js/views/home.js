@@ -6,7 +6,7 @@ import * as store from '../store.js';
 import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
 import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, moodSummarySince } from '../stats.js';
 import { balanceBars } from '../charts.js';
-import { esc, formatDateLong, relativeDays, todayStr, windowStartStr } from '../utils.js';
+import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml } from '../utils.js';
 
 export async function render(container) {
   const sets = await store.getEnrichedSets();
@@ -57,7 +57,7 @@ export async function render(container) {
       📋 ${planCount ? `Planlagt økt klar (${planCount} øvelse${planCount === 1 ? '' : 'r'})` : 'Planlegg økt'}
     </a>
     <div class="knapp-rad hjem-ekstra">
-      <a href="#/aerob" class="knapp sekundaer">🏃 Aerob</a>
+      <a href="#/aerob" class="knapp sekundaer"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> Aerob</a>
       <a href="#/sovn" class="knapp sekundaer">😴 Søvn</a>
       <a href="#/folelse" class="knapp sekundaer">🙂 Dagsform</a>
     </div>
@@ -70,16 +70,16 @@ export async function render(container) {
     ${next ? `
     <section class="kort" aria-label="Anbefaling">
       <h2 class="kort-tittel">Neste anbefalte kategori</h2>
-      <p class="anbefaling"><span aria-hidden="true">${next.category.icon}</span> ${esc(next.category.name)}
+      <p class="anbefaling">${categoryIconHtml(next.category, 'kategori-ikon liten')} ${esc(next.category.name)}
         ${next.days === null ? '<span class="dus">(aldri trent)</span>' : `<span class="dus">(${next.days} dager siden)</span>`}
       </p>
     </section>` : ''}
 
     <section class="kort" aria-label="Bevegelsesbalanse siste 7 dager">
       <h2 class="kort-tittel">Siste 7 dager</h2>
-      ${balanceBars(store.KATEGORIER.map((k) => ({ icon: k.icon, name: k.name, count: balance.counts.get(k.id) || 0 })))}
+      ${balanceBars(store.KATEGORIER.map((k) => ({ category: k, name: k.name, count: balance.counts.get(k.id) || 0 })))}
       ${balance.missing.length && sets.length ? `<p class="dus liten">Mangler: ${balance.missing.map((k) => esc(k.name)).join(', ')}</p>` : ''}
-      ${aerobMin > 0 ? `<p class="dus liten aerob-oppsummert">🏃 ${aerobMin} min aerob</p>` : ''}
+      ${aerobMin > 0 ? `<p class="dus liten aerob-oppsummert"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> ${aerobMin} min aerob</p>` : ''}
       ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${sleepSum.avgHours} t søvn (${sleepSum.nights} netter)</p>` : ''}
       ${moodSum ? `<p class="dus liten mood-oppsummert">🙂 Snitt ${moodSum.avgValue}/100 dagsform (${moodSum.count} registrering${moodSum.count === 1 ? '' : 'er'})</p>` : ''}
     </section>

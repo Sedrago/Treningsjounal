@@ -5,7 +5,7 @@
 
 import * as store from '../store.js';
 import { initContent, getDescription, countCatalogNotInApp } from '../content.js';
-import { esc, toast } from '../utils.js';
+import { esc, toast, categoryIconHtml } from '../utils.js';
 
 function goalSummary(ex) {
   const mode = store.logModeOf(ex);
@@ -26,7 +26,7 @@ export async function render(container) {
     const catExercises = exercises.filter((e) => e.category === k.id);
     return `
       <section class="kort" aria-label="${esc(k.name)}">
-        <h2 class="kort-tittel">${k.icon} ${esc(k.name)}</h2>
+        <h2 class="kort-tittel kategori-tittel">${categoryIconHtml(k)} ${esc(k.name)}</h2>
         ${catExercises.map((e) => `
           <button type="button" class="ovelse-rad ${e.active === false ? 'inaktiv' : ''}" data-id="${e.id}">
             <span>${esc(e.name)}${e.active === false ? ' <span class="dus">(inaktiv)</span>' : ''}</span>
@@ -94,7 +94,7 @@ export function openForm(host, exercise, onDone) {
 
         <label class="felt-navn" for="f-kategori">Kategori</label>
         <select class="inndata" id="f-kategori">
-          ${store.KATEGORIER.map((k) => `<option value="${k.id}" ${k.id === e.category ? 'selected' : ''}>${k.icon} ${esc(k.name)}</option>`).join('')}
+          ${store.KATEGORIER.map((k) => `<option value="${k.id}" ${k.id === e.category ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}
         </select>
 
         <label class="felt-navn" for="f-logmode">Loggingstype</label>

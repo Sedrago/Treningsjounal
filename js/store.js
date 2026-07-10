@@ -18,15 +18,18 @@ async function queueOp(entity, op, data) {
 
 /** De faste bevegelseskategoriene. */
 export const KATEGORIER = [
-  { id: 'horisontal-push', name: 'Horisontal push', icon: '💪', priority: 1 },
-  { id: 'horisontal-pull', name: 'Horisontal pull', icon: '🚣', priority: 2 },
-  { id: 'vertikal-push', name: 'Vertikal push', icon: '🙌', priority: 3 },
-  { id: 'vertikal-pull', name: 'Vertikal pull', icon: '🧗', priority: 4 },
-  { id: 'kneboy', name: 'Knebøydominant', icon: '🦵', priority: 5 },
-  { id: 'hoftehengsel', name: 'Hoftehengsel', icon: '🏋️', priority: 6 },
-  { id: 'core', name: 'Core', icon: '🧘', priority: 7 },
-  { id: 'valgfri', name: 'Valgfri tilleggsøvelse', icon: '⭐', priority: 8 },
+  { id: 'horisontal-push', name: 'Horisontal push', icon: 'images/horisontal_push.jpg', priority: 1 },
+  { id: 'horisontal-pull', name: 'Horisontal pull', icon: 'images/horisontal_pull.jpg', priority: 2 },
+  { id: 'vertikal-push', name: 'Vertikal push', icon: 'images/vertikal_push.jpg', priority: 3 },
+  { id: 'vertikal-pull', name: 'Vertikal pull', icon: 'images/vertikal_pull.jpg', priority: 4 },
+  { id: 'kneboy', name: 'Knebøydominant', icon: 'images/squat.jpg', priority: 5 },
+  { id: 'hoftehengsel', name: 'Hoftehengsel', icon: 'images/hinge.jpg', priority: 6 },
+  { id: 'core', name: 'Core', icon: 'images/core.jpg', priority: 7 },
+  { id: 'valgfri', name: 'Valgfri tilleggsøvelse', icon: 'images/valgfri.jpg', priority: 8 },
 ];
+
+/** Ikon for aerob/utholdenhet (brukes på hjemskjermen). */
+export const AEROB_ICON = 'images/utholdenhet.jpg';
 
 export function categoryById(id) {
   return KATEGORIER.find((k) => k.id === id) || null;

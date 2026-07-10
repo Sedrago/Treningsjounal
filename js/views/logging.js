@@ -12,7 +12,7 @@ import {
 } from '../pickers.js';
 import {
   esc, formatDateShort, todayStr, debounce,
-  weightUnit, summarizeSet,
+  weightUnit, summarizeSet, categoryIconHtml,
 } from '../utils.js';
 
 function emptySet(exerciseId, n) {
@@ -92,7 +92,7 @@ export async function render(container, params) {
       <a href="#/okt" class="tilbake" aria-label="Tilbake til dagens økt">‹</a>
       <div>
         <h1>${esc(exercise.name)}</h1>
-        <p class="dus">${category ? `${category.icon} ${esc(category.name)} · ` : ''}Mål: ${goalText}
+        <p class="dus">${category ? `${categoryIconHtml(category, 'kategori-ikon liten')} ${esc(category.name)} · ` : ''}Mål: ${goalText}
           · <a href="#/ovelse/${exercise.id}">historikk</a></p>
         ${lastSession ? `<p class="dus liten forrige-kompakt">Forrige (${formatDateShort(lastSession.date)}): ${esc(lastSession.sets.map((s) => summarizeSet(s, logMode, units)).join(' / '))}</p>` : ''}
       </div>
