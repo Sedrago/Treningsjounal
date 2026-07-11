@@ -6,6 +6,7 @@
 import * as store from '../store.js';
 import { initContent, getCatalogByCategory, getCatalogEntry } from '../content.js';
 import { openForm } from './exercises.js';
+import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { groupBy } from '../stats.js';
 import { esc, formatDateShort, relativeDays, todayStr, toast, windowStartStr, categoryIconHtml } from '../utils.js';
 
@@ -203,10 +204,13 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
     </div>`).join('');
 
   const bibRows = catalogRest.map((c) => `
-    <button type="button" class="velger-rad plan-bib-rad" data-id="${esc(c.id)}">
-      <span class="velger-navn">${esc(c.name)}</span>
-      <span class="velger-info dus">+ fra bibliotek</span>
-    </button>`).join('');
+    <article class="plan-bib-rad" data-id="${esc(c.id)}">
+      <div class="plan-bib-topp">
+        <h3 class="plan-bib-navn">${esc(c.name)}</h3>
+        <button type="button" class="plan-bib-bruk" data-id="${esc(c.id)}">Bruk denne →</button>
+      </div>
+      ${descriptionBlock(c.description, 120)}
+    </article>`).join('');
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -224,6 +228,8 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
     </div>`;
 
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+
+  bindDescriptionToggles(host);
 
   host.querySelectorAll('.plan-velg').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -243,7 +249,7 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
     });
   });
 
-  host.querySelectorAll('.plan-bib-rad').forEach((btn) => {
+  host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const entry = getCatalogEntry(btn.dataset.id);
       if (!entry) return;

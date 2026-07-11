@@ -7,21 +7,21 @@ import { initContent, getCatalogByCategory, getCatalogEntry, isContentLoaded } f
 import { esc, toast, categoryIconHtml } from '../utils.js';
 
 /** Kort utdrag av beskrivelse til listevisning. */
-function excerpt(text, max = 140) {
+export function excerpt(text, max = 140) {
   if (!text || text.length <= max) return { short: text, truncated: false };
   return { short: `${text.slice(0, max).trim()}…`, truncated: true };
 }
 
 /** Beskrivelse – klikk bytter mellom utdrag og full tekst. */
-function descriptionBlock(text) {
-  const { short, truncated } = excerpt(text);
+export function descriptionBlock(text, max = 140) {
+  const { short, truncated } = excerpt(text, max);
   if (!text) return '';
   if (!truncated) return `<p class="bib-beskrivelse">${esc(text)}</p>`;
   return `<p class="bib-beskrivelse bib-beskrivelse--utvidbar" role="button" tabindex="0">${esc(short)}</p>`;
 }
 
 /** Klikk/Enter på utdrag viser hele beskrivelsen og tilbake igjen. */
-function bindDescriptionToggles(container) {
+export function bindDescriptionToggles(container) {
   container.querySelectorAll('.bib-beskrivelse--utvidbar').forEach((el) => {
     const id = el.closest('[data-id]')?.dataset.id;
     const entry = id ? getCatalogEntry(id) : null;

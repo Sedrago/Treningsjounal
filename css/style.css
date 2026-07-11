@@ -514,6 +514,46 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .plan-velg:disabled { opacity: 0.55; cursor: default; }
 .plan-bib-tittel { margin-top: 14px; }
 
+.plan-bib-rad {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--kant);
+}
+.plan-bib-rad:last-child { border-bottom: none; }
+
+.plan-bib-topp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-bib-navn {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-bib-bruk {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--aksent);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0;
+  white-space: nowrap;
+}
+.plan-bib-bruk:active { opacity: 0.75; }
+
+.plan-bib-rad .bib-beskrivelse {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+}
+
 .plan-kopi-rad { flex-direction: column; align-items: flex-start; gap: 4px; }
 .plan-kopi-ovelser {
   white-space: normal;
