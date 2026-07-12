@@ -58,6 +58,7 @@ export async function mountSetLogger(host, {
   persistedSet,
   templateSet,
   onSaved,
+  compact = false,
 }) {
   host.innerHTML = '';
   const logMode = store.logModeOf(exercise);
@@ -72,13 +73,13 @@ export async function mountSetLogger(host, {
   const draft = buildDraft(exercise, setNumber, persistedSet, templateSet);
   if (draft.rir == null) draft.rir = defaultRir;
 
-  const wrap = document.createElement('section');
-  wrap.className = 'kort oktt-panel';
+  const wrap = document.createElement('div');
+  wrap.className = compact ? 'oktt-panel oktt-panel--bunn' : 'kort oktt-panel';
   wrap.innerHTML = `
     <div class="oktt-panel-hode">
       <div>
         <h2 class="oktt-tittel">${esc(exercise.name)}</h2>
-        <p class="dus liten oktt-sett-info">Sett ${setNumber} av ${goalSets}</p>
+        <p class="dus liten oktt-sett-info">Sett ${setNumber} / ${goalSets}</p>
       </div>
     </div>
     <div class="oktt-velgere"></div>
@@ -87,10 +88,10 @@ export async function mountSetLogger(host, {
       <input type="checkbox" id="oktt-tilleggsvekt" ${showWeight ? 'checked' : ''}>
       <span>Tilleggsvekt</span>
     </label>` : ''}
-    <section class="hvile-linje oktt-hvile" aria-label="Hviletimer">
-      <span class="dus">Hvile:</span>
-      ${restTimes.map((t) => `<button type="button" class="knapp hvile" data-sek="${t}">${t} s</button>`).join('')}
-    </section>
+    ${restTimes.length ? `
+    <div class="oktt-hvile-rad" aria-label="Hviletimer">
+      ${restTimes.map((t) => `<button type="button" class="knapp hvile oktt-hvile-knapp" data-sek="${t}">${t}s</button>`).join('')}
+    </div>` : ''}
     <button type="button" class="knapp primaer stor oktt-lagre" id="oktt-lagre-sett">Lagre sett →</button>`;
 
   host.appendChild(wrap);
@@ -146,7 +147,7 @@ export async function mountSetLogger(host, {
     });
   }
 
-  wrap.querySelectorAll('.hvile').forEach((btn) => {
+  wrap.querySelectorAll('.oktt-hvile-knapp, .hvile').forEach((btn) => {
     btn.addEventListener('click', () => timer.start(parseInt(btn.dataset.sek, 10)));
   });
 

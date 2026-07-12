@@ -683,18 +683,74 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 /* ---------- Økt-modus (Styrketrening) ---------- */
 
+#app.app--styrke-oktt {
+  padding-bottom: 0;
+  gap: 0;
+  min-height: 100dvh;
+}
+
+.styrke-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.styrke-layout--oktt {
+  flex: 1;
+  gap: 0;
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+}
+
+.styrke-topp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.styrke-layout--oktt .styrke-topp {
+  flex: 0 1 auto;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.styrke-bunn {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 2px solid var(--kant);
+  background: var(--flate);
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.18);
+  -webkit-overflow-scrolling: touch;
+}
+
+.side-topp-kompakt { margin-bottom: 0; }
+.side-topp-kompakt h1 { font-size: 1.2rem; }
+.side-topp-kompakt .dus { font-size: 0.85rem; margin-top: 2px; }
+
+.styrke-program-kompakt {
+  padding: 8px 10px;
+  margin-bottom: 0;
+}
+.styrke-program-kompakt .styrke-program-hode { margin-bottom: 4px; }
+.styrke-program-kompakt .kort-tittel { font-size: 0.9rem; font-weight: 600; }
+
 .oktt-liste {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .oktt-rad {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 8px 6px;
+  min-height: 44px;
+  padding: 5px 8px 5px 10px;
   border: none;
   border-radius: var(--radius-liten);
   background: none;
@@ -704,41 +760,131 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   cursor: pointer;
 }
 .oktt-rad:active { background: var(--flate-2); }
-.oktt-rad.aktiv { background: rgb(var(--aksent-rgb, 90 140 255) / 0.12); }
-.oktt-rad.aktiv .plan-navn { color: var(--aksent); }
-.oktt-rad.ferdig { opacity: 0.55; }
+.oktt-rad.aktiv { background: rgb(var(--aksent-rgb, 52 211 153) / 0.1); }
+.oktt-rad.aktiv .plan-navn { color: var(--aksent); font-weight: 600; }
+.oktt-rad.ferdig { opacity: 0.5; }
+
+.oktt-rad-markor {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: transparent;
+}
+.oktt-rad.aktiv .oktt-rad-markor { background: var(--aksent); }
+
+.plan-rekkefolge.kompakt {
+  width: 26px;
+  height: 26px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.plan-navn.kompakt {
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .oktt-rad-info {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 8px;
 }
+.oktt-rad-info .dus { flex-shrink: 0; font-size: 0.78rem; }
 
 .oktt-prikker {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
 }
 .oktt-prikk {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--kant);
 }
 .oktt-prikk.ferdig { background: var(--aksent); }
-
-#oktt-panel { margin-bottom: 12px; }
+.oktt-prikk.naa {
+  background: var(--aksent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--aksent) 35%, transparent);
+}
 
 .oktt-panel { margin-bottom: 0; }
-.oktt-panel-hode { margin-bottom: 8px; }
-.oktt-tittel { margin: 0 0 2px; font-size: 1.15rem; }
+.oktt-panel-hode { margin-bottom: 6px; }
+.oktt-tittel { margin: 0 0 2px; font-size: 1.05rem; }
 .oktt-sett-info { margin: 0; }
-.oktt-tilleggsvekt { margin: 8px 0 0; }
+.oktt-tilleggsvekt { margin: 6px 0 0; }
+.oktt-ferdig { text-align: center; padding: 20px 16px; }
+
+.oktt-panel--bunn {
+  padding: 0 4px;
+}
+
+.oktt-panel--bunn .oktt-tittel { font-size: 1.1rem; }
+.oktt-panel--bunn .oktt-sett-info { font-weight: 600; color: var(--aksent); }
+
+.oktt-panel--bunn .pill-gruppe { margin: 8px 0 4px; }
+.oktt-panel--bunn .pill-rad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.oktt-panel--bunn .pill {
+  min-height: 48px;
+  padding: 10px 6px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.oktt-panel--bunn .vekt-hop {
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 0.9rem;
+}
+.oktt-panel--bunn .vekt-trommel { height: 112px; }
+.oktt-panel--bunn .vekt-trommel-item { height: 44px; font-size: 1.2rem; }
+
+.oktt-panel--bunn .reps-stripe { margin: 6px 0; }
+.oktt-panel--bunn .reps-stripe-trommel { height: 58px; max-width: 100%; }
+.oktt-panel--bunn .reps-stripe-item {
+  flex: 0 0 56px;
+  height: 48px;
+  font-size: 1.25rem;
+}
+.oktt-panel--bunn .reps-stripe-markor {
+  width: 56px;
+  height: 48px;
+}
+
+.oktt-hvile-rad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.oktt-hvile-knapp {
+  min-height: 44px;
+  min-width: 52px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+}
+
+.oktt-panel--bunn .oktt-lagre {
+  min-height: 56px;
+  margin-top: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  width: 100%;
+}
+
 .oktt-hvile { margin: 12px 0; }
 .oktt-lagre { margin-top: 8px; }
-.oktt-ferdig { text-align: center; padding: 20px 16px; }
 
 /* ---------- Reps-stripe ---------- */
 

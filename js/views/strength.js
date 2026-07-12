@@ -56,6 +56,7 @@ function statusLine(plan, items, todaySets) {
 }
 
 const FOCUS_KEY = 'styrkeFocusEx';
+const SESSION_KEY = 'styrkeSessionActive';
 
 function resolveActive(items, setsByEx, exMap) {
   if (!items.length) return null;
@@ -156,10 +157,20 @@ export async function render(container) {
   const todayWorkout = workouts.find((w) => w.date === today) || null;
 
   const setsByEx = groupBy(todaySets, (s) => s.exerciseId);
-  const inSession = items.length > 0;
-  const active = inSession ? resolveActive(items, setsByEx, exMap) : null;
   const { done: progDone, total: progTotal } = sessionProgress(items, todaySets);
-  const allProgramDone = inSession && progDone >= progTotal && progTotal > 0;
+  const allProgramDone = items.length > 0 && progDone >= progTotal && progTotal > 0;
+  const hasPartialLog = todaySets.length > 0 && !allProgramDone;
+
+  // Fortsett automatisk hvis økt pågår; ellers kreves «Start økt».
+  if (allProgramDone || !items.length) {
+    sessionStorage.removeItem(SESSION_KEY);
+  } else if (hasPartialLog) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+  }
+  const sessionActive = sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
+  const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
+
+  container.classList.toggle('app--styrke-oktt', sessionActive);
 
   const rows = items.map((item, i) => {
     const ex = exMap.get(item.exerciseId);
@@ -167,20 +178,22 @@ export async function render(container) {
     const cat = ex ? store.categoryById(ex.category) : null;
     const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
     const done = logged >= item.goalSets;
-    const isActive = active && active.exIndex === i && !allProgramDone;
+    const isActive = sessionActive && active && active.exIndex === i && !allProgramDone;
 
-    if (inSession) {
+    if (sessionActive) {
       const dots = Array.from({ length: item.goalSets }, (_, n) => {
         const filled = n < logged;
-        return `<span class="oktt-prikk ${filled ? 'ferdig' : ''}"></span>`;
+        const isCurrent = isActive && n === logged;
+        return `<span class="oktt-prikk ${filled ? 'ferdig' : ''} ${isCurrent ? 'naa' : ''}"></span>`;
       }).join('');
       return `
         <button type="button" class="oktt-rad ${done ? 'ferdig' : ''} ${isActive ? 'aktiv' : ''}"
           data-ex-id="${item.exerciseId}" aria-current="${isActive ? 'step' : 'false'}">
-          <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
+          <span class="oktt-rad-markor" aria-hidden="true"></span>
+          <span class="plan-rekkefolge kompakt">${done ? '✓' : i + 1}</span>
           <span class="oktt-rad-info">
-            <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
-            <span class="dus liten">${logged}/${item.goalSets} sett</span>
+            <span class="plan-navn kompakt">${esc(name)}</span>
+            <span class="dus liten">${logged}/${item.goalSets}</span>
           </span>
           <span class="oktt-prikker" aria-hidden="true">${dots}</span>
         </button>`;
@@ -212,40 +225,48 @@ export async function render(container) {
     { action: 'mal', label: 'Lagrede programmer' },
     ...(items.length ? [{ action: 'lagre-mal', label: 'Lagre som program' }] : []),
     ...(items.length ? [{ action: 'tom', label: 'Tøm program', farlig: true }] : []),
+    ...(sessionActive ? [{ action: 'pause', label: 'Pause økt' }] : []),
   ];
 
   container.innerHTML = `
-    <header class="side-topp">
-      <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
-      <div>
-        <h1>Styrketrening</h1>
-        <p class="dus">${formatDateLong(today)} · ${esc(statusLine(plan, items, todaySets))}</p>
-      </div>
-    </header>
-
-    <section class="kort styrke-program" aria-label="Dagens program">
-      <div class="styrke-program-hode">
-        <h2 class="kort-tittel">Program${items.length ? ` (${items.length})` : ''}</h2>
-        <div class="styrke-meny-wrap">
-          <button type="button" class="ikon-knapp styrke-meny" id="program-meny" aria-label="Programmeny" aria-haspopup="menu" aria-expanded="false">☰</button>
-          <div class="styrke-meny-popover skjult" id="program-meny-liste" role="menu">
-            ${menuItems.map((m) => `
-              <button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
+    <div class="styrke-layout ${sessionActive ? 'styrke-layout--oktt' : ''}">
+      <div class="styrke-topp">
+        <header class="side-topp ${sessionActive ? 'side-topp-kompakt' : ''}">
+          <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
+          <div>
+            <h1>${sessionActive ? 'Økt' : 'Styrketrening'}</h1>
+            <p class="dus">${sessionActive
+    ? `${progDone}/${progTotal} øvelser · sett ${active?.setNum ?? '–'}/${active?.item?.goalSets ?? '–'}`
+    : `${formatDateLong(today)} · ${esc(statusLine(plan, items, todaySets))}`}</p>
           </div>
-        </div>
+        </header>
+
+        <section class="kort styrke-program ${sessionActive ? 'styrke-program-kompakt' : ''}" aria-label="Dagens program">
+          <div class="styrke-program-hode">
+            <h2 class="kort-tittel">Program${items.length ? ` (${items.length})` : ''}</h2>
+            <div class="styrke-meny-wrap">
+              <button type="button" class="ikon-knapp styrke-meny" id="program-meny" aria-label="Programmeny" aria-haspopup="menu" aria-expanded="false">☰</button>
+              <div class="styrke-meny-popover skjult" id="program-meny-liste" role="menu">
+                ${menuItems.map((m) => `
+                  <button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div id="styrke-liste" class="${sessionActive ? 'oktt-liste' : ''}">${rows}</div>
+        </section>
+
+        ${!sessionActive ? `
+        ${items.length ? '<button type="button" class="knapp primaer stor" id="start-okt">Start økt</button>' : ''}
+        <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
+        <section class="kort">
+          <label class="felt-navn" for="okt-notat">Notat for økten</label>
+          <textarea id="okt-notat" class="inndata" rows="2"
+            placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
+        </section>` : ''}
       </div>
-      <div id="styrke-liste" class="${inSession ? 'oktt-liste' : ''}">${rows}</div>
-    </section>
 
-    <div id="oktt-panel"></div>
-
-    <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
-
-    <section class="kort">
-      <label class="felt-navn" for="okt-notat">Notat for økten</label>
-      <textarea id="okt-notat" class="inndata" rows="2"
-        placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
-    </section>
+      ${sessionActive ? '<div class="styrke-bunn" id="oktt-panel"></div>' : ''}
+    </div>
     <div id="velger-vert"></div>
   `;
 
@@ -343,12 +364,23 @@ export async function render(container) {
       });
     } else if (action === 'tom') {
       if (!confirm('Tømme hele programmet? Loggede sett i dag beholdes.')) return;
+      sessionStorage.removeItem(SESSION_KEY);
       if (plan) await store.deletePlan(plan.id);
+      render(container);
+    } else if (action === 'pause') {
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(FOCUS_KEY);
       render(container);
     }
   }
 
-  container.querySelector('#legg-til-ovelse').addEventListener('click', () => handleProgramAction('legg-til'));
+  container.querySelector('#start-okt')?.addEventListener('click', () => {
+    if (!items.length) return;
+    sessionStorage.setItem(SESSION_KEY, '1');
+    render(container);
+  });
+
+  container.querySelector('#legg-til-ovelse')?.addEventListener('click', () => handleProgramAction('legg-til'));
 
   menuList.querySelectorAll('[data-program-handling]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -382,14 +414,22 @@ export async function render(container) {
     });
   });
 
+  container.querySelector('.oktt-rad.aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
   const sessionHost = container.querySelector('#oktt-panel');
-  if (inSession && allProgramDone) {
+  if (sessionActive && allProgramDone) {
     sessionHost.innerHTML = `
-      <section class="kort oktt-panel oktt-ferdig">
+      <div class="oktt-panel oktt-panel--bunn oktt-ferdig">
         <h2 class="oktt-tittel">Program fullført</h2>
-        <p class="dus">Alle ${progTotal} øvelser er logget i dag.</p>
-      </section>`;
-  } else if (inSession && active?.exercise) {
+        <p class="dus">Alle ${progTotal} øvelser er logget.</p>
+        <button type="button" class="knapp primaer stor" id="oktt-ferdig">Ferdig</button>
+      </div>`;
+    sessionHost.querySelector('#oktt-ferdig').addEventListener('click', () => {
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(FOCUS_KEY);
+      render(container);
+    });
+  } else if (sessionActive && active?.exercise) {
     const exSets = setsByEx.get(active.item.exerciseId) || [];
     const persistedSet = exSets.find((s) => s.setNumber === active.setNum) || null;
     const prevSet = exSets.find((s) => s.setNumber === active.setNum - 1)
@@ -403,6 +443,7 @@ export async function render(container) {
       goalSets: active.item.goalSets,
       persistedSet,
       templateSet: prevSet,
+      compact: true,
       onSaved: () => {
         sessionStorage.removeItem(FOCUS_KEY);
         toast('Sett lagret', 'suksess');

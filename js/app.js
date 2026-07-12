@@ -68,6 +68,7 @@ async function renderRoute() {
   const { route, params, query } = parseHash();
   const renderFn = routes[route] || home.render;
   const main = document.getElementById('app');
+  main.classList.remove('app--styrke-oktt');
   main.scrollTop = 0;
   window.scrollTo(0, 0);
   try {
