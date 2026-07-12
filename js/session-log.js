@@ -2,13 +2,13 @@
  * session-log.js – logging av ett sett om gangen (økt-modus).
  */
 
-import * as store from '../store.js';
-import * as timer from '../timer.js';
+import * as store from './store.js';
+import * as timer from './timer.js';
 import {
   mountWeightWheel, mountPillRow, mountDurationWheel,
   mountRepStrip, effortPillOptions, rirToEffort,
 } from './pickers.js';
-import { weightUnit, toast, esc } from './utils.js';
+import { toast, esc } from './utils.js';
 
 export function isSetComplete(set, logMode, showWeight) {
   if (logMode === 'duration') return set.durationSec != null;
