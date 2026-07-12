@@ -3,7 +3,7 @@
  */
 
 import * as store from '../store.js';
-import { initContent, getCatalogByCategory, getCatalogEntry } from '../content.js';
+import { initContent, getCatalogByCategory, getCatalogEntry, getDescription } from '../content.js';
 import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { mountSetLogger } from '../session-log.js';
@@ -123,6 +123,33 @@ function resolveActive(items, setsByEx, exMap) {
   return { exIndex, item, exercise, setNum, allComplete: false };
 }
 
+function renderTeknikkPanel(exercise) {
+  if (!exercise) return '';
+  const description = getDescription(exercise);
+  const notes = exercise.notes?.trim();
+  const video = exercise.video?.trim();
+  if (!description && !notes && !video) return '';
+
+  const extras = `
+    ${notes ? `<p class="teknikk-notater"><span class="dus">Mine notater:</span> ${esc(notes)}</p>` : ''}
+    ${video ? `<p class="teknikk-video"><a href="${esc(video)}" target="_blank" rel="noopener">Se video ↗</a></p>` : ''}`;
+
+  if (description) {
+    return `
+    <details class="styrke-teknikk teknikk-panel" open>
+      <summary class="teknikk-summary">Teknikk · ${esc(exercise.name)}</summary>
+      <p class="teknikk-tekst">${esc(description)}</p>
+      ${extras}
+    </details>`;
+  }
+
+  return `
+    <section class="styrke-teknikk teknikk-panel">
+      <p class="felt-navn">Teknikk · ${esc(exercise.name)}</p>
+      ${extras}
+    </section>`;
+}
+
 /** Eksportert for hjemskjermen. */
 export async function homeStrengthLabel() {
   const enriched = await store.getEnrichedSets();
@@ -169,6 +196,8 @@ export async function render(container) {
   }
   const sessionActive = sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
   const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
+  const teknikkExercise = sessionActive ? active?.exercise : null;
+  const teknikkHtml = renderTeknikkPanel(teknikkExercise);
 
   container.classList.toggle('app--styrke-oktt', sessionActive);
 
@@ -240,6 +269,7 @@ export async function render(container) {
           </div>
         </div>
       </div>
+      ${teknikkHtml}
       <div id="styrke-liste">${rows}</div>
     </section>
 

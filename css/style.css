@@ -598,6 +598,16 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 .styrke-program { margin-bottom: 10px; }
 
+.styrke-program .styrke-teknikk {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  background: var(--flate-2);
+  border-radius: var(--radius-liten);
+  border: 1px solid var(--kant);
+}
+.styrke-program .styrke-teknikk .teknikk-summary { padding: 0; }
+.styrke-program .styrke-teknikk .teknikk-tekst { margin-top: 8px; }
+
 .styrke-program-hode {
   display: flex;
   justify-content: space-between;
