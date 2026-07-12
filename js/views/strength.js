@@ -58,6 +58,7 @@ function statusLine(plan, items, todaySets) {
 const FOCUS_KEY = 'styrkeFocusEx';
 const SESSION_KEY = 'styrkeSessionActive';
 const TEKNIKK_KEY = 'styrkeTeknikkEx';
+const EXPAND_KEY = 'styrkeRadUtvid';
 
 function exercisePickerDescription(exercise) {
   const description = getDescription(exercise);
@@ -193,6 +194,7 @@ export async function render(container) {
   const sessionActive = sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
   const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
   const teknikkOpenId = sessionActive ? sessionStorage.getItem(TEKNIKK_KEY) : null;
+  const expandedId = sessionActive ? sessionStorage.getItem(EXPAND_KEY) : null;
 
   container.classList.toggle('app--styrke-oktt', sessionActive);
 
@@ -203,8 +205,10 @@ export async function render(container) {
     const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
     const done = logged >= item.goalSets;
     const isActive = sessionActive && active && active.exIndex === i && !allProgramDone;
-    const compact = sessionActive && !isActive;
-    const showTeknikk = isActive && teknikkOpenId === item.exerciseId;
+    const isExpanded = sessionActive && expandedId === item.exerciseId;
+    const showDetails = !sessionActive || isExpanded;
+    const compact = sessionActive && !showDetails;
+    const showTeknikk = isExpanded && teknikkOpenId === item.exerciseId;
     const hasTeknikk = ex && (getDescription(ex) || ex.notes?.trim() || ex.video?.trim());
 
     const progress = sessionActive ? `
@@ -215,32 +219,36 @@ export async function render(container) {
     return `<span class="oktt-prikk ${filled ? 'ferdig' : ''} ${isCurrent ? 'naa' : ''}"></span>`;
   }).join('')}</span>` : '';
 
-    const setVelger = !compact ? `
+    const expandBtn = sessionActive ? `
+        <button type="button" class="ikon-knapp styrke-rad-utvid" data-handling="utvid"
+          aria-label="${isExpanded ? 'Skjul valg' : 'Vis valg'}" aria-expanded="${isExpanded ? 'true' : 'false'}">⌄</button>` : '';
+
+    const setVelger = showDetails ? `
         <span class="plan-sett-velger">
           <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
           <span class="plan-sett-antall">${item.goalSets} sett</span>
           <button type="button" class="plan-sett-knapp" data-handling="sett-pluss" aria-label="Flere sett">+</button>
         </span>` : '';
 
-    const rowActions = !compact ? `
+    const rowActions = showDetails ? `
         <span class="plan-rad-handlinger">
           <button type="button" class="ikon-knapp" data-handling="opp" aria-label="Flytt opp" ${i === 0 ? 'disabled' : ''}>↑</button>
           <button type="button" class="ikon-knapp" data-handling="ned" aria-label="Flytt ned" ${i === items.length - 1 ? 'disabled' : ''}>↓</button>
-          ${isActive && hasTeknikk ? '<button type="button" class="ikon-knapp styrke-teknikk-knapp" data-handling="teknikk" aria-label="Vis teknikk" aria-pressed="' + (showTeknikk ? 'true' : 'false') + '">i</button>' : ''}
+          ${hasTeknikk ? '<button type="button" class="ikon-knapp styrke-teknikk-knapp" data-handling="teknikk" aria-label="Vis teknikk" aria-pressed="' + (showTeknikk ? 'true' : 'false') + '">i</button>' : ''}
           <button type="button" class="ikon-knapp" data-handling="fjern" aria-label="Fjern">✕</button>
         </span>` : '';
 
     return `
-      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : ''}"
+      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : ''} ${isExpanded ? 'styrke-rad--utvidet' : ''}"
         data-idx="${i}" data-ex-id="${item.exerciseId}">
         <div class="styrke-lenke">
           <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
           <span class="plan-okt-info">
             <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
-            ${isActive ? '<span class="styrke-rad-merke">Nå</span>' : ''}
           </span>
         </div>
         ${progress}
+        ${expandBtn}
         ${setVelger}
         ${rowActions}
         ${showTeknikk ? renderInlineTeknikk(ex) : ''}
@@ -392,6 +400,7 @@ export async function render(container) {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(FOCUS_KEY);
       sessionStorage.removeItem(TEKNIKK_KEY);
+      sessionStorage.removeItem(EXPAND_KEY);
       render(container);
     }
   }
@@ -420,6 +429,9 @@ export async function render(container) {
         if (sessionStorage.getItem(TEKNIKK_KEY) && sessionStorage.getItem(TEKNIKK_KEY) !== row.dataset.exId) {
           sessionStorage.removeItem(TEKNIKK_KEY);
         }
+        if (sessionStorage.getItem(EXPAND_KEY) && sessionStorage.getItem(EXPAND_KEY) !== row.dataset.exId) {
+          sessionStorage.removeItem(EXPAND_KEY);
+        }
         render(container);
       });
     }
@@ -428,6 +440,17 @@ export async function render(container) {
         e.preventDefault();
         e.stopPropagation();
         const action = btn.dataset.handling;
+        if (action === 'utvid') {
+          const open = sessionStorage.getItem(EXPAND_KEY) === row.dataset.exId;
+          if (open) {
+            sessionStorage.removeItem(EXPAND_KEY);
+            sessionStorage.removeItem(TEKNIKK_KEY);
+          } else {
+            sessionStorage.setItem(EXPAND_KEY, row.dataset.exId);
+          }
+          render(container);
+          return;
+        }
         if (action === 'teknikk') {
           const open = sessionStorage.getItem(TEKNIKK_KEY) === row.dataset.exId;
           if (open) sessionStorage.removeItem(TEKNIKK_KEY);
@@ -472,6 +495,7 @@ export async function render(container) {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(FOCUS_KEY);
       sessionStorage.removeItem(TEKNIKK_KEY);
+      sessionStorage.removeItem(EXPAND_KEY);
       render(container);
     });
   } else if (sessionActive && active?.exercise) {

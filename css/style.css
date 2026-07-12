@@ -762,6 +762,19 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .styrke-rad--kompakt .styrke-lenke { flex: 1 1 auto; }
 
+.styrke-rad-utvid {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+.styrke-rad-utvid[aria-expanded="true"] { transform: rotate(180deg); }
+
+.styrke-rad--utvidet {
+  padding-bottom: 4px;
+}
+
 .styrke-rad-teknikk {
   flex: 1 0 100%;
   width: 100%;
