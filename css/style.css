@@ -759,21 +759,12 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .styrke-rad--kompakt {
   padding: 6px 0;
   cursor: pointer;
-  align-items: flex-start;
 }
 .styrke-rad--kompakt .styrke-lenke { flex: 1 1 auto; }
 .styrke-rad--kompakt .plan-navn {
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  word-break: break-word;
-  line-height: 1.25;
 }
-.styrke-rad--kompakt .plan-rekkefolge { margin-top: 1px; }
-.styrke-rad--kompakt .styrke-rad-fremdrift,
-.styrke-rad--kompakt .styrke-rad-utvid { margin-top: 2px; }
 
 .styrke-rad-utvid {
   flex-shrink: 0;
