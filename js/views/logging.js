@@ -230,7 +230,7 @@ export async function render(container, params) {
       host.appendChild(repsHost);
       row.pickers.reps = mountRepStrip(repsHost, {
         value: row.set.reps,
-        centerHint: Math.round((Number(exercise.goalRepsMin) + Number(exercise.goalRepsMax)) / 2) || 8,
+        centerHint: store.repMidpoint(exercise) ?? 8,
         onChange: (v) => {
           row.touched = true;
           row.set.reps = v;
@@ -357,7 +357,7 @@ export async function render(container, params) {
   if (persisted.length) {
     persisted.forEach((s) => addSet({ ...s, exerciseId }));
   } else {
-    const n = Number(exercise.goalSets) || 3;
+    const n = Number(exercise.goalSets);
     const prev = lastSession?.sets;
     for (let i = 1; i <= n; i++) {
       const prevSet = prev?.[i - 1] || prev?.[prev.length - 1];

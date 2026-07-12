@@ -8,9 +8,10 @@ import { initContent, getDescription, countCatalogNotInApp } from '../content.js
 import { esc, toast, categoryIconHtml } from '../utils.js';
 
 function goalSummary(ex) {
+  const text = store.goalTextFor(ex);
+  if (!text) return 'Ingen mål';
   const mode = store.logModeOf(ex);
-  const label = mode === 'duration' ? 's' : 'reps';
-  return `${ex.goalSets} × ${ex.goalRepsMin}–${ex.goalRepsMax} ${label}`;
+  return mode === 'duration' ? text : `${text} reps`;
 }
 
 function logModeLabel(id) {
@@ -74,9 +75,9 @@ export function openForm(host, exercise, onDone) {
   const e = exercise || {
     name: '', category: store.KATEGORIER[0].id, notes: '', video: '', active: true,
     logMode: 'weight',
-    goalSets: store.getSetting('defaultSets'),
-    goalRepsMin: store.getSetting('defaultRepsMin'),
-    goalRepsMax: store.getSetting('defaultRepsMax'),
+    goalSets: store.defaultGoals().goalSets,
+    goalRepsMin: store.defaultGoals().goalRepsMin,
+    goalRepsMax: store.defaultGoals().goalRepsMax,
   };
   const description = getDescription(e);
   const mode = store.logModeOf(e);

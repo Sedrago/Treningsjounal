@@ -17,9 +17,7 @@ export function isSetComplete(set, logMode, showWeight) {
 }
 
 function defaultReps(exercise) {
-  const min = Number(exercise.goalRepsMin) || 8;
-  const max = Number(exercise.goalRepsMax) || 10;
-  return Math.round((min + max) / 2);
+  return store.repMidpoint(exercise) ?? 8;
 }
 
 function buildDraft(exercise, setNumber, persisted, template) {

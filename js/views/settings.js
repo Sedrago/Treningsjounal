@@ -58,17 +58,17 @@ export async function render(container) {
           <input type="number" class="inndata" id="s-rir" value="${s('defaultRir')}" min="0" max="10">
         </div>
         <div class="felt">
-          <label class="felt-navn" for="s-sett">Standard sett</label>
+          <label class="felt-navn" for="s-sett">Standard sett <span class="dus">(ny øvelse fra bibliotek)</span></label>
           <input type="number" class="inndata" id="s-sett" value="${s('defaultSets')}" min="1" max="10">
         </div>
       </div>
       <div class="skjema-rad">
         <div class="felt">
-          <label class="felt-navn" for="s-repsmin">Reps nedre</label>
+          <label class="felt-navn" for="s-repsmin">Reps nedre <span class="dus">(ny øvelse)</span></label>
           <input type="number" class="inndata" id="s-repsmin" value="${s('defaultRepsMin')}" min="1" max="50">
         </div>
         <div class="felt">
-          <label class="felt-navn" for="s-repsmaks">Reps øvre</label>
+          <label class="felt-navn" for="s-repsmaks">Reps øvre <span class="dus">(ny øvelse)</span></label>
           <input type="number" class="inndata" id="s-repsmaks" value="${s('defaultRepsMax')}" min="1" max="50">
         </div>
       </div>

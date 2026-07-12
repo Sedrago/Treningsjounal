@@ -335,7 +335,7 @@ export async function render(container) {
   function addExercise(exercise) {
     const next = [...items.map((it) => ({ ...it })), {
       exerciseId: exercise.id,
-      goalSets: Number(exercise.goalSets) || Number(store.getSetting('defaultSets')) || 3,
+      goalSets: Number(exercise.goalSets),
     }];
     return updateItems(next);
   }
@@ -619,7 +619,7 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
     e.preventDefault();
     const name = e.target.navn.value.trim();
     if (!name) return;
-    const ex = await store.saveExercise({ name, category: categoryId });
+    const ex = await store.saveExercise({ name, category: categoryId, applyDefaultGoals: true });
     host.innerHTML = '';
     onPick(ex);
   });

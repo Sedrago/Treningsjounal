@@ -82,7 +82,9 @@ export async function ensureDefaultExercises() {
   const existing = await db.getAll('exercises');
   if (existing.some((e) => !e.deleted)) return false;
   for (const tpl of DEFAULT_OVELSER) {
-    await saveExercise({ ...tpl, catalogId: tpl.id, notes: '', video: '', active: true });
+    await saveExercise({
+      ...tpl, catalogId: tpl.id, notes: '', video: '', active: true, applyDefaultGoals: true,
+    });
   }
   return true;
 }
@@ -182,13 +184,63 @@ export function logModeOf(exercise) {
   return LOG_MODES.some((m) => m.id === mode) ? mode : 'weight';
 }
 
+/** Standardmål fra innstillinger – brukes kun ved første gangs tillegg til «mine øvelser». */
+export function defaultGoals() {
+  return {
+    goalSets: Number(getSetting('defaultSets')),
+    goalRepsMin: Number(getSetting('defaultRepsMin')),
+    goalRepsMax: Number(getSetting('defaultRepsMax')),
+  };
+}
+
+function goalNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function resolveGoalsForSave(ex, existing) {
+  const explicit = {
+    goalSets: goalNumber(ex.goalSets),
+    goalRepsMin: goalNumber(ex.goalRepsMin),
+    goalRepsMax: goalNumber(ex.goalRepsMax),
+  };
+  const hasExplicit = explicit.goalSets || explicit.goalRepsMin || explicit.goalRepsMax;
+  if (hasExplicit) {
+    return {
+      goalSets: explicit.goalSets ?? existing?.goalSets ?? null,
+      goalRepsMin: explicit.goalRepsMin ?? existing?.goalRepsMin ?? null,
+      goalRepsMax: explicit.goalRepsMax ?? existing?.goalRepsMax ?? null,
+    };
+  }
+  if (ex.applyDefaultGoals) return defaultGoals();
+  if (existing) {
+    return {
+      goalSets: existing.goalSets ?? null,
+      goalRepsMin: existing.goalRepsMin ?? null,
+      goalRepsMax: existing.goalRepsMax ?? null,
+    };
+  }
+  return { goalSets: null, goalRepsMin: null, goalRepsMax: null };
+}
+
 export function goalTextFor(exercise) {
   const mode = logModeOf(exercise);
-  const sets = exercise.goalSets || 3;
-  const min = exercise.goalRepsMin;
-  const max = exercise.goalRepsMax;
+  const sets = goalNumber(exercise?.goalSets);
+  const min = goalNumber(exercise?.goalRepsMin);
+  const max = goalNumber(exercise?.goalRepsMax);
+  if (!sets || !min || !max) return '';
   if (mode === 'duration') return `${sets} × ${min}–${max} s`;
   return `${sets} × ${min}–${max}`;
+}
+
+/** Midtpunkt av reps-mål, eller null hvis mål ikke er satt. */
+export function repMidpoint(exercise) {
+  const min = goalNumber(exercise?.goalRepsMin);
+  const max = goalNumber(exercise?.goalRepsMax);
+  if (min && max) return Math.round((min + max) / 2);
+  if (min) return min;
+  if (max) return max;
+  return null;
 }
 
 /* ---------- Innstillinger ---------- */
@@ -233,6 +285,7 @@ export function getExercise(id) {
 /** Lagrer en øvelse (ny eller endret). catalogId settes kun ved opprettelse eller migrering. */
 export async function saveExercise(ex) {
   const existing = ex.id ? await db.get('exercises', ex.id) : null;
+  const goals = resolveGoalsForSave(ex, existing);
   const record = {
     id: ex.id || uuid(),
     name: ex.name.trim(),
@@ -241,9 +294,7 @@ export async function saveExercise(ex) {
     notes: ex.notes || '',
     video: ex.video || '',
     active: ex.active !== false,
-    goalSets: Number(ex.goalSets) || Number(getSetting('defaultSets')),
-    goalRepsMin: Number(ex.goalRepsMin) || Number(getSetting('defaultRepsMin')),
-    goalRepsMax: Number(ex.goalRepsMax) || Number(getSetting('defaultRepsMax')),
+    ...goals,
     logMode: logModeOf(ex),
     deleted: false,
     updatedAt: nowIso(),
@@ -304,6 +355,7 @@ export async function addExerciseFromCatalog(catalogId, catalogEntry) {
     notes: '',
     video: '',
     active: true,
+    applyDefaultGoals: true,
   });
 }
 

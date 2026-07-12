@@ -229,8 +229,8 @@ export function rirToEffort(rir) {
 }
 
 export function repPillOptions(exercise) {
-  const min = Number(exercise.goalRepsMin) || 8;
-  const max = Number(exercise.goalRepsMax) || 10;
+  const min = Number(exercise?.goalRepsMin) || 8;
+  const max = Number(exercise?.goalRepsMax) || 10;
   const lo = Math.max(1, min - 2);
   const hi = max + 4;
   const opts = [];
