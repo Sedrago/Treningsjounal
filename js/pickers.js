@@ -210,6 +210,24 @@ export function mountDurationWheel(host, { valueSec, onChange }) {
   });
 }
 
+export function effortPillOptions() {
+  return [
+    { value: 0, label: 'Fail' },
+    { value: 1, label: '1–2' },
+    { value: 3, label: 'Mod' },
+    { value: 5, label: 'Lett' },
+  ];
+}
+
+/** Map lagret RIR til nærmeste innsats-nivå. */
+export function rirToEffort(rir) {
+  if (rir == null) return 3;
+  if (rir <= 0) return 0;
+  if (rir <= 2) return 1;
+  if (rir <= 4) return 3;
+  return 5;
+}
+
 export function repPillOptions(exercise) {
   const min = Number(exercise.goalRepsMin) || 8;
   const max = Number(exercise.goalRepsMax) || 10;
@@ -221,13 +239,105 @@ export function repPillOptions(exercise) {
 }
 
 export function rirPillOptions() {
-  return [
-    { value: 0, label: '0' },
-    { value: 1, label: '1' },
-    { value: 2, label: '2' },
-    { value: 3, label: '3' },
-    { value: 4, label: '4' },
-    { value: 5, label: '5' },
-    { value: null, label: '–' },
-  ];
+  return effortPillOptions();
+}
+
+/**
+ * Horisontal reps-linje: senterverdi med naboer, kan dras sideveis (1–100+).
+ * @returns {{ setValue: (v: number|null) => void, destroy: () => void }}
+ */
+export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange }) {
+  host.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'reps-stripe';
+  wrap.innerHTML = `
+    <p class="pill-etikett">Reps</p>
+    <div class="reps-stripe-rad">
+      <div class="reps-stripe-trommel" aria-label="Velg repetisjoner">
+        <div class="reps-stripe-markor" aria-hidden="true"></div>
+        <ul class="reps-stripe-liste"></ul>
+      </div>
+    </div>`;
+
+  const drum = wrap.querySelector('.reps-stripe-trommel');
+  const list = wrap.querySelector('.reps-stripe-liste');
+  const ITEM = 52;
+  const PAD = ITEM * 3;
+  let current = value ?? centerHint ?? 8;
+
+  function buildItems(center) {
+    const maxVal = Math.max(max, center + 15);
+    list.innerHTML = '';
+    list.style.paddingLeft = `${PAD}px`;
+    list.style.paddingRight = `${PAD}px`;
+    for (let v = 1; v <= maxVal; v++) {
+      const li = document.createElement('li');
+      li.className = 'reps-stripe-item';
+      li.dataset.value = String(v);
+      li.textContent = String(v);
+      list.appendChild(li);
+    }
+  }
+
+  let scrollTimer = null;
+
+  function emit(val) {
+    current = Math.max(1, Math.min(max, Math.round(val)));
+    onChange(current);
+  }
+
+  function scrollToValue(val, smooth = false) {
+    val = Math.max(1, Math.min(max, Math.round(val)));
+    let item = list.querySelector(`[data-value="${val}"]`);
+    if (!item) {
+      buildItems(val);
+      item = list.querySelector(`[data-value="${val}"]`);
+    }
+    if (!item) return;
+    const left = item.offsetLeft - drum.clientWidth / 2 + ITEM / 2;
+    drum.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  function nearestFromScroll() {
+    const drumRect = drum.getBoundingClientRect();
+    const centerX = drumRect.left + drum.clientWidth / 2;
+    let best = null;
+    let bestDist = Infinity;
+    list.querySelectorAll('.reps-stripe-item').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const mid = r.left + r.width / 2;
+      const d = Math.abs(mid - centerX);
+      if (d < bestDist) {
+        bestDist = d;
+        best = el;
+      }
+    });
+    return best ? parseInt(best.dataset.value, 10) : current;
+  }
+
+  drum.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const val = nearestFromScroll();
+      if (val !== current) emit(val);
+    }, 80);
+  }, { passive: true });
+
+  host.appendChild(wrap);
+  buildItems(current);
+  requestAnimationFrame(() => scrollToValue(current, false));
+
+  return {
+    setValue(v) {
+      const n = v != null ? Math.round(v) : current;
+      if (n === current) return;
+      current = n;
+      if (!list.querySelector(`[data-value="${n}"]`)) buildItems(n);
+      scrollToValue(n, false);
+    },
+    destroy() {
+      clearTimeout(scrollTimer);
+      host.innerHTML = '';
+    },
+  };
 }

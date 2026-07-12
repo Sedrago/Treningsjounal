@@ -681,6 +681,125 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   justify-content: flex-end;
 }
 
+/* ---------- Økt-modus (Styrketrening) ---------- */
+
+.oktt-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oktt-rad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 6px;
+  border: none;
+  border-radius: var(--radius-liten);
+  background: none;
+  color: var(--tekst);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.oktt-rad:active { background: var(--flate-2); }
+.oktt-rad.aktiv { background: rgb(var(--aksent-rgb, 90 140 255) / 0.12); }
+.oktt-rad.aktiv .plan-navn { color: var(--aksent); }
+.oktt-rad.ferdig { opacity: 0.55; }
+
+.oktt-rad-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.oktt-prikker {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.oktt-prikk {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kant);
+}
+.oktt-prikk.ferdig { background: var(--aksent); }
+
+#oktt-panel { margin-bottom: 12px; }
+
+.oktt-panel { margin-bottom: 0; }
+.oktt-panel-hode { margin-bottom: 8px; }
+.oktt-tittel { margin: 0 0 2px; font-size: 1.15rem; }
+.oktt-sett-info { margin: 0; }
+.oktt-tilleggsvekt { margin: 8px 0 0; }
+.oktt-hvile { margin: 12px 0; }
+.oktt-lagre { margin-top: 8px; }
+.oktt-ferdig { text-align: center; padding: 20px 16px; }
+
+/* ---------- Reps-stripe ---------- */
+
+.reps-stripe { margin: 8px 0; }
+
+.reps-stripe-rad {
+  display: flex;
+  justify-content: center;
+}
+
+.reps-stripe-trommel {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  height: 56px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.reps-stripe-trommel::-webkit-scrollbar { display: none; }
+
+.reps-stripe-markor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  height: 44px;
+  border: 2px solid var(--aksent);
+  border-radius: var(--radius-liten);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.reps-stripe-liste {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+.reps-stripe-item {
+  flex: 0 0 52px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--dus);
+  transition: color 0.15s, font-size 0.15s;
+}
+
+.reps-stripe-trommel:not(:hover) .reps-stripe-item:nth-child(n) { opacity: 0.7; }
+
 /* ---------- Logging ---------- */
 
 .forrige-kompakt { margin: 4px 0 0; }

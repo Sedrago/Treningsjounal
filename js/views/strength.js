@@ -6,6 +6,7 @@ import * as store from '../store.js';
 import { initContent, getCatalogByCategory, getCatalogEntry } from '../content.js';
 import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
+import { mountSetLogger } from '../session-log.js';
 import { groupBy } from '../stats.js';
 import {
   esc, formatDateShort, formatDateLong, relativeDays, todayStr,
@@ -54,6 +55,73 @@ function statusLine(plan, items, todaySets) {
   return `Pågår – ${done}/${total} øvelser fullført`;
 }
 
+const FOCUS_KEY = 'styrkeFocusEx';
+
+function resolveActive(items, setsByEx, exMap) {
+  if (!items.length) return null;
+
+  const focusId = sessionStorage.getItem(FOCUS_KEY);
+  let exIndex = focusId ? items.findIndex((it) => it.exerciseId === focusId) : -1;
+  const explicitFocus = exIndex >= 0;
+
+  if (exIndex < 0) {
+    exIndex = items.findIndex((it) => {
+      const logged = new Set((setsByEx.get(it.exerciseId) || []).map((s) => s.setNumber)).size;
+      return logged < it.goalSets;
+    });
+  }
+  if (exIndex < 0) exIndex = 0;
+
+  const item = items[exIndex];
+  const exercise = exMap.get(item.exerciseId);
+  const persisted = setsByEx.get(item.exerciseId) || [];
+  const loggedNums = new Set(persisted.map((s) => s.setNumber));
+
+  let setNum = 1;
+  for (let n = 1; n <= item.goalSets; n++) {
+    if (!loggedNums.has(n)) {
+      setNum = n;
+      break;
+    }
+    setNum = n;
+  }
+
+  const allDone = loggedNums.size >= item.goalSets;
+  if (allDone && explicitFocus) {
+    return { exIndex, item, exercise, setNum: item.goalSets, allComplete: false };
+  }
+
+  if (allDone && !explicitFocus) {
+    const nextIdx = items.findIndex((it, i) => {
+      if (i <= exIndex) return false;
+      const logged = new Set((setsByEx.get(it.exerciseId) || []).map((s) => s.setNumber)).size;
+      return logged < it.goalSets;
+    });
+    if (nextIdx >= 0) {
+      const nextItem = items[nextIdx];
+      const nextPersisted = setsByEx.get(nextItem.exerciseId) || [];
+      const nextLogged = new Set(nextPersisted.map((s) => s.setNumber));
+      let nextSet = 1;
+      for (let n = 1; n <= nextItem.goalSets; n++) {
+        if (!nextLogged.has(n)) {
+          nextSet = n;
+          break;
+        }
+      }
+      return {
+        exIndex: nextIdx,
+        item: nextItem,
+        exercise: exMap.get(nextItem.exerciseId),
+        setNum: nextSet,
+        allComplete: false,
+      };
+    }
+    return { exIndex, item, exercise, setNum, allComplete: true };
+  }
+
+  return { exIndex, item, exercise, setNum, allComplete: false };
+}
+
 /** Eksportert for hjemskjermen. */
 export async function homeStrengthLabel() {
   const enriched = await store.getEnrichedSets();
@@ -86,10 +154,12 @@ export async function render(container) {
   const stats = categoryStats(enriched);
   const workouts = await store.getWorkouts();
   const todayWorkout = workouts.find((w) => w.date === today) || null;
-  const hasLogged = todaySets.length > 0;
 
   const setsByEx = groupBy(todaySets, (s) => s.exerciseId);
-  let nextMarked = false;
+  const inSession = items.length > 0;
+  const active = inSession ? resolveActive(items, setsByEx, exMap) : null;
+  const { done: progDone, total: progTotal } = sessionProgress(items, todaySets);
+  const allProgramDone = inSession && progDone >= progTotal && progTotal > 0;
 
   const rows = items.map((item, i) => {
     const ex = exMap.get(item.exerciseId);
@@ -97,22 +167,33 @@ export async function render(container) {
     const cat = ex ? store.categoryById(ex.category) : null;
     const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
     const done = logged >= item.goalSets;
-    const isNext = hasLogged && !done && !nextMarked;
-    if (isNext) nextMarked = true;
+    const isActive = active && active.exIndex === i && !allProgramDone;
 
-    const mainCell = ex
-      ? `<a href="#/logg/${ex.id}" class="plan-okt-lenke styrke-lenke">
+    if (inSession) {
+      const dots = Array.from({ length: item.goalSets }, (_, n) => {
+        const filled = n < logged;
+        return `<span class="oktt-prikk ${filled ? 'ferdig' : ''}"></span>`;
+      }).join('');
+      return `
+        <button type="button" class="oktt-rad ${done ? 'ferdig' : ''} ${isActive ? 'aktiv' : ''}"
+          data-ex-id="${item.exerciseId}" aria-current="${isActive ? 'step' : 'false'}">
+          <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
+          <span class="oktt-rad-info">
+            <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
+            <span class="dus liten">${logged}/${item.goalSets} sett</span>
+          </span>
+          <span class="oktt-prikker" aria-hidden="true">${dots}</span>
+        </button>`;
+    }
+
+    return `
+      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''}" data-idx="${i}">
+        <div class="styrke-lenke">
           <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
           <span class="plan-okt-info">
             <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
-            ${hasLogged ? `<span class="dus liten">${logged}/${item.goalSets} sett${isNext ? ' · neste' : ''}</span>` : ''}
           </span>
-        </a>`
-      : `<div class="styrke-rad-ukjent"><span class="plan-rekkefolge">${i + 1}</span><span class="plan-navn">${esc(name)}</span></div>`;
-
-    return `
-      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isNext ? 'neste' : ''}" data-idx="${i}">
-        ${mainCell}
+        </div>
         <span class="plan-sett-velger">
           <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
           <span class="plan-sett-antall">${item.goalSets} sett</span>
@@ -153,8 +234,10 @@ export async function render(container) {
           </div>
         </div>
       </div>
-      <div id="styrke-liste">${rows}</div>
+      <div id="styrke-liste" class="${inSession ? 'oktt-liste' : ''}">${rows}</div>
     </section>
+
+    <div id="oktt-panel"></div>
 
     <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
 
@@ -291,6 +374,42 @@ export async function render(container) {
       });
     });
   });
+
+  container.querySelectorAll('.oktt-rad').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      sessionStorage.setItem(FOCUS_KEY, btn.dataset.exId);
+      render(container);
+    });
+  });
+
+  const sessionHost = container.querySelector('#oktt-panel');
+  if (inSession && allProgramDone) {
+    sessionHost.innerHTML = `
+      <section class="kort oktt-panel oktt-ferdig">
+        <h2 class="oktt-tittel">Program fullført</h2>
+        <p class="dus">Alle ${progTotal} øvelser er logget i dag.</p>
+      </section>`;
+  } else if (inSession && active?.exercise) {
+    const exSets = setsByEx.get(active.item.exerciseId) || [];
+    const persistedSet = exSets.find((s) => s.setNumber === active.setNum) || null;
+    const prevSet = exSets.find((s) => s.setNumber === active.setNum - 1)
+      || (await store.getLastSessionForExercise(active.item.exerciseId, today))?.sets?.[active.setNum - 1]
+      || (await store.getLastSessionForExercise(active.item.exerciseId, today))?.sets?.slice(-1)[0]
+      || null;
+
+    await mountSetLogger(sessionHost, {
+      exercise: active.exercise,
+      setNumber: active.setNum,
+      goalSets: active.item.goalSets,
+      persistedSet,
+      templateSet: prevSet,
+      onSaved: () => {
+        sessionStorage.removeItem(FOCUS_KEY);
+        toast('Sett lagret', 'suksess');
+        render(container);
+      },
+    });
+  }
 }
 
 /** Bunn-ark: velg kategori (sortert etter lengst siden sist). */

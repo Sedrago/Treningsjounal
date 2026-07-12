@@ -8,7 +8,7 @@ import * as timer from '../timer.js';
 import { initContent, getDescription } from '../content.js';
 import {
   mountWeightWheel, mountPillRow, mountDurationWheel,
-  repPillOptions, rirPillOptions,
+  mountRepStrip, effortPillOptions, rirToEffort,
 } from '../pickers.js';
 import {
   esc, formatDateShort, todayStr, debounce,
@@ -48,7 +48,10 @@ function summaryText(set, logMode, units, showWeight) {
     return 'Ikke logget';
   }
   const parts = [summarizeSet(set, logMode, units)];
-  if (set.rir != null) parts.push(`RIR ${set.rir}`);
+  if (set.rir != null) {
+    const effort = effortPillOptions().find((o) => o.value === rirToEffort(set.rir));
+    if (effort) parts.push(effort.label);
+  }
   return parts.join(' · ');
 }
 
@@ -185,13 +188,9 @@ export async function render(container, params) {
     rows[index].el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  function onFieldChange(row, index) {
-    row.save();
+  function onFieldChange(row) {
     updatePanelHeader(row);
-    if (index === 0) propagateFromFirst();
-    if (isComplete(row.set, logMode, showWeight) && index + 1 < rows.length) {
-      setTimeout(() => openPanel(index + 1), 280);
-    }
+    if (row.index === 0) propagateFromFirst();
   }
 
   function ensurePickers(row) {
@@ -210,7 +209,7 @@ export async function render(container, params) {
         onChange: (v) => {
           row.touched = true;
           row.set.durationSec = v;
-          onFieldChange(row, row.index);
+          onFieldChange(row);
         },
       });
     } else {
@@ -223,20 +222,19 @@ export async function render(container, params) {
           onChange: (kg) => {
             row.touched = true;
             row.set.weight = kg;
-            onFieldChange(row, row.index);
+            onFieldChange(row);
           },
         });
       }
       const repsHost = document.createElement('div');
       host.appendChild(repsHost);
-      row.pickers.reps = mountPillRow(repsHost, {
-        label: 'Reps',
-        options: repPillOptions(exercise),
+      row.pickers.reps = mountRepStrip(repsHost, {
         value: row.set.reps,
+        centerHint: Math.round((Number(exercise.goalRepsMin) + Number(exercise.goalRepsMax)) / 2) || 8,
         onChange: (v) => {
           row.touched = true;
           row.set.reps = v;
-          onFieldChange(row, row.index);
+          onFieldChange(row);
         },
       });
     }
@@ -244,15 +242,28 @@ export async function render(container, params) {
     const rirHost = document.createElement('div');
     host.appendChild(rirHost);
     row.pickers.rir = mountPillRow(rirHost, {
-      label: 'RIR',
-      options: rirPillOptions(),
-      value: row.set.rir ?? defaultRir,
+      label: 'Innsats',
+      options: effortPillOptions(),
+      value: rirToEffort(row.set.rir ?? defaultRir),
       onChange: (v) => {
         row.touched = true;
         row.set.rir = v;
-        onFieldChange(row, row.index);
+        onFieldChange(row);
       },
     });
+
+    const lagreBtn = document.createElement('button');
+    lagreBtn.type = 'button';
+    lagreBtn.className = 'knapp primaer bred oktt-lagre';
+    lagreBtn.textContent = 'Lagre sett →';
+    lagreBtn.addEventListener('click', async () => {
+      if (!isComplete(row.set, logMode, showWeight)) return;
+      await persistRow(row);
+      updatePanelHeader(row);
+      if (row.index === 0) propagateFromFirst();
+      if (row.index + 1 < rows.length) openPanel(row.index + 1);
+    });
+    host.appendChild(lagreBtn);
 
     const actions = document.createElement('div');
     actions.className = 'sett-panel-handlinger';
@@ -353,9 +364,9 @@ export async function render(container, params) {
       const set = emptySet(exerciseId, i);
       if (prevSet) {
         copySetValues(prevSet, set, logMode);
-        if (set.rir == null) set.rir = defaultRir;
+        if (set.rir == null) set.rir = rirToEffort(defaultRir);
       } else {
-        set.rir = defaultRir;
+        set.rir = rirToEffort(defaultRir);
       }
       addSet(set);
     }
