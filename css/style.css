@@ -598,20 +598,48 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 .styrke-program { margin-bottom: 10px; }
 
-.styrke-tom { padding: 8px 0; }
-.styrke-snarest {
+.styrke-program-hode {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
   gap: 8px;
-  margin-top: 10px;
+  margin-bottom: 8px;
+}
+.styrke-program-hode .kort-tittel { margin: 0; }
+
+.styrke-meny-wrap { position: relative; flex-shrink: 0; }
+.styrke-meny { font-size: 1.1rem; line-height: 1; }
+
+.styrke-meny-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 220px;
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten, 8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
 }
 
-.styrke-handlinger {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+.styrke-meny-valg {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid var(--kant);
+  background: none;
+  color: var(--tekst);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+.styrke-meny-valg:last-child { border-bottom: none; }
+.styrke-meny-valg:active { background: var(--flate-2); }
+.styrke-meny-valg.farlig { color: var(--farlig, #c0392b); }
+
+#legg-til-ovelse { margin-bottom: 12px; }
 
 .styrke-rad {
   flex-wrap: wrap;

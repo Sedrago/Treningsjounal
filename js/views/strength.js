@@ -47,7 +47,7 @@ function sessionProgress(items, todaySets) {
 }
 
 function statusLine(plan, items, todaySets) {
-  if (!items.length) return 'Bygg programmet – velg øvelser eller hent fra tidligere';
+  if (!items.length) return 'Tomt program';
   const { done, total } = sessionProgress(items, todaySets);
   if (!todaySets.length) return `${total} øvelse${total === 1 ? '' : 'r'} klar`;
   if (done >= total) return `Fullført ${done}/${total} øvelser i dag`;
@@ -126,15 +126,12 @@ export async function render(container) {
       </div>`;
   }).join('');
 
-  const emptyHint = `
-    <div class="styrke-tom" aria-label="Kom i gang">
-      <p class="dus liten">Bygg dagens økt på en av disse måtene:</p>
-      <div class="styrke-snarest">
-        <button type="button" class="knapp sekundaer" data-handling="legg-til">+ Velg øvelser</button>
-        <button type="button" class="knapp sekundaer" data-handling="historikk">Hent fra tidligere</button>
-        <button type="button" class="knapp sekundaer" data-handling="mal">Lagrede programmer</button>
-      </div>
-    </div>`;
+  const menuItems = [
+    { action: 'historikk', label: 'Hent fra tidligere økt' },
+    { action: 'mal', label: 'Lagrede programmer' },
+    ...(items.length ? [{ action: 'lagre-mal', label: 'Lagre som program' }] : []),
+    ...(items.length ? [{ action: 'tom', label: 'Tøm program', farlig: true }] : []),
+  ];
 
   container.innerHTML = `
     <header class="side-topp">
@@ -146,28 +143,52 @@ export async function render(container) {
     </header>
 
     <section class="kort styrke-program" aria-label="Dagens program">
-      <h2 class="kort-tittel">Program${items.length ? ` (${items.length} øvelse${items.length === 1 ? '' : 'r'})` : ''}</h2>
-      <div id="styrke-liste">${rows || emptyHint}</div>
+      <div class="styrke-program-hode">
+        <h2 class="kort-tittel">Program${items.length ? ` (${items.length})` : ''}</h2>
+        <div class="styrke-meny-wrap">
+          <button type="button" class="ikon-knapp styrke-meny" id="program-meny" aria-label="Programmeny" aria-haspopup="menu" aria-expanded="false">☰</button>
+          <div class="styrke-meny-popover skjult" id="program-meny-liste" role="menu">
+            ${menuItems.map((m) => `
+              <button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div id="styrke-liste">${rows}</div>
     </section>
 
-    <div class="styrke-handlinger">
-      <button type="button" class="knapp sekundaer bred" data-handling="legg-til">+ Legg til øvelse</button>
-      <button type="button" class="knapp sekundaer bred" data-handling="historikk">Hent fra tidligere økt</button>
-      <button type="button" class="knapp sekundaer bred" data-handling="mal">Lagrede programmer</button>
-      ${items.length ? '<button type="button" class="knapp sekundaer bred" data-handling="lagre-mal">Lagre som program</button>' : ''}
-      ${items.length ? '<button type="button" class="knapp farlig bred" data-handling="tom">Tøm program</button>' : ''}
-    </div>
+    <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
 
     <section class="kort">
       <label class="felt-navn" for="okt-notat">Notat for økten</label>
       <textarea id="okt-notat" class="inndata" rows="2"
         placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
     </section>
-    ${hasLogged ? '<button type="button" class="knapp primaer stor" id="avslutt">Avslutt økt</button>' : ''}
     <div id="velger-vert"></div>
   `;
 
   const host = container.querySelector('#velger-vert');
+  const menuBtn = container.querySelector('#program-meny');
+  const menuList = container.querySelector('#program-meny-liste');
+
+  function closeMenu() {
+    menuList.classList.add('skjult');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function openMenu() {
+    menuList.classList.remove('skjult');
+    menuBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (menuList.classList.contains('skjult')) {
+      openMenu();
+      setTimeout(() => document.addEventListener('click', closeMenu, { once: true }), 0);
+    } else {
+      closeMenu();
+    }
+  });
 
   async function updateItems(newItems) {
     if (plan && !newItems.length) {
@@ -186,13 +207,71 @@ export async function render(container) {
     await store.saveWorkout(w);
   }, 600));
 
-  container.querySelector('#avslutt')?.addEventListener('click', async () => {
-    const w = await store.getOrCreateTodayWorkout();
-    await store.touchWorkoutDuration(w.id);
-    const active = await store.getActivePlan();
-    if (active) await store.completePlan(active.id);
-    toast('Økt lagret. Godt jobbet!', 'suksess');
-    location.hash = '#/hjem';
+  function addExercise(exercise) {
+    const next = [...items.map((it) => ({ ...it })), {
+      exerciseId: exercise.id,
+      goalSets: Number(exercise.goalSets) || Number(store.getSetting('defaultSets')) || 3,
+    }];
+    return updateItems(next);
+  }
+
+  async function handleProgramAction(action) {
+    closeMenu();
+    if (action === 'legg-til') {
+      openCategoryPicker(host, stats, (catId) => {
+        openExercisePicker(host, catId, items, (ex) => {
+          host.innerHTML = '';
+          addExercise(ex);
+          toast(`«${ex.name}» lagt til`, 'suksess');
+        }, () => render(container));
+      });
+    } else if (action === 'historikk') {
+      openCopySheet(host, enriched, exMap, async (dayItems) => {
+        const existing = new Set(items.map((it) => it.exerciseId));
+        const merged = [...items.map((it) => ({ ...it }))];
+        for (const it of dayItems) {
+          if (!existing.has(it.exerciseId)) merged.push(it);
+        }
+        await updateItems(merged);
+        toast('Øvelser hentet fra tidligere økt', 'suksess');
+      });
+    } else if (action === 'mal') {
+      openTemplatesSheet(host, exMap, async (templateId, replace) => {
+        const templates = await store.getSavedTemplates();
+        const tpl = templates.find((t) => t.id === templateId);
+        if (!tpl?.items?.length) return;
+        if (replace && items.length && !confirm('Erstatt nåværende program med malen?')) return;
+        if (replace) {
+          await store.loadTemplateIntoActive(templateId);
+        } else {
+          const existing = new Set(items.map((it) => it.exerciseId));
+          const merged = [...items.map((it) => ({ ...it }))];
+          for (const it of tpl.items) {
+            if (!existing.has(it.exerciseId)) merged.push({ ...it });
+          }
+          await updateItems(merged);
+        }
+        toast(`«${tpl.name || 'Program'}» lastet inn`, 'suksess');
+      });
+    } else if (action === 'lagre-mal') {
+      openSaveTemplateSheet(host, items, async (name) => {
+        await store.saveAsTemplate(name, items.map((it) => ({ ...it })));
+        toast(`Programmet «${name}» er lagret`, 'suksess');
+      });
+    } else if (action === 'tom') {
+      if (!confirm('Tømme hele programmet? Loggede sett i dag beholdes.')) return;
+      if (plan) await store.deletePlan(plan.id);
+      render(container);
+    }
+  }
+
+  container.querySelector('#legg-til-ovelse').addEventListener('click', () => handleProgramAction('legg-til'));
+
+  menuList.querySelectorAll('[data-program-handling]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleProgramAction(btn.dataset.programHandling);
+    });
   });
 
   container.querySelectorAll('.styrke-rad').forEach((row) => {
@@ -210,66 +289,6 @@ export async function render(container) {
         else if (action === 'sett-pluss') next[idx].goalSets = Math.min(10, next[idx].goalSets + 1);
         await updateItems(next);
       });
-    });
-  });
-
-  function addExercise(exercise) {
-    const next = [...items.map((it) => ({ ...it })), {
-      exerciseId: exercise.id,
-      goalSets: Number(exercise.goalSets) || Number(store.getSetting('defaultSets')) || 3,
-    }];
-    return updateItems(next);
-  }
-
-  container.querySelectorAll('[data-handling]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const action = btn.dataset.handling;
-      if (action === 'legg-til') {
-        openCategoryPicker(host, stats, (catId) => {
-          openExercisePicker(host, catId, items, (ex) => {
-            host.innerHTML = '';
-            addExercise(ex);
-            toast(`«${ex.name}» lagt til`, 'suksess');
-          }, () => render(container));
-        });
-      } else if (action === 'historikk') {
-        openCopySheet(host, enriched, exMap, async (dayItems) => {
-          const existing = new Set(items.map((it) => it.exerciseId));
-          const merged = [...items.map((it) => ({ ...it }))];
-          for (const it of dayItems) {
-            if (!existing.has(it.exerciseId)) merged.push(it);
-          }
-          await updateItems(merged);
-          toast('Øvelser hentet fra tidligere økt', 'suksess');
-        });
-      } else if (action === 'mal') {
-        openTemplatesSheet(host, exMap, async (templateId, replace) => {
-          const templates = await store.getSavedTemplates();
-          const tpl = templates.find((t) => t.id === templateId);
-          if (!tpl?.items?.length) return;
-          if (replace && items.length && !confirm('Erstatt nåværende program med malen?')) return;
-          if (replace) {
-            await store.loadTemplateIntoActive(templateId);
-          } else {
-            const existing = new Set(items.map((it) => it.exerciseId));
-            const merged = [...items.map((it) => ({ ...it }))];
-            for (const it of tpl.items) {
-              if (!existing.has(it.exerciseId)) merged.push({ ...it });
-            }
-            await updateItems(merged);
-          }
-          toast(`«${tpl.name || 'Program'}» lastet inn`, 'suksess');
-        });
-      } else if (action === 'lagre-mal') {
-        openSaveTemplateSheet(host, items, async (name) => {
-          await store.saveAsTemplate(name, items.map((it) => ({ ...it })));
-          toast(`Programmet «${name}» er lagret`, 'suksess');
-        });
-      } else if (action === 'tom') {
-        if (!confirm('Tømme hele programmet? Loggede sett i dag beholdes.')) return;
-        if (plan) await store.deletePlan(plan.id);
-        render(container);
-      }
     });
   });
 }
