@@ -8,8 +8,7 @@ import * as api from './api.js';
 import { initContent, initContentFromCache, checkContentUpdate } from './content.js';
 
 import * as home from './views/home.js';
-import * as workout from './views/workout.js';
-import * as plan from './views/plan.js';
+import * as strength from './views/strength.js';
 import * as logging from './views/logging.js';
 import * as history from './views/history.js';
 import * as statistics from './views/statistics.js';
@@ -25,8 +24,9 @@ import * as settings from './views/settings.js';
 /** Rutetabell: sti → render-funksjon. */
 const routes = {
   hjem: home.render,
-  okt: workout.render,
-  planlegg: plan.render,
+  styrke: strength.render,
+  okt: strength.render,
+  planlegg: strength.render,
   logg: logging.render,
   historikk: history.render,
   ovelse: history.renderExercise,
@@ -53,11 +53,15 @@ export function applyTheme(theme = store.getSetting('theme')) {
 
 /** Parser '#/rute/param?nokkel=verdi'. */
 function parseHash() {
-  const hash = location.hash.replace(/^#\/?/, '') || store.getSetting('startPage');
+  let start = store.getSetting('startPage');
+  if (start === 'okt') start = 'styrke';
+  const hash = location.hash.replace(/^#\/?/, '') || start;
   const [pathPart, queryPart] = hash.split('?');
   const segments = pathPart.split('/').filter(Boolean);
   const query = Object.fromEntries(new URLSearchParams(queryPart || ''));
-  return { route: segments[0] || 'hjem', params: segments.slice(1), query };
+  let route = segments[0] || 'hjem';
+  if (route === 'okt' || route === 'planlegg') route = 'styrke';
+  return { route, params: segments.slice(1), query };
 }
 
 async function renderRoute() {

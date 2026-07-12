@@ -592,6 +592,67 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .plan-okt-rad.ferdig { opacity: 0.6; }
 .plan-okt-rad.ferdig .plan-rekkefolge { color: var(--aksent); }
 
+/* ---------- Styrketrening (samlet økt) ---------- */
+
+.hjem-styrke-sub { text-align: center; margin: -6px 0 12px; }
+
+.styrke-program { margin-bottom: 10px; }
+
+.styrke-tom { padding: 8px 0; }
+.styrke-snarest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.styrke-handlinger {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.styrke-rad {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.styrke-rad.neste .plan-rekkefolge { background: var(--aksent); color: var(--aksent-tekst, #fff); }
+.styrke-rad.neste .plan-navn { color: var(--aksent); }
+.styrke-rad.ferdig { opacity: 0.65; }
+
+.styrke-lenke {
+  flex: 1 1 160px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  color: var(--tekst);
+  text-decoration: none;
+}
+
+.styrke-rad-ukjent {
+  flex: 1 1 160px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.styrke-mal-rad {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 8px;
+}
+.styrke-mal-info { display: flex; flex-direction: column; gap: 4px; }
+.styrke-mal-handlinger {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 /* ---------- Logging ---------- */
 
 .forrige-kompakt { margin: 4px 0 0; }

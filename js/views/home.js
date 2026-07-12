@@ -6,6 +6,7 @@ import * as store from '../store.js';
 import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
 import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, moodSummarySince } from '../stats.js';
 import { balanceBars } from '../charts.js';
+import { homeStrengthLabel } from './strength.js';
 import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml } from '../utils.js';
 
 export async function render(container) {
@@ -25,8 +26,7 @@ export async function render(container) {
   const aerobMin = aerobicMinutesSince(aerobic, since7);
   const sleepSum = sleepSummarySince(sleepRows, since7);
   const moodSum = moodSummarySince(moodRows, since7);
-  const plan = await store.getActivePlan();
-  const planCount = plan?.items?.length || 0;
+  const styrke = await homeStrengthLabel();
 
   const streakLabel = streakMode === 'calendar'
     ? (streak === 1 ? 'uke' : 'uker')
@@ -52,10 +52,8 @@ export async function render(container) {
       </div>
     </header>
 
-    <a href="#/okt" class="knapp primaer stor" id="start-okt">Start dagens økt</a>
-    <a href="#/planlegg" class="knapp sekundaer bred" id="planlegg-okt">
-      📋 ${planCount ? `Planlagt økt klar (${planCount} øvelse${planCount === 1 ? '' : 'r'})` : 'Planlegg økt'}
-    </a>
+    <a href="#/styrke" class="knapp primaer stor" id="start-styrke">${esc(styrke.title)}</a>
+    <p class="dus liten hjem-styrke-sub">${esc(styrke.sub)}</p>
     <div class="knapp-rad hjem-ekstra">
       <a href="#/aerob" class="knapp sekundaer"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> Aerob</a>
       <a href="#/sovn" class="knapp sekundaer">😴 Søvn</a>

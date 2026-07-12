@@ -76,7 +76,7 @@ export async function render(container) {
       <label class="felt-navn" for="s-start">Startside</label>
       <select class="inndata" id="s-start">
         <option value="hjem" ${s('startPage') === 'hjem' ? 'selected' : ''}>Hjem</option>
-        <option value="okt" ${s('startPage') === 'okt' ? 'selected' : ''}>Dagens økt</option>
+        <option value="styrke" ${s('startPage') === 'styrke' || s('startPage') === 'okt' ? 'selected' : ''}>Styrketrening</option>
       </select>
 
       <label class="felt-navn" for="s-streak">Streak-modus</label>

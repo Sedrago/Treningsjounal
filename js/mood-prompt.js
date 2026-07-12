@@ -102,7 +102,7 @@ export async function maybeShowMoodPrompt(route = parseHashRoute()) {
   const today = todayStr();
   const now = Date.now();
 
-  if (route === 'okt') {
+  if (route === 'styrke' || route === 'okt') {
     const workout = await store.getOrCreateTodayWorkout();
     if (hasMoodForWorkout(entries, workout.id)) return;
     await showMoodPrompt({ context: 'workout-start', workoutId: workout.id });

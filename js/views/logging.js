@@ -89,7 +89,7 @@ export async function render(container, params) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/okt" class="tilbake" aria-label="Tilbake til dagens økt">‹</a>
+      <a href="#/styrke" class="tilbake" aria-label="Tilbake til styrketrening">‹</a>
       <div>
         <h1>${esc(exercise.name)}</h1>
         <p class="dus">${category ? `${categoryIconHtml(category, 'kategori-ikon liten')} ${esc(category.name)} · ` : ''}Mål: ${goalText}

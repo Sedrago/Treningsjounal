@@ -117,7 +117,7 @@ export const DEFAULT_SETTINGS = {
   defaultSets: 3,
   defaultRepsMin: 8,
   defaultRepsMax: 10,
-  startPage: 'hjem',        // 'hjem' | 'okt'
+  startPage: 'hjem',        // 'hjem' | 'styrke'
   streakMode: 'rolling7',   // 'rolling7' | 'calendar'
   workingSetRirMax: 4,      // sett med RIR ≤ dette telles som arbeidssett
 };
@@ -576,21 +576,36 @@ function parsePlanItems(plan) {
   return { ...plan, items: Array.isArray(items) ? items : [] };
 }
 
-/** Aktiv (ikke fullført) plan, eller null. */
+/** Aktiv økt (status aktiv), foretrekker dagens dato. */
 export async function getActivePlan() {
   const all = await db.getAll('plans');
+  const today = todayStr();
   const active = all
     .filter((p) => !p.deleted && p.status === 'aktiv')
-    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    .sort((a, b) => {
+      if (a.date === today && b.date !== today) return -1;
+      if (b.date === today && a.date !== today) return 1;
+      return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+    });
   return active.length ? parsePlanItems(active[0]) : null;
 }
 
+/** Lagrede programmaler (status mal). */
+export async function getSavedTemplates() {
+  const all = await db.getAll('plans');
+  return all
+    .filter((p) => !p.deleted && p.status === 'mal')
+    .map(parsePlanItems)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '') || (a.name || '').localeCompare(b.name || '', 'no'));
+}
+
 /**
- * Lagrer planen. items: [{exerciseId, goalSets}] i ønsket rekkefølge.
- * Kun én aktiv plan om gangen – tidligere aktive markeres fullført.
+ * Lagrer plan/mal. items: [{exerciseId, goalSets}] i ønsket rekkefølge.
+ * Ny aktiv plan avslutter andre aktive – maler påvirkes ikke.
  */
 export async function savePlan(plan) {
-  if (!plan.id) {
+  const status = plan.status || 'aktiv';
+  if (!plan.id && status === 'aktiv') {
     const all = await db.getAll('plans');
     for (const p of all) {
       if (!p.deleted && p.status === 'aktiv') {
@@ -604,14 +619,32 @@ export async function savePlan(plan) {
   const record = {
     id: plan.id || uuid(),
     date: plan.date || todayStr(),
+    name: plan.name || '',
     items: JSON.stringify(plan.items || []),
-    status: plan.status || 'aktiv',
+    status,
     deleted: false,
     updatedAt: nowIso(),
   };
   await db.put('plans', record);
   await queueOp('plan', 'upsert', record);
   return parsePlanItems(record);
+}
+
+/** Lagrer nåværende øktliste som navngitt mal. */
+export async function saveAsTemplate(name, items) {
+  return savePlan({ name: name.trim(), items, status: 'mal', date: todayStr() });
+}
+
+/** Erstatter aktiv økt med innhold fra mal. */
+export async function loadTemplateIntoActive(templateId) {
+  const raw = await db.get('plans', templateId);
+  if (!raw || raw.deleted || raw.status !== 'mal') return null;
+  const items = parsePlanItems(raw).items.map((it) => ({ ...it }));
+  const active = await getActivePlan();
+  if (active) {
+    return savePlan({ ...active, items, date: todayStr() });
+  }
+  return savePlan({ items, status: 'aktiv', date: todayStr() });
 }
 
 /** Markerer planen som fullført (ved avsluttet økt). */

@@ -34,7 +34,7 @@ var COLUMNS = {
   Aerobic: ['id', 'date', 'minutes', 'activity', 'comment', 'deleted', 'updatedAt', 'intensity'],
   Sleep: ['id', 'date', 'hours', 'quality', 'comment', 'deleted', 'updatedAt'],
   Mood: ['id', 'date', 'value', 'context', 'workoutId', 'deleted', 'updatedAt'],
-  Plans: ['id', 'date', 'items', 'status', 'deleted', 'updatedAt'],
+  Plans: ['id', 'date', 'name', 'items', 'status', 'deleted', 'updatedAt'],
   Categories: ['id', 'name', 'icon', 'priority'],
   Settings: ['key', 'value'],
   Statistics: ['key', 'value'],
