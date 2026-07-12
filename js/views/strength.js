@@ -67,11 +67,6 @@ function exercisePickerDescription(exercise) {
   return description || notes || '';
 }
 
-function compactExerciseName(name) {
-  if (name.length <= 17) return name;
-  return `${name.slice(0, 14)}...`;
-}
-
 function renderInlineTeknikk(exercise, category) {
   if (!exercise) return '';
   const description = getDescription(exercise);
@@ -239,15 +234,13 @@ export async function render(container) {
           <button type="button" class="ikon-knapp" data-handling="fjern" aria-label="Fjern">✕</button>
         </span>` : '';
 
-    const displayName = compact ? compactExerciseName(name) : name;
-
     return `
       <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : ''} ${isExpanded ? 'styrke-rad--utvidet' : ''}"
         data-idx="${i}" data-ex-id="${item.exerciseId}">
         <div class="styrke-lenke">
           <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
           <span class="plan-okt-info">
-            <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(displayName)}</span>
+            <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
           </span>
         </div>
         ${progress}
