@@ -57,6 +57,29 @@ function statusLine(plan, items, todaySets) {
 
 const FOCUS_KEY = 'styrkeFocusEx';
 const SESSION_KEY = 'styrkeSessionActive';
+const TEKNIKK_KEY = 'styrkeTeknikkEx';
+
+function exercisePickerDescription(exercise) {
+  const description = getDescription(exercise);
+  const notes = exercise.notes?.trim();
+  if (description && notes) return `${description}\n\nMine notater: ${notes}`;
+  return description || notes || '';
+}
+
+function renderInlineTeknikk(exercise) {
+  if (!exercise) return '';
+  const description = getDescription(exercise);
+  const notes = exercise.notes?.trim();
+  const video = exercise.video?.trim();
+  if (!description && !notes && !video) return '';
+
+  return `
+    <div class="styrke-rad-teknikk" data-handling="teknikk-lukk" role="button" tabindex="0" aria-label="Skjul teknikk">
+      ${description ? `<p class="styrke-teknikk-tekst">${esc(description)}</p>` : ''}
+      ${notes ? `<p class="styrke-teknikk-notater dus liten">Mine notater: ${esc(notes)}</p>` : ''}
+      ${video ? `<p class="styrke-teknikk-video"><a href="${esc(video)}" target="_blank" rel="noopener" data-handling="video">Se video ↗</a></p>` : ''}
+    </div>`;
+}
 
 function resolveActive(items, setsByEx, exMap) {
   if (!items.length) return null;
@@ -123,33 +146,6 @@ function resolveActive(items, setsByEx, exMap) {
   return { exIndex, item, exercise, setNum, allComplete: false };
 }
 
-function renderTeknikkPanel(exercise) {
-  if (!exercise) return '';
-  const description = getDescription(exercise);
-  const notes = exercise.notes?.trim();
-  const video = exercise.video?.trim();
-  if (!description && !notes && !video) return '';
-
-  const extras = `
-    ${notes ? `<p class="teknikk-notater"><span class="dus">Mine notater:</span> ${esc(notes)}</p>` : ''}
-    ${video ? `<p class="teknikk-video"><a href="${esc(video)}" target="_blank" rel="noopener">Se video ↗</a></p>` : ''}`;
-
-  if (description) {
-    return `
-    <details class="styrke-teknikk teknikk-panel" open>
-      <summary class="teknikk-summary">Teknikk · ${esc(exercise.name)}</summary>
-      <p class="teknikk-tekst">${esc(description)}</p>
-      ${extras}
-    </details>`;
-  }
-
-  return `
-    <section class="styrke-teknikk teknikk-panel">
-      <p class="felt-navn">Teknikk · ${esc(exercise.name)}</p>
-      ${extras}
-    </section>`;
-}
-
 /** Eksportert for hjemskjermen. */
 export async function homeStrengthLabel() {
   const enriched = await store.getEnrichedSets();
@@ -196,8 +192,7 @@ export async function render(container) {
   }
   const sessionActive = sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
   const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
-  const teknikkExercise = sessionActive ? active?.exercise : null;
-  const teknikkHtml = renderTeknikkPanel(teknikkExercise);
+  const teknikkOpenId = sessionActive ? sessionStorage.getItem(TEKNIKK_KEY) : null;
 
   container.classList.toggle('app--styrke-oktt', sessionActive);
 
@@ -208,6 +203,9 @@ export async function render(container) {
     const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
     const done = logged >= item.goalSets;
     const isActive = sessionActive && active && active.exIndex === i && !allProgramDone;
+    const compact = sessionActive && !isActive;
+    const showTeknikk = isActive && teknikkOpenId === item.exerciseId;
+    const hasTeknikk = ex && (getDescription(ex) || ex.notes?.trim() || ex.video?.trim());
 
     const progress = sessionActive ? `
       <span class="styrke-rad-fremdrift dus liten">${logged}/${item.goalSets}</span>
@@ -217,8 +215,23 @@ export async function render(container) {
     return `<span class="oktt-prikk ${filled ? 'ferdig' : ''} ${isCurrent ? 'naa' : ''}"></span>`;
   }).join('')}</span>` : '';
 
+    const setVelger = !compact ? `
+        <span class="plan-sett-velger">
+          <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
+          <span class="plan-sett-antall">${item.goalSets} sett</span>
+          <button type="button" class="plan-sett-knapp" data-handling="sett-pluss" aria-label="Flere sett">+</button>
+        </span>` : '';
+
+    const rowActions = !compact ? `
+        <span class="plan-rad-handlinger">
+          <button type="button" class="ikon-knapp" data-handling="opp" aria-label="Flytt opp" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="ikon-knapp" data-handling="ned" aria-label="Flytt ned" ${i === items.length - 1 ? 'disabled' : ''}>↓</button>
+          ${isActive && hasTeknikk ? '<button type="button" class="ikon-knapp styrke-teknikk-knapp" data-handling="teknikk" aria-label="Vis teknikk" aria-pressed="' + (showTeknikk ? 'true' : 'false') + '">i</button>' : ''}
+          <button type="button" class="ikon-knapp" data-handling="fjern" aria-label="Fjern">✕</button>
+        </span>` : '';
+
     return `
-      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''}"
+      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : ''}"
         data-idx="${i}" data-ex-id="${item.exerciseId}">
         <div class="styrke-lenke">
           <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
@@ -228,16 +241,9 @@ export async function render(container) {
           </span>
         </div>
         ${progress}
-        <span class="plan-sett-velger">
-          <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
-          <span class="plan-sett-antall">${item.goalSets} sett</span>
-          <button type="button" class="plan-sett-knapp" data-handling="sett-pluss" aria-label="Flere sett">+</button>
-        </span>
-        <span class="plan-rad-handlinger">
-          <button type="button" class="ikon-knapp" data-handling="opp" aria-label="Flytt opp" ${i === 0 ? 'disabled' : ''}>↑</button>
-          <button type="button" class="ikon-knapp" data-handling="ned" aria-label="Flytt ned" ${i === items.length - 1 ? 'disabled' : ''}>↓</button>
-          <button type="button" class="ikon-knapp" data-handling="fjern" aria-label="Fjern">✕</button>
-        </span>
+        ${setVelger}
+        ${rowActions}
+        ${showTeknikk ? renderInlineTeknikk(ex) : ''}
       </div>`;
   }).join('');
 
@@ -269,7 +275,6 @@ export async function render(container) {
           </div>
         </div>
       </div>
-      ${teknikkHtml}
       <div id="styrke-liste">${rows}</div>
     </section>
 
@@ -386,6 +391,7 @@ export async function render(container) {
     } else if (action === 'pause') {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(FOCUS_KEY);
+      sessionStorage.removeItem(TEKNIKK_KEY);
       render(container);
     }
   }
@@ -411,6 +417,9 @@ export async function render(container) {
       row.addEventListener('click', (e) => {
         if (e.target.closest('[data-handling]')) return;
         sessionStorage.setItem(FOCUS_KEY, row.dataset.exId);
+        if (sessionStorage.getItem(TEKNIKK_KEY) && sessionStorage.getItem(TEKNIKK_KEY) !== row.dataset.exId) {
+          sessionStorage.removeItem(TEKNIKK_KEY);
+        }
         render(container);
       });
     }
@@ -418,8 +427,21 @@ export async function render(container) {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const next = items.map((it) => ({ ...it }));
         const action = btn.dataset.handling;
+        if (action === 'teknikk') {
+          const open = sessionStorage.getItem(TEKNIKK_KEY) === row.dataset.exId;
+          if (open) sessionStorage.removeItem(TEKNIKK_KEY);
+          else sessionStorage.setItem(TEKNIKK_KEY, row.dataset.exId);
+          render(container);
+          return;
+        }
+        if (action === 'teknikk-lukk') {
+          if (e.target.closest('[data-handling="video"]')) return;
+          sessionStorage.removeItem(TEKNIKK_KEY);
+          render(container);
+          return;
+        }
+        const next = items.map((it) => ({ ...it }));
         if (action === 'fjern') next.splice(idx, 1);
         else if (action === 'opp' && idx > 0) [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
         else if (action === 'ned' && idx < next.length - 1) [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
@@ -427,6 +449,13 @@ export async function render(container) {
         else if (action === 'sett-pluss') next[idx].goalSets = Math.min(10, next[idx].goalSets + 1);
         await updateItems(next);
       });
+    });
+    row.querySelector('.styrke-rad-teknikk')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        sessionStorage.removeItem(TEKNIKK_KEY);
+        render(container);
+      }
     });
   });
 
@@ -442,6 +471,7 @@ export async function render(container) {
     sessionHost.querySelector('#oktt-ferdig').addEventListener('click', () => {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(FOCUS_KEY);
+      sessionStorage.removeItem(TEKNIKK_KEY);
       render(container);
     });
   } else if (sessionActive && active?.exercise) {
@@ -513,15 +543,19 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
   const catalogRest = getCatalogByCategory(categoryId)
     .filter((c) => !activeCatalogIds.has(c.id));
   const inPlan = new Set(planItems.map((it) => it.exerciseId));
+  const mineById = new Map(mine.map((e) => [e.id, e]));
 
   const mineRows = mine.map((e) => `
-    <div class="velger-rad plan-velger-rad" data-id="${e.id}">
-      <button type="button" class="plan-velg" data-id="${e.id}" ${inPlan.has(e.id) ? 'disabled' : ''}>
-        <span class="velger-navn">${esc(e.name)}${inPlan.has(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</span>
-        <span class="velger-info dus">${e.goalSets} × ${e.goalRepsMin}–${e.goalRepsMax}</span>
-      </button>
-      <button type="button" class="ikon-knapp plan-rediger" data-id="${e.id}" aria-label="Rediger øvelse">✎</button>
-    </div>`).join('');
+    <article class="plan-bib-rad plan-mine-rad" data-id="${e.id}">
+      <div class="plan-bib-topp">
+        <h3 class="plan-bib-navn">${esc(e.name)}${inPlan.has(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
+        <span class="plan-mine-handlinger">
+          <button type="button" class="ikon-knapp plan-rediger" data-id="${e.id}" aria-label="Rediger øvelse">✎</button>
+          <button type="button" class="plan-bib-bruk" data-id="${e.id}" ${inPlan.has(e.id) ? 'disabled' : ''}>Bruk denne →</button>
+        </span>
+      </div>
+      ${descriptionBlock(exercisePickerDescription(e), 120)}
+    </article>`).join('');
 
   const bibRows = catalogRest.map((c) => `
     <article class="plan-bib-rad" data-id="${esc(c.id)}">
@@ -539,7 +573,7 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
         <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      ${mineRows || '<p class="dus liten">Ingen egne øvelser i kategorien ennå.</p>'}
+      ${mineRows ? `<p class="felt-navn plan-bib-tittel">Mine øvelser</p>${mineRows}` : '<p class="dus liten">Ingen egne øvelser i kategorien ennå.</p>'}
       ${bibRows ? `<p class="felt-navn plan-bib-tittel">Fra biblioteket</p>${bibRows}` : ''}
       <form class="ny-ovelse-skjema">
         <input type="text" class="inndata" name="navn" placeholder="Ny øvelse …" aria-label="Navn på ny øvelse">
@@ -548,10 +582,23 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
     </div>`;
 
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
-  bindDescriptionToggles(host);
+  bindDescriptionToggles(host, (id) => {
+    const entry = getCatalogEntry(id);
+    if (entry?.description) return entry.description;
+    const ex = mineById.get(id);
+    return ex ? exercisePickerDescription(ex) : '';
+  });
 
-  host.querySelectorAll('.plan-velg').forEach((btn) => {
+  host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      const catalogEntry = getCatalogEntry(btn.dataset.id);
+      if (catalogEntry) {
+        const ex = await store.addExerciseFromCatalog(catalogEntry.id, catalogEntry);
+        host.innerHTML = '';
+        onPick(ex);
+        return;
+      }
       const ex = await store.getExercise(btn.dataset.id);
       if (!ex) return;
       host.innerHTML = '';
@@ -565,16 +612,6 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
       const ex = await store.getExercise(btn.dataset.id);
       if (!ex) return;
       openForm(host, ex, () => onEdited());
-    });
-  });
-
-  host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const entry = getCatalogEntry(btn.dataset.id);
-      if (!entry) return;
-      const ex = await store.addExerciseFromCatalog(entry.id, entry);
-      host.innerHTML = '';
-      onPick(ex);
     });
   });
 

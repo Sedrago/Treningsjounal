@@ -273,7 +273,7 @@ export function mountValueStrip(host, {
 
   const drum = wrap.querySelector('.verdi-stripe-trommel');
   const list = wrap.querySelector('.verdi-stripe-liste');
-  const ITEM = compact ? 44 : 52;
+  const ITEM = compact ? 40 : 44;
   const PAD = ITEM * 3;
   let current = value ?? centerHint ?? min;
 

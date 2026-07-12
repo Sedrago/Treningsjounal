@@ -388,6 +388,8 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   z-index: 40;
 }
 
+#velger-vert .ark-bakgrunn { z-index: 110; }
+
 .ark {
   position: fixed;
   left: 0; right: 0; bottom: 0;
@@ -402,6 +404,9 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   margin: 0 auto;
   animation: ark-inn 0.22s ease;
 }
+
+#velger-vert .ark { z-index: 111; }
+
 @keyframes ark-inn { from { transform: translateY(30%); opacity: 0.5; } to { transform: none; opacity: 1; } }
 
 .ark-hode { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -750,6 +755,51 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   color: var(--aksent-tekst);
 }
 .styrke-rad--aktiv .plan-navn { color: var(--aksent); }
+
+.styrke-rad--kompakt {
+  padding: 6px 0;
+  cursor: pointer;
+}
+.styrke-rad--kompakt .styrke-lenke { flex: 1 1 auto; }
+
+.styrke-rad-teknikk {
+  flex: 1 0 100%;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: var(--flate-2);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  cursor: pointer;
+}
+.styrke-teknikk-tekst {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.styrke-teknikk-notater { margin: 8px 0 0; }
+.styrke-teknikk-video { margin: 8px 0 0; font-size: 0.88rem; }
+
+.styrke-teknikk-knapp {
+  font-style: italic;
+  font-weight: 700;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.styrke-teknikk-knapp[aria-pressed="true"] {
+  background: var(--aksent);
+  color: var(--aksent-tekst, #fff);
+}
+
+.plan-mine-handlinger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.plan-bib-bruk:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 
 .plan-okt-info {
   display: flex;

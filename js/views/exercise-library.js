@@ -21,11 +21,12 @@ export function descriptionBlock(text, max = 140) {
 }
 
 /** Klikk/Enter på utdrag viser hele beskrivelsen og tilbake igjen. */
-export function bindDescriptionToggles(container) {
+export function bindDescriptionToggles(container, resolveDescription) {
   container.querySelectorAll('.bib-beskrivelse--utvidbar').forEach((el) => {
     const id = el.closest('[data-id]')?.dataset.id;
-    const entry = id ? getCatalogEntry(id) : null;
-    const full = entry?.description;
+    const full = resolveDescription
+      ? resolveDescription(id)
+      : (id ? getCatalogEntry(id)?.description : '');
     if (!full) return;
 
     const { short } = excerpt(full);
