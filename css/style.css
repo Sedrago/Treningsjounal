@@ -756,21 +756,25 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .styrke-rad--aktiv .plan-navn { color: var(--aksent); }
 
-.styrke-rad--kompakt {
+.styrke-rad--liste {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 6px 8px;
   padding: 6px 0;
-  cursor: pointer;
 }
-.styrke-rad--kompakt .styrke-lenke {
+.styrke-rad--liste.styrke-rad--oktt {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.styrke-rad--liste.styrke-rad--oktt.styrke-rad--kompakt { cursor: pointer; }
+
+.styrke-rad--liste .styrke-lenke {
   grid-column: 1;
   min-width: 0;
   align-items: flex-start;
 }
-.styrke-rad--kompakt .plan-okt-info { min-width: 0; }
-.styrke-rad--kompakt .plan-navn {
+.styrke-rad--liste .plan-okt-info { min-width: 0; flex: 1; }
+.styrke-rad--liste .plan-navn {
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
@@ -778,18 +782,56 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   word-break: break-word;
   line-height: 1.25;
 }
-.styrke-rad--kompakt .plan-rekkefolge { flex-shrink: 0; margin-top: 1px; }
-.styrke-rad--kompakt .styrke-rad-fremdrift {
+.styrke-rad--liste .plan-rekkefolge { flex-shrink: 0; margin-top: 1px; }
+
+.styrke-rad-kat {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+.styrke-rad-kat .styrke-kat-ikon,
+.styrke-rad-kat img.kategori-ikon {
+  width: calc(1.25em * 2);
+  height: calc(1.25em * 2);
+  object-fit: contain;
+  display: block;
+}
+.styrke-rad-kat span.kategori-ikon {
+  width: auto;
+  height: calc(1.25em * 2);
+  font-size: calc(1.25em * 2);
+  line-height: 1;
+  display: block;
+}
+
+.styrke-rad--liste .styrke-rad-fremdrift {
   grid-column: 2;
   grid-row: 1;
   align-self: start;
   padding-top: 5px;
 }
-.styrke-rad--kompakt .styrke-rad-utvid {
+.styrke-rad--liste:not(.styrke-rad--oktt) .styrke-rad-utvid {
+  grid-column: 2;
+  grid-row: 1;
+}
+.styrke-rad--liste.styrke-rad--oktt .styrke-rad-utvid {
   grid-column: 3;
   grid-row: 1;
+}
+.styrke-rad--liste .styrke-rad-utvid {
   margin-left: 0;
   align-self: start;
+}
+.styrke-rad--liste .plan-sett-velger,
+.styrke-rad--liste .plan-rad-handlinger,
+.styrke-rad--liste .styrke-rad-teknikk {
+  grid-column: 1 / -1;
+}
+
+.styrke-rad--kompakt {
+  padding: 6px 0;
 }
 
 .styrke-rad-utvid {

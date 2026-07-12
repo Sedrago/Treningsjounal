@@ -194,8 +194,8 @@ export async function render(container) {
   }
   const sessionActive = sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
   const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
-  const teknikkOpenId = sessionActive ? sessionStorage.getItem(TEKNIKK_KEY) : null;
-  const expandedId = sessionActive ? sessionStorage.getItem(EXPAND_KEY) : null;
+  const teknikkOpenId = sessionStorage.getItem(TEKNIKK_KEY);
+  const expandedId = sessionStorage.getItem(EXPAND_KEY);
 
   container.classList.toggle('app--styrke-oktt', sessionActive);
 
@@ -206,18 +206,18 @@ export async function render(container) {
     const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
     const done = logged >= item.goalSets;
     const isActive = sessionActive && active && active.exIndex === i && !allProgramDone;
-    const isExpanded = sessionActive && expandedId === item.exerciseId;
-    const showDetails = !sessionActive || isExpanded;
-    const compact = sessionActive && !showDetails;
+    const isExpanded = expandedId === item.exerciseId;
+    const showDetails = isExpanded;
+    const compact = !isExpanded;
     const showTeknikk = isExpanded && teknikkOpenId === item.exerciseId;
     const hasTeknikk = ex && (getDescription(ex) || ex.notes?.trim() || ex.video?.trim());
 
     const progress = sessionActive ? `
       <span class="styrke-rad-fremdrift dus liten">${logged}/${item.goalSets}</span>` : '';
 
-    const expandBtn = sessionActive ? `
+    const expandBtn = `
         <button type="button" class="ikon-knapp styrke-rad-utvid" data-handling="utvid"
-          aria-label="${isExpanded ? 'Skjul valg' : 'Vis valg'}" aria-expanded="${isExpanded ? 'true' : 'false'}">⌄</button>` : '';
+          aria-label="${isExpanded ? 'Skjul valg' : 'Vis valg'}" aria-expanded="${isExpanded ? 'true' : 'false'}">⌄</button>`;
 
     const setVelger = showDetails ? `
         <span class="plan-sett-velger">
@@ -235,12 +235,13 @@ export async function render(container) {
         </span>` : '';
 
     return `
-      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : ''} ${isExpanded ? 'styrke-rad--utvidet' : ''}"
+      <div class="plan-rad styrke-rad styrke-rad--liste ${sessionActive ? 'styrke-rad--oktt' : ''} ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : 'styrke-rad--utvidet'}"
         data-idx="${i}" data-ex-id="${item.exerciseId}">
         <div class="styrke-lenke">
           <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
+          ${cat ? `<span class="styrke-rad-kat">${categoryIconHtml(cat, 'kategori-ikon styrke-kat-ikon')}</span>` : ''}
           <span class="plan-okt-info">
-            <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
+            <span class="plan-navn">${esc(name)}</span>
           </span>
         </div>
         ${progress}
@@ -390,6 +391,9 @@ export async function render(container) {
     } else if (action === 'tom') {
       if (!confirm('Tømme hele programmet? Loggede sett i dag beholdes.')) return;
       sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(FOCUS_KEY);
+      sessionStorage.removeItem(TEKNIKK_KEY);
+      sessionStorage.removeItem(EXPAND_KEY);
       if (plan) await store.deletePlan(plan.id);
       render(container);
     } else if (action === 'pause') {
