@@ -243,59 +243,96 @@ export function rirPillOptions() {
 }
 
 /**
- * Horisontal reps-linje: senterverdi med naboer, kan dras sideveis (1–100+).
+ * Horisontal verdi-linje (reps, kg …). Senter = valgt verdi.
  * @returns {{ setValue: (v: number|null) => void, destroy: () => void }}
  */
-export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange }) {
+export function mountValueStrip(host, {
+  label,
+  value,
+  centerHint = 8,
+  step = 1,
+  min = 0,
+  max = 100,
+  range = 50,
+  format = (v) => String(v),
+  parse = (s) => parseFloat(s),
+  onChange,
+  compact = false,
+}) {
   host.innerHTML = '';
   const wrap = document.createElement('div');
-  wrap.className = 'reps-stripe';
+  wrap.className = `verdi-stripe ${compact ? 'verdi-stripe-kompakt' : ''}`;
   wrap.innerHTML = `
-    <p class="pill-etikett">Reps</p>
-    <div class="reps-stripe-rad">
-      <div class="reps-stripe-trommel" aria-label="Velg repetisjoner">
-        <div class="reps-stripe-markor" aria-hidden="true"></div>
-        <ul class="reps-stripe-liste"></ul>
+    ${label ? `<p class="pill-etikett verdi-stripe-etikett">${label}</p>` : ''}
+    <div class="verdi-stripe-rad">
+      <div class="verdi-stripe-trommel" aria-label="${label || 'Velg verdi'}">
+        <div class="verdi-stripe-markor" aria-hidden="true"></div>
+        <ul class="verdi-stripe-liste"></ul>
       </div>
     </div>`;
 
-  const drum = wrap.querySelector('.reps-stripe-trommel');
-  const list = wrap.querySelector('.reps-stripe-liste');
-  const ITEM = 52;
+  const drum = wrap.querySelector('.verdi-stripe-trommel');
+  const list = wrap.querySelector('.verdi-stripe-liste');
+  const ITEM = compact ? 44 : 52;
   const PAD = ITEM * 3;
-  let current = value ?? centerHint ?? 8;
+  let current = value ?? centerHint ?? min;
+
+  function snap(val) {
+    if (step >= 1) return Math.max(min, Math.min(max, Math.round(val)));
+    return Math.max(min, Math.min(max, Math.round(val / step) * step));
+  }
 
   function buildItems(center) {
-    const maxVal = Math.max(max, center + 15);
+    const lo = Math.max(min, center - range);
+    const hi = Math.min(max, center + range);
     list.innerHTML = '';
     list.style.paddingLeft = `${PAD}px`;
     list.style.paddingRight = `${PAD}px`;
-    for (let v = 1; v <= maxVal; v++) {
+    for (let v = lo; v <= hi + step * 0.001; v += step) {
+      const val = Math.round(v * 100) / 100;
       const li = document.createElement('li');
-      li.className = 'reps-stripe-item';
-      li.dataset.value = String(v);
-      li.textContent = String(v);
+      li.className = 'verdi-stripe-item';
+      li.dataset.value = String(val);
+      li.textContent = format(val);
       list.appendChild(li);
     }
+    updateHighlight(current);
+  }
+
+  function updateHighlight(val) {
+    list.querySelectorAll('.verdi-stripe-item').forEach((el) => {
+      const v = parse(el.dataset.value);
+      el.classList.toggle('sentrert', Math.abs(v - val) < step * 0.01);
+    });
   }
 
   let scrollTimer = null;
+  let rafId = null;
 
   function emit(val) {
-    current = Math.max(1, Math.min(max, Math.round(val)));
+    const next = snap(val);
+    if (Math.abs(next - current) < step * 0.01) {
+      updateHighlight(current);
+      return;
+    }
+    current = next;
+    updateHighlight(current);
     onChange(current);
   }
 
   function scrollToValue(val, smooth = false) {
-    val = Math.max(1, Math.min(max, Math.round(val)));
-    let item = list.querySelector(`[data-value="${val}"]`);
+    val = snap(val);
+    let item = [...list.querySelectorAll('.verdi-stripe-item')]
+      .find((el) => Math.abs(parse(el.dataset.value) - val) < step * 0.01);
     if (!item) {
       buildItems(val);
-      item = list.querySelector(`[data-value="${val}"]`);
+      item = [...list.querySelectorAll('.verdi-stripe-item')]
+        .find((el) => Math.abs(parse(el.dataset.value) - val) < step * 0.01);
     }
     if (!item) return;
     const left = item.offsetLeft - drum.clientWidth / 2 + ITEM / 2;
     drum.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+    updateHighlight(val);
   }
 
   function nearestFromScroll() {
@@ -303,7 +340,7 @@ export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange
     const centerX = drumRect.left + drum.clientWidth / 2;
     let best = null;
     let bestDist = Infinity;
-    list.querySelectorAll('.reps-stripe-item').forEach((el) => {
+    list.querySelectorAll('.verdi-stripe-item').forEach((el) => {
       const r = el.getBoundingClientRect();
       const mid = r.left + r.width / 2;
       const d = Math.abs(mid - centerX);
@@ -312,32 +349,78 @@ export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange
         best = el;
       }
     });
-    return best ? parseInt(best.dataset.value, 10) : current;
+    return best ? parse(best.dataset.value) : current;
   }
 
-  drum.addEventListener('scroll', () => {
+  function onScroll() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      const val = nearestFromScroll();
+      updateHighlight(val);
+    });
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
       const val = nearestFromScroll();
-      if (val !== current) emit(val);
-    }, 80);
-  }, { passive: true });
+      if (Math.abs(val - current) >= step * 0.01) emit(val);
+    }, 35);
+  }
+
+  drum.addEventListener('scroll', onScroll, { passive: true });
 
   host.appendChild(wrap);
+  current = snap(current);
   buildItems(current);
   requestAnimationFrame(() => scrollToValue(current, false));
 
   return {
     setValue(v) {
-      const n = v != null ? Math.round(v) : current;
-      if (n === current) return;
+      const n = v != null ? snap(v) : current;
+      if (Math.abs(n - current) < step * 0.01) return;
       current = n;
-      if (!list.querySelector(`[data-value="${n}"]`)) buildItems(n);
       scrollToValue(n, false);
     },
     destroy() {
       clearTimeout(scrollTimer);
+      if (rafId) cancelAnimationFrame(rafId);
       host.innerHTML = '';
     },
   };
+}
+
+/** Horisontal kg-linje (0,5 kg / 1 lb intervaller). */
+export function mountWeightStrip(host, { valueKg, units, onChange, compact = false }) {
+  const step = weightStep(units);
+  const unit = weightUnit(units);
+  const display = valueKg != null ? snapDisplay(toDisplayWeight(valueKg, units), units) : 40;
+  return mountValueStrip(host, {
+    label: unit,
+    value: display,
+    centerHint: display,
+    step,
+    min: 0,
+    max: 300,
+    range: compact ? 100 : 60,
+    format: (v) => fmtNum(v, v % 1 === 0 ? 0 : 1),
+    onChange: (d) => onChange(fromInputWeight(d, units)),
+    compact,
+  });
+}
+
+/**
+ * Horisontal reps-linje: senterverdi med naboer, kan dras sideveis (1–100+).
+ * @returns {{ setValue: (v: number|null) => void, destroy: () => void }}
+ */
+export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange, compact = false }) {
+  return mountValueStrip(host, {
+    label: 'Reps',
+    value,
+    centerHint,
+    step: 1,
+    min: 1,
+    max,
+    range: compact ? 30 : 20,
+    format: (v) => String(Math.round(v)),
+    onChange,
+    compact,
+  });
 }

@@ -180,33 +180,25 @@ export async function render(container) {
     const done = logged >= item.goalSets;
     const isActive = sessionActive && active && active.exIndex === i && !allProgramDone;
 
-    if (sessionActive) {
-      const dots = Array.from({ length: item.goalSets }, (_, n) => {
-        const filled = n < logged;
-        const isCurrent = isActive && n === logged;
-        return `<span class="oktt-prikk ${filled ? 'ferdig' : ''} ${isCurrent ? 'naa' : ''}"></span>`;
-      }).join('');
-      return `
-        <button type="button" class="oktt-rad ${done ? 'ferdig' : ''} ${isActive ? 'aktiv' : ''}"
-          data-ex-id="${item.exerciseId}" aria-current="${isActive ? 'step' : 'false'}">
-          <span class="oktt-rad-markor" aria-hidden="true"></span>
-          <span class="plan-rekkefolge kompakt">${done ? '✓' : i + 1}</span>
-          <span class="oktt-rad-info">
-            <span class="plan-navn kompakt">${esc(name)}</span>
-            <span class="dus liten">${logged}/${item.goalSets}</span>
-          </span>
-          <span class="oktt-prikker" aria-hidden="true">${dots}</span>
-        </button>`;
-    }
+    const progress = sessionActive ? `
+      <span class="styrke-rad-fremdrift dus liten">${logged}/${item.goalSets}</span>
+      <span class="oktt-prikker" aria-hidden="true">${Array.from({ length: item.goalSets }, (_, n) => {
+    const filled = n < logged;
+    const isCurrent = isActive && n === logged;
+    return `<span class="oktt-prikk ${filled ? 'ferdig' : ''} ${isCurrent ? 'naa' : ''}"></span>`;
+  }).join('')}</span>` : '';
 
     return `
-      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''}" data-idx="${i}">
+      <div class="plan-rad styrke-rad ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''}"
+        data-idx="${i}" data-ex-id="${item.exerciseId}">
         <div class="styrke-lenke">
           <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
           <span class="plan-okt-info">
             <span class="plan-navn">${cat ? `${categoryIconHtml(cat, 'kategori-ikon liten')} ` : ''}${esc(name)}</span>
+            ${isActive ? '<span class="styrke-rad-merke">Nå</span>' : ''}
           </span>
         </div>
+        ${progress}
         <span class="plan-sett-velger">
           <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
           <span class="plan-sett-antall">${item.goalSets} sett</span>
@@ -229,44 +221,38 @@ export async function render(container) {
   ];
 
   container.innerHTML = `
-    <div class="styrke-layout ${sessionActive ? 'styrke-layout--oktt' : ''}">
-      <div class="styrke-topp">
-        <header class="side-topp ${sessionActive ? 'side-topp-kompakt' : ''}">
-          <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
-          <div>
-            <h1>${sessionActive ? 'Økt' : 'Styrketrening'}</h1>
-            <p class="dus">${sessionActive
-    ? `${progDone}/${progTotal} øvelser · sett ${active?.setNum ?? '–'}/${active?.item?.goalSets ?? '–'}`
-    : `${formatDateLong(today)} · ${esc(statusLine(plan, items, todaySets))}`}</p>
-          </div>
-        </header>
-
-        <section class="kort styrke-program ${sessionActive ? 'styrke-program-kompakt' : ''}" aria-label="Dagens program">
-          <div class="styrke-program-hode">
-            <h2 class="kort-tittel">Program${items.length ? ` (${items.length})` : ''}</h2>
-            <div class="styrke-meny-wrap">
-              <button type="button" class="ikon-knapp styrke-meny" id="program-meny" aria-label="Programmeny" aria-haspopup="menu" aria-expanded="false">☰</button>
-              <div class="styrke-meny-popover skjult" id="program-meny-liste" role="menu">
-                ${menuItems.map((m) => `
-                  <button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
-              </div>
-            </div>
-          </div>
-          <div id="styrke-liste" class="${sessionActive ? 'oktt-liste' : ''}">${rows}</div>
-        </section>
-
-        ${!sessionActive ? `
-        ${items.length ? '<button type="button" class="knapp primaer stor" id="start-okt">Start økt</button>' : ''}
-        <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
-        <section class="kort">
-          <label class="felt-navn" for="okt-notat">Notat for økten</label>
-          <textarea id="okt-notat" class="inndata" rows="2"
-            placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
-        </section>` : ''}
+    <header class="side-topp">
+      <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
+      <div>
+        <h1>Styrketrening</h1>
+        <p class="dus">${formatDateLong(today)} · ${esc(statusLine(plan, items, todaySets))}</p>
       </div>
+    </header>
 
-      ${sessionActive ? '<div class="styrke-bunn" id="oktt-panel"></div>' : ''}
-    </div>
+    <section class="kort styrke-program" aria-label="Dagens program">
+      <div class="styrke-program-hode">
+        <h2 class="kort-tittel">Program${items.length ? ` (${items.length})` : ''}</h2>
+        <div class="styrke-meny-wrap">
+          <button type="button" class="ikon-knapp styrke-meny" id="program-meny" aria-label="Programmeny" aria-haspopup="menu" aria-expanded="false">☰</button>
+          <div class="styrke-meny-popover skjult" id="program-meny-liste" role="menu">
+            ${menuItems.map((m) => `
+              <button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div id="styrke-liste">${rows}</div>
+    </section>
+
+    ${!sessionActive && items.length ? '<button type="button" class="knapp primaer stor" id="start-okt">Start økt</button>' : ''}
+    <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
+
+    <section class="kort">
+      <label class="felt-navn" for="okt-notat">Notat for økten</label>
+      <textarea id="okt-notat" class="inndata" rows="2"
+        placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
+    </section>
+
+    ${sessionActive ? '<div class="oktt-overlay" id="oktt-panel" role="region" aria-label="Logg sett"></div>' : ''}
     <div id="velger-vert"></div>
   `;
 
@@ -391,6 +377,13 @@ export async function render(container) {
 
   container.querySelectorAll('.styrke-rad').forEach((row) => {
     const idx = Number(row.dataset.idx);
+    if (sessionActive) {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('[data-handling]')) return;
+        sessionStorage.setItem(FOCUS_KEY, row.dataset.exId);
+        render(container);
+      });
+    }
     row.querySelectorAll('[data-handling]').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -407,22 +400,14 @@ export async function render(container) {
     });
   });
 
-  container.querySelectorAll('.oktt-rad').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      sessionStorage.setItem(FOCUS_KEY, btn.dataset.exId);
-      render(container);
-    });
-  });
-
-  container.querySelector('.oktt-rad.aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  container.querySelector('.styrke-rad--aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const sessionHost = container.querySelector('#oktt-panel');
   if (sessionActive && allProgramDone) {
     sessionHost.innerHTML = `
-      <div class="oktt-panel oktt-panel--bunn oktt-ferdig">
-        <h2 class="oktt-tittel">Program fullført</h2>
-        <p class="dus">Alle ${progTotal} øvelser er logget.</p>
-        <button type="button" class="knapp primaer stor" id="oktt-ferdig">Ferdig</button>
+      <div class="oktt-panel oktt-panel--overlay oktt-ferdig">
+        <p class="oktt-overlay-tittel"><strong>Program fullført</strong></p>
+        <button type="button" class="knapp primaer oktt-lagre" id="oktt-ferdig">Ferdig</button>
       </div>`;
     sessionHost.querySelector('#oktt-ferdig').addEventListener('click', () => {
       sessionStorage.removeItem(SESSION_KEY);

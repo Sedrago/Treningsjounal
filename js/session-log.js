@@ -5,7 +5,7 @@
 import * as store from './store.js';
 import * as timer from './timer.js';
 import {
-  mountWeightWheel, mountPillRow, mountDurationWheel,
+  mountWeightWheel, mountWeightStrip, mountPillRow, mountDurationWheel,
   mountRepStrip, effortPillOptions, rirToEffort,
 } from './pickers.js';
 import { toast, esc } from './utils.js';
@@ -47,6 +47,14 @@ function buildDraft(exercise, setNumber, persisted, template) {
   return draft;
 }
 
+function syncOverlayHeight(host) {
+  const app = document.getElementById('app');
+  if (!app || !host.closest('.oktt-overlay')) return;
+  requestAnimationFrame(() => {
+    app.style.setProperty('--oktt-overlay-h', `${host.offsetHeight}px`);
+  });
+}
+
 /**
  * Monter logging for ett sett. Lagrer først ved «Lagre sett →».
  * @returns {{ destroy: () => void }}
@@ -74,25 +82,47 @@ export async function mountSetLogger(host, {
   if (draft.rir == null) draft.rir = defaultRir;
 
   const wrap = document.createElement('div');
-  wrap.className = compact ? 'oktt-panel oktt-panel--bunn' : 'kort oktt-panel';
-  wrap.innerHTML = `
-    <div class="oktt-panel-hode">
-      <div>
-        <h2 class="oktt-tittel">${esc(exercise.name)}</h2>
-        <p class="dus liten oktt-sett-info">Sett ${setNumber} / ${goalSets}</p>
+  wrap.className = compact ? 'oktt-panel oktt-panel--overlay' : 'kort oktt-panel';
+
+  if (compact) {
+    wrap.innerHTML = `
+      <div class="oktt-overlay-hode">
+        <div class="oktt-overlay-tittel">
+          <strong>${esc(exercise.name)}</strong>
+          <span class="dus">· sett ${setNumber}/${goalSets}</span>
+        </div>
+        ${restTimes.length ? `
+        <div class="oktt-overlay-hvile">
+          ${restTimes.slice(0, 3).map((t) => `<button type="button" class="knapp hvile mini" data-sek="${t}">${t}s</button>`).join('')}
+        </div>` : ''}
       </div>
-    </div>
-    <div class="oktt-velgere"></div>
-    ${logMode === 'bodyweight' ? `
-    <label class="bryter-rad logg-tilleggsvekt oktt-tilleggsvekt">
-      <input type="checkbox" id="oktt-tilleggsvekt" ${showWeight ? 'checked' : ''}>
-      <span>Tilleggsvekt</span>
-    </label>` : ''}
-    ${restTimes.length ? `
-    <div class="oktt-hvile-rad" aria-label="Hviletimer">
-      ${restTimes.map((t) => `<button type="button" class="knapp hvile oktt-hvile-knapp" data-sek="${t}">${t}s</button>`).join('')}
-    </div>` : ''}
-    <button type="button" class="knapp primaer stor oktt-lagre" id="oktt-lagre-sett">Lagre sett →</button>`;
+      <div class="oktt-velgere oktt-velgere-kompakt"></div>
+      ${logMode === 'bodyweight' ? `
+      <label class="bryter-rad logg-tilleggsvekt oktt-tilleggsvekt kompakt">
+        <input type="checkbox" id="oktt-tilleggsvekt" ${showWeight ? 'checked' : ''}>
+        <span>+Vekt</span>
+      </label>` : ''}
+      <button type="button" class="knapp primaer oktt-lagre" id="oktt-lagre-sett">Lagre sett →</button>`;
+  } else {
+    wrap.innerHTML = `
+      <div class="oktt-panel-hode">
+        <div>
+          <h2 class="oktt-tittel">${esc(exercise.name)}</h2>
+          <p class="dus liten oktt-sett-info">Sett ${setNumber} / ${goalSets}</p>
+        </div>
+      </div>
+      <div class="oktt-velgere"></div>
+      ${logMode === 'bodyweight' ? `
+      <label class="bryter-rad logg-tilleggsvekt oktt-tilleggsvekt">
+        <input type="checkbox" id="oktt-tilleggsvekt" ${showWeight ? 'checked' : ''}>
+        <span>Tilleggsvekt</span>
+      </label>` : ''}
+      ${restTimes.length ? `
+      <div class="oktt-hvile-rad" aria-label="Hviletimer">
+        ${restTimes.map((t) => `<button type="button" class="knapp hvile oktt-hvile-knapp" data-sek="${t}">${t}s</button>`).join('')}
+      </div>` : ''}
+      <button type="button" class="knapp primaer stor oktt-lagre" id="oktt-lagre-sett">Lagre sett →</button>`;
+  }
 
   host.appendChild(wrap);
   const pickerHost = wrap.querySelector('.oktt-velgere');
@@ -112,17 +142,27 @@ export async function mountSetLogger(host, {
       if (logMode === 'weight' || showWeight) {
         const wHost = document.createElement('div');
         pickerHost.appendChild(wHost);
-        pickers.weight = mountWeightWheel(wHost, {
-          valueKg: draft.weight,
-          units,
-          onChange: (kg) => { draft.weight = kg; },
-        });
+        if (compact) {
+          pickers.weight = mountWeightStrip(wHost, {
+            valueKg: draft.weight,
+            units,
+            compact: true,
+            onChange: (kg) => { draft.weight = kg; },
+          });
+        } else {
+          pickers.weight = mountWeightWheel(wHost, {
+            valueKg: draft.weight,
+            units,
+            onChange: (kg) => { draft.weight = kg; },
+          });
+        }
       }
       const repsHost = document.createElement('div');
       pickerHost.appendChild(repsHost);
       pickers.reps = mountRepStrip(repsHost, {
         value: draft.reps,
         centerHint: defaultReps(exercise),
+        compact,
         onChange: (v) => { draft.reps = v; },
       });
     }
@@ -130,11 +170,15 @@ export async function mountSetLogger(host, {
     const effortHost = document.createElement('div');
     pickerHost.appendChild(effortHost);
     pickers.effort = mountPillRow(effortHost, {
-      label: 'Innsats',
+      label: compact ? '' : 'Innsats',
       options: effortPillOptions(),
       value: draft.rir ?? defaultRir,
       onChange: (v) => { draft.rir = v; },
     });
+    if (compact) {
+      effortHost.querySelector('.pill-rad')?.classList.add('oktt-innsats-rad');
+    }
+    syncOverlayHeight(host);
   }
 
   remountPickers();
@@ -147,7 +191,7 @@ export async function mountSetLogger(host, {
     });
   }
 
-  wrap.querySelectorAll('.oktt-hvile-knapp, .hvile').forEach((btn) => {
+  wrap.querySelectorAll('[data-sek]').forEach((btn) => {
     btn.addEventListener('click', () => timer.start(parseInt(btn.dataset.sek, 10)));
   });
 
@@ -163,10 +207,13 @@ export async function mountSetLogger(host, {
     onSaved(saved);
   });
 
+  syncOverlayHeight(host);
+
   return {
     destroy() {
       Object.values(pickers).forEach((p) => p?.destroy?.());
       host.innerHTML = '';
+      document.getElementById('app')?.style.removeProperty('--oktt-overlay-h');
     },
   };
 }
