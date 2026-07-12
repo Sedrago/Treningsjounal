@@ -67,7 +67,7 @@ function exercisePickerDescription(exercise) {
   return description || notes || '';
 }
 
-function renderInlineTeknikk(exercise) {
+function renderInlineTeknikk(exercise, category) {
   if (!exercise) return '';
   const description = getDescription(exercise);
   const notes = exercise.notes?.trim();
@@ -76,6 +76,7 @@ function renderInlineTeknikk(exercise) {
 
   return `
     <div class="styrke-rad-teknikk" data-handling="teknikk-lukk" role="button" tabindex="0" aria-label="Skjul teknikk">
+      <p class="styrke-teknikk-navn">${category ? `${categoryIconHtml(category, 'kategori-ikon liten')} ` : ''}${esc(exercise.name)}</p>
       ${description ? `<p class="styrke-teknikk-tekst">${esc(description)}</p>` : ''}
       ${notes ? `<p class="styrke-teknikk-notater dus liten">Mine notater: ${esc(notes)}</p>` : ''}
       ${video ? `<p class="styrke-teknikk-video"><a href="${esc(video)}" target="_blank" rel="noopener" data-handling="video">Se video ↗</a></p>` : ''}
@@ -212,12 +213,7 @@ export async function render(container) {
     const hasTeknikk = ex && (getDescription(ex) || ex.notes?.trim() || ex.video?.trim());
 
     const progress = sessionActive ? `
-      <span class="styrke-rad-fremdrift dus liten">${logged}/${item.goalSets}</span>
-      <span class="oktt-prikker" aria-hidden="true">${Array.from({ length: item.goalSets }, (_, n) => {
-    const filled = n < logged;
-    const isCurrent = isActive && n === logged;
-    return `<span class="oktt-prikk ${filled ? 'ferdig' : ''} ${isCurrent ? 'naa' : ''}"></span>`;
-  }).join('')}</span>` : '';
+      <span class="styrke-rad-fremdrift dus liten">${logged}/${item.goalSets}</span>` : '';
 
     const expandBtn = sessionActive ? `
         <button type="button" class="ikon-knapp styrke-rad-utvid" data-handling="utvid"
@@ -251,7 +247,7 @@ export async function render(container) {
         ${expandBtn}
         ${setVelger}
         ${rowActions}
-        ${showTeknikk ? renderInlineTeknikk(ex) : ''}
+        ${showTeknikk ? renderInlineTeknikk(ex, cat) : ''}
       </div>`;
   }).join('');
 
