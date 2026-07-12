@@ -948,23 +948,6 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .verdi-stripe-kompakt .verdi-stripe-trommel { height: 42px; }
 .verdi-stripe-trommel::-webkit-scrollbar { display: none; }
 
-.verdi-stripe-markor {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 44px;
-  height: 36px;
-  border: 2px solid var(--aksent);
-  border-radius: 8px;
-  pointer-events: none;
-  z-index: 1;
-}
-.verdi-stripe-kompakt .verdi-stripe-markor {
-  width: 40px;
-  height: 34px;
-}
-
 .verdi-stripe-liste {
   display: flex;
   flex-direction: row;

@@ -266,7 +266,6 @@ export function mountValueStrip(host, {
     ${label ? `<p class="pill-etikett verdi-stripe-etikett">${label}</p>` : ''}
     <div class="verdi-stripe-rad">
       <div class="verdi-stripe-trommel" aria-label="${label || 'Velg verdi'}">
-        <div class="verdi-stripe-markor" aria-hidden="true"></div>
         <ul class="verdi-stripe-liste"></ul>
       </div>
     </div>`;
