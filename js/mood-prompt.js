@@ -90,6 +90,11 @@ function hasMoodForWorkout(entries, workoutId) {
   return entries.some((m) => m.workoutId === workoutId);
 }
 
+export async function workoutNeedsMood(workoutId) {
+  const entries = await store.getMoodEntries();
+  return !hasMoodForWorkout(entries, workoutId);
+}
+
 function hasWorkoutStartToday(entries, today) {
   return entries.some((m) => m.date === today && m.context === 'workout-start');
 }
@@ -102,12 +107,7 @@ export async function maybeShowMoodPrompt(route = parseHashRoute()) {
   const today = todayStr();
   const now = Date.now();
 
-  if (route === 'styrke' || route === 'okt') {
-    const workout = await store.getOrCreateTodayWorkout();
-    if (hasMoodForWorkout(entries, workout.id)) return;
-    await showMoodPrompt({ context: 'workout-start', workoutId: workout.id });
-    return;
-  }
+  if (route === 'styrke' || route === 'okt') return;
 
   if (route !== 'hjem') return;
   if (hasWorkoutStartToday(entries, today)) return;
@@ -167,4 +167,37 @@ export function showMoodPrompt(opts = {}) {
 
 export function showMoodPromptManual() {
   return showMoodPrompt({ context: 'manual', workoutId: null });
+}
+
+/** Inline humør-klokke over sett-logging under aktiv styrkeøkt. */
+export function mountMoodInline(host, { workoutId, onDone }) {
+  if (!host) return;
+  host.innerHTML = `
+    <section class="oktt-mood" aria-labelledby="oktt-mood-tittel">
+      <h2 id="oktt-mood-tittel" class="mood-tittel mood-tittel--inline">Hvordan føler du deg?</h2>
+      ${moodClockHtml()}
+    </section>`;
+
+  const done = () => { if (onDone) onDone(); };
+
+  host.querySelectorAll('.mood-klokke-time').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await store.saveMoodEntry({
+        value: Number(btn.dataset.value),
+        context: 'workout-start',
+        workoutId,
+        date: todayStr(),
+      });
+      host.innerHTML = '';
+      done();
+    });
+  });
+
+  const dismiss = async () => {
+    await db.setMeta('moodLastDismissedAt', String(Date.now()));
+    host.innerHTML = '';
+    done();
+  };
+
+  host.querySelector('[data-hopp-over]').addEventListener('click', dismiss);
 }

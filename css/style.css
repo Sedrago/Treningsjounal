@@ -702,7 +702,7 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   padding-bottom: var(--oktt-overlay-h, 210px);
 }
 
-.oktt-overlay {
+.oktt-bunn {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
@@ -711,6 +711,39 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   width: 100%;
   max-width: 640px;
   padding: 0 16px calc(8px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.oktt-bunn > * { pointer-events: auto; }
+
+.oktt-mood {
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  padding: 10px 12px 6px;
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 0.1);
+}
+.oktt-mood:empty { display: none; }
+
+.mood-tittel--inline {
+  font-size: 1rem;
+  margin: 0 0 6px;
+  text-align: center;
+}
+.oktt-mood .mood-klokke {
+  --klokke-stor: min(56vw, 210px);
+  margin-bottom: 2px;
+}
+
+.oktt-overlay {
+  position: static;
+  transform: none;
+  left: auto;
+  width: 100%;
+  max-width: none;
+  padding: 0;
   pointer-events: none;
 }
 .oktt-overlay > * { pointer-events: auto; }
@@ -773,8 +806,9 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   min-width: 0;
   align-items: flex-start;
 }
-.styrke-rad--liste .plan-okt-info { min-width: 0; flex: 1; }
+.styrke-rad--liste .plan-okt-info { min-width: 0; flex: 1; text-align: left; }
 .styrke-rad--liste .plan-navn {
+  text-align: left;
   white-space: normal;
   overflow: visible;
   text-overflow: unset;

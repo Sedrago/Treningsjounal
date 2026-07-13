@@ -7,6 +7,7 @@ import { initContent, getCatalogByCategory, getCatalogEntry, getDescription } fr
 import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { mountSetLogger } from '../session-log.js';
+import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
 import {
   esc, formatDateShort, formatDateLong, relativeDays, todayStr,
@@ -292,7 +293,11 @@ export async function render(container) {
         placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
     </section>
 
-    ${sessionActive ? '<div class="oktt-overlay" id="oktt-panel" role="region" aria-label="Logg sett"></div>' : ''}
+    ${sessionActive ? `
+    <div class="oktt-bunn" id="oktt-bunn">
+      <div class="oktt-mood" id="oktt-mood"></div>
+      <div class="oktt-overlay" id="oktt-panel" role="region" aria-label="Logg sett"></div>
+    </div>` : ''}
     <div id="velger-vert"></div>
   `;
 
@@ -485,6 +490,16 @@ export async function render(container) {
   container.querySelector('.styrke-rad--aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const sessionHost = container.querySelector('#oktt-panel');
+  if (sessionActive) {
+    const workout = todayWorkout || await store.getOrCreateTodayWorkout();
+    const moodHost = container.querySelector('#oktt-mood');
+    if (moodHost && await workoutNeedsMood(workout.id)) {
+      mountMoodInline(moodHost, { workoutId: workout.id, onDone: () => render(container) });
+    } else if (moodHost) {
+      moodHost.innerHTML = '';
+    }
+  }
+
   if (sessionActive && allProgramDone) {
     sessionHost.innerHTML = `
       <div class="oktt-panel oktt-panel--overlay oktt-ferdig">
@@ -518,6 +533,13 @@ export async function render(container) {
         toast('Sett lagret', 'suksess');
         render(container);
       },
+    });
+  }
+
+  if (sessionActive) {
+    requestAnimationFrame(() => {
+      const bunn = container.querySelector('#oktt-bunn');
+      if (bunn) container.style.setProperty('--oktt-overlay-h', `${bunn.offsetHeight + 12}px`);
     });
   }
 }
