@@ -235,6 +235,13 @@ function activityCellFill(volume, intensity) {
   return `hsl(${hue} ${sat}% ${light}%)`;
 }
 
+/** Blå fyll for aerob-celle (normalisert 0–1). */
+function activityAerobFill(aerobic) {
+  const sat = 65 + aerobic * 15;
+  const light = 40 + aerobic * 22;
+  return `hsl(210 ${sat}% ${light}%)`;
+}
+
 /**
  * Progresjonsgraf med glatt kurve. Y-akse kan skjules (kun utvikling, ikke tall).
  * @param {HTMLElement} container
@@ -381,24 +388,37 @@ export function activityHeatmap(container, data, weeks = 52) {
 
       if (dayData.aerobic > 0) {
         const glowPad = 2 + dayData.aerobic * 3;
-        const glow = svgEl('rect', {
+        svg.appendChild(svgEl('rect', {
           x: cx - glowPad, y: cy - glowPad,
           width: cell + glowPad * 2, height: cell + glowPad * 2,
           rx: 4,
           fill: `hsla(210, 75%, 52%, ${0.2 + dayData.aerobic * 0.45})`,
           filter: 'url(#hm-aerob-glow)',
           class: 'hm-aerob-glow',
-        });
-        svg.appendChild(glow);
+        }));
+        svg.appendChild(svgEl('rect', {
+          x: cx, y: cy,
+          width: cell, height: cell, rx: 3,
+          fill: activityAerobFill(dayData.aerobic),
+          class: 'hm-celle aerob',
+        }));
+      } else if (dayData.volume <= 0) {
+        svg.appendChild(svgEl('rect', {
+          x: cx, y: cy,
+          width: cell, height: cell, rx: 3,
+          fill: 'var(--hm-tom)',
+          class: 'hm-celle tom',
+        }));
       }
 
-      const fill = activityCellFill(dayData.volume, dayData.intensity);
-      svg.appendChild(svgEl('rect', {
-        x: cx, y: cy,
-        width: cell, height: cell, rx: 3,
-        fill,
-        class: dayData.volume > 0 ? 'hm-celle aktiv' : 'hm-celle tom',
-      }));
+      if (dayData.volume > 0) {
+        svg.appendChild(svgEl('rect', {
+          x: cx, y: cy,
+          width: cell, height: cell, rx: 3,
+          fill: activityCellFill(dayData.volume, dayData.intensity),
+          class: 'hm-celle aktiv',
+        }));
+      }
 
       d.setDate(d.getDate() + 1);
     }
@@ -419,7 +439,7 @@ export function activityHeatmap(container, data, weeks = 52) {
     <span class="heatmap-forklaring-rad">
       <span class="heatmap-legend-brikke intens" style="background:${activityCellFill(0.8, 0.85)}"></span>
       <span class="heatmap-legend-label">Hardere</span>
-      <span class="heatmap-legend-brikke aerob" aria-hidden="true"></span>
+      <span class="heatmap-legend-brikke aerob" style="background:${activityAerobFill(0.75)}" aria-hidden="true"></span>
       <span class="heatmap-legend-label">Aerob</span>
     </span>`;
 

@@ -1502,7 +1502,6 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .heatmap-legend-brikke.aerob {
   box-shadow: 0 0 0 3px hsla(210, 75%, 52%, 0.45);
-  background: var(--hm-tom);
 }
 .heatmap-legend-label { margin: 0 2px; }
 
