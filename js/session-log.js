@@ -8,7 +8,7 @@ import {
   mountWeightWheel, mountWeightStrip, mountPillRow, mountDurationWheel,
   mountRepStrip, effortPillOptions, rirToEffort,
 } from './pickers.js';
-import { toast, esc } from './utils.js';
+import { toast, esc, summarizeSet } from './utils.js';
 
 export function isSetComplete(set, logMode, showWeight) {
   if (logMode === 'duration') return set.durationSec != null;
@@ -18,6 +18,52 @@ export function isSetComplete(set, logMode, showWeight) {
 
 function defaultReps(exercise) {
   return store.repMidpoint(exercise) ?? 8;
+}
+
+function setSummaryText(set, exercise, units) {
+  const logMode = store.logModeOf(exercise);
+  const showWeight = logMode === 'weight' || (logMode === 'bodyweight' && set.weight != null);
+  if (!isSetComplete(set, logMode, showWeight)) return null;
+  const parts = [summarizeSet(set, logMode, units)];
+  if (set.rir != null) {
+    const effort = effortPillOptions().find((o) => o.value === rirToEffort(set.rir));
+    if (effort) parts.push(effort.label);
+  }
+  return parts.join(' · ');
+}
+
+/** HTML for fullførte sett (sortert, med sletteknapp). */
+export function completedSetsHtml(exercise, sets, units) {
+  const completed = sets
+    .slice()
+    .sort((a, b) => a.setNumber - b.setNumber)
+    .filter((s) => setSummaryText(s, exercise, units));
+  if (!completed.length) return '';
+  return `
+    <div class="oktt-fullforte" aria-label="Fullførte sett">
+      ${completed.map((s) => {
+    const text = setSummaryText(s, exercise, units);
+    return `
+        <div class="oktt-fullfort-rad">
+          <span class="oktt-fullfort-nr">${s.setNumber}</span>
+          <span class="oktt-fullfort-info">${esc(text)}</span>
+          <button type="button" class="ikon-knapp oktt-fullfort-slett" data-set-delete="${s.id}" aria-label="Slett sett ${s.setNumber}">✕</button>
+        </div>`;
+  }).join('')}
+    </div>`;
+}
+
+export function bindCompletedSetsList(container, { onDelete }) {
+  container.querySelectorAll('[data-set-delete]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const label = btn.getAttribute('aria-label') || 'settet';
+      if (!confirm(`Slette ${label.toLowerCase()}?`)) return;
+      await store.deleteSet(btn.dataset.setDelete);
+      onDelete?.();
+    });
+  });
 }
 
 function buildDraft(exercise, setNumber, persisted, template) {
@@ -47,9 +93,11 @@ function buildDraft(exercise, setNumber, persisted, template) {
 
 function syncOverlayHeight(host) {
   const app = document.getElementById('app');
-  if (!app || !host.closest('.oktt-overlay')) return;
+  if (!app) return;
   requestAnimationFrame(() => {
-    app.style.setProperty('--oktt-overlay-h', `${host.offsetHeight}px`);
+    const bunn = host.closest('#oktt-bunn');
+    const h = bunn ? bunn.offsetHeight : host.offsetHeight;
+    app.style.setProperty('--oktt-overlay-h', `${h + 12}px`);
   });
 }
 
@@ -63,7 +111,9 @@ export async function mountSetLogger(host, {
   goalSets,
   persistedSet,
   templateSet,
+  completedSets = [],
   onSaved,
+  onDeleted,
   compact = false,
 }) {
   host.innerHTML = '';
@@ -125,6 +175,20 @@ export async function mountSetLogger(host, {
   host.appendChild(wrap);
   const pickerHost = wrap.querySelector('.oktt-velgere');
   const pickers = {};
+
+  const completedHtml = completedSetsHtml(exercise, completedSets, units);
+  if (completedHtml) {
+    const completedHost = document.createElement('div');
+    completedHost.className = 'oktt-fullforte-wrap';
+    completedHost.innerHTML = completedHtml;
+    wrap.insertBefore(completedHost, pickerHost);
+    bindCompletedSetsList(completedHost, {
+      onDelete: () => {
+        onDeleted?.();
+        syncOverlayHeight(host);
+      },
+    });
+  }
 
   function remountPickers() {
     Object.values(pickers).forEach((p) => p?.destroy?.());

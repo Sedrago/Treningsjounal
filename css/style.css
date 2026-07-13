@@ -964,6 +964,39 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 .oktt-velgere-kompakt { display: flex; flex-direction: column; gap: 2px; }
 
+.oktt-fullforte-wrap { margin-bottom: 8px; }
+.oktt-fullforte {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.oktt-fullfort-rad {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--flate-2);
+  border-radius: var(--radius-liten);
+  font-size: 0.88rem;
+}
+.oktt-fullfort-nr {
+  font-weight: 700;
+  color: var(--aksent);
+  min-width: 1.1rem;
+  text-align: center;
+}
+.oktt-fullfort-info {
+  min-width: 0;
+  text-align: left;
+}
+.oktt-fullfort-slett { flex-shrink: 0; }
+
+.styrke-fullforte {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+}
+
 .oktt-innsats-rad {
   display: grid !important;
   grid-template-columns: repeat(4, 1fr);

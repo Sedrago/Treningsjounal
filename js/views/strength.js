@@ -6,7 +6,7 @@ import * as store from '../store.js';
 import { initContent, getCatalogByCategory, getCatalogEntry, getDescription } from '../content.js';
 import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
-import { mountSetLogger } from '../session-log.js';
+import { mountSetLogger, completedSetsHtml, bindCompletedSetsList } from '../session-log.js';
 import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
 import {
@@ -235,6 +235,11 @@ export async function render(container) {
           <button type="button" class="ikon-knapp" data-handling="fjern" aria-label="Fjern">✕</button>
         </span>` : '';
 
+    const exSetsToday = setsByEx.get(item.exerciseId) || [];
+    const completedSetsBlock = sessionActive && showDetails && ex
+      ? completedSetsHtml(ex, exSetsToday, store.getSetting('units'))
+      : '';
+
     return `
       <div class="plan-rad styrke-rad styrke-rad--liste ${sessionActive ? 'styrke-rad--oktt' : ''} ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : 'styrke-rad--utvidet'}"
         data-idx="${i}" data-ex-id="${item.exerciseId}">
@@ -249,6 +254,7 @@ export async function render(container) {
         ${expandBtn}
         ${setVelger}
         ${rowActions}
+        ${completedSetsBlock ? `<div class="styrke-fullforte">${completedSetsBlock}</div>` : ''}
         ${showTeknikk ? renderInlineTeknikk(ex, cat) : ''}
       </div>`;
   }).join('');
@@ -487,6 +493,10 @@ export async function render(container) {
     });
   });
 
+  container.querySelectorAll('.styrke-fullforte').forEach((el) => {
+    bindCompletedSetsList(el, { onDelete: () => render(container) });
+  });
+
   container.querySelector('.styrke-rad--aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const sessionHost = container.querySelector('#oktt-panel');
@@ -527,12 +537,14 @@ export async function render(container) {
       goalSets: active.item.goalSets,
       persistedSet,
       templateSet: prevSet,
+      completedSets: exSets,
       compact: true,
       onSaved: () => {
         sessionStorage.removeItem(FOCUS_KEY);
         toast('Sett lagret', 'suksess');
         render(container);
       },
+      onDeleted: () => render(container),
     });
   }
 
