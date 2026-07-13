@@ -5,6 +5,7 @@
 import * as store from '../store.js';
 import { groupBy, totalVolume, oneRMHistory, best1RM, personalRecord, personalRecordReps, personalRecordDuration, bestSessionVolume } from '../stats.js';
 import { lineChart } from '../charts.js';
+import { openAddSessionSheetIn } from './session-edit.js';
 import {
   esc, fmtNum, fmtVolume, fmtDuration, formatDateShort, formatDateLong,
   todayStr, toDisplayWeight, weightUnit, summarizeSet, fmtClock,
@@ -36,7 +37,9 @@ export async function render(container, params, query = {}) {
       ${FILTERS.map((f) => `<button type="button" role="tab" aria-selected="${f.id === filter}"
         class="filter-knapp ${f.id === filter ? 'aktiv' : ''}" data-filter="${f.id}">${f.label}</button>`).join('')}
     </div>
+    <button type="button" class="knapp sekundaer bred" id="legg-til-okt">+ Legg til tidligere økt</button>
     <div id="historikk-liste"></div>
+    <div id="skjema-vert"></div>
   `;
 
   const listEl = container.querySelector('#historikk-liste');
@@ -76,9 +79,12 @@ export async function render(container, params, query = {}) {
       const comments = daySets.filter((s) => s.comment).map((s) => `<p class="dus liten">«${esc(s.comment)}»</p>`).join('');
       return `
         <section class="kort hist-kort">
-          <h2 class="kort-tittel">${formatDateLong(date)}
-            <span class="dus liten">${fmtVolume(totalVolume(daySets))} kg volum${workout?.duration ? ` · ${fmtDuration(workout.duration)}` : ''}</span>
-          </h2>
+          <div class="hist-kort-topp">
+            <h2 class="kort-tittel">${formatDateLong(date)}
+              <span class="dus liten">${fmtVolume(totalVolume(daySets))} kg volum${workout?.duration ? ` · ${fmtDuration(workout.duration)}` : ''}</span>
+            </h2>
+            <a href="#/rediger-okt/${date}" class="knapp sekundaer liten">Rediger</a>
+          </div>
           ${lines}
           ${comments}
           ${workout?.notes ? `<p class="dus liten">Notat: ${esc(workout.notes)}</p>` : ''}
@@ -87,6 +93,10 @@ export async function render(container, params, query = {}) {
   }
 
   draw();
+
+  container.querySelector('#legg-til-okt').addEventListener('click', () => {
+    openAddSessionSheetIn(container.querySelector('#skjema-vert'));
+  });
 
   container.querySelectorAll('.filter-knapp').forEach((btn) => {
     btn.addEventListener('click', () => {

@@ -1431,6 +1431,22 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 
 .hist-linje { margin: 5px 0; display: flex; justify-content: space-between; gap: 8px; }
+.hist-kort-topp {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.hist-kort-topp .kort-tittel { margin: 0; flex: 1; min-width: 0; }
+.okt-rediger-rad {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.okt-rediger-innhold { flex: 1; min-width: 0; }
+.okt-rediger-innhold .kort-tittel { margin: 0 0 4px; font-size: 1rem; }
 
 /* ---------- Statistikk ---------- */
 

@@ -376,15 +376,20 @@ export function getWorkout(id) {
   return db.get('workouts', id);
 }
 
-/** Finner dagens økt, eller oppretter en ny. */
-export async function getOrCreateTodayWorkout() {
-  const today = todayStr();
-  const existing = (await db.getByIndex('workouts', 'date', today)).find((w) => !w.deleted);
+/** Finner økt for en gitt dato, eller null. */
+export async function getWorkoutByDate(date) {
+  const existing = (await db.getByIndex('workouts', 'date', date)).find((w) => !w.deleted);
+  return existing || null;
+}
+
+/** Finner eller oppretter økt for en gitt dato. */
+export async function getOrCreateWorkoutForDate(date, { retroactive = false } = {}) {
+  const existing = await getWorkoutByDate(date);
   if (existing) return existing;
   const workout = {
     id: uuid(),
-    date: today,
-    startedAt: nowIso(),
+    date,
+    startedAt: retroactive ? null : nowIso(),
     duration: 0,
     bodyweight: null,
     notes: '',
@@ -394,6 +399,11 @@ export async function getOrCreateTodayWorkout() {
   await db.put('workouts', workout);
   await queueOp('workout', 'upsert', workout);
   return workout;
+}
+
+/** Finner dagens økt, eller oppretter en ny. */
+export async function getOrCreateTodayWorkout() {
+  return getOrCreateWorkoutForDate(todayStr());
 }
 
 export async function saveWorkout(workout) {

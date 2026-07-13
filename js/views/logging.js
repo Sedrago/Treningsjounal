@@ -55,7 +55,7 @@ function summaryText(set, logMode, units, showWeight) {
   return parts.join(' · ');
 }
 
-export async function render(container, params) {
+export async function render(container, params, query = {}) {
   await initContent();
   const exerciseId = params[0];
   const exercise = await store.getExercise(exerciseId);
@@ -69,14 +69,17 @@ export async function render(container, params) {
   const units = store.getSetting('units');
   const unit = weightUnit(units);
   const today = todayStr();
+  const sessionDate = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) && query.date <= today
+    ? query.date
+    : today;
+  const isPastSession = sessionDate !== today;
   const defaultRir = Number(store.getSetting('defaultRir'));
 
-  const lastSession = await store.getLastSessionForExercise(exerciseId, today);
-  const workouts = await store.getWorkouts();
-  const todayWorkout = workouts.find((w) => w.date === today) || null;
+  const lastSession = await store.getLastSessionForExercise(exerciseId, sessionDate);
+  const sessionWorkout = await store.getWorkoutByDate(sessionDate);
   let persisted = [];
-  if (todayWorkout) {
-    persisted = (await store.getSetsForWorkout(todayWorkout.id))
+  if (sessionWorkout) {
+    persisted = (await store.getSetsForWorkout(sessionWorkout.id))
       .filter((s) => s.exerciseId === exerciseId)
       .sort((a, b) => a.setNumber - b.setNumber);
   }
@@ -92,10 +95,10 @@ export async function render(container, params) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/styrke" class="tilbake" aria-label="Tilbake til styrketrening">‹</a>
+      <a href="${isPastSession ? `#/rediger-okt/${sessionDate}` : '#/styrke'}" class="tilbake" aria-label="Tilbake">‹</a>
       <div>
         <h1>${esc(exercise.name)}</h1>
-        <p class="dus">${category ? `${categoryIconHtml(category, 'kategori-ikon liten')} ${esc(category.name)} · ` : ''}Mål: ${goalText}
+        <p class="dus">${isPastSession ? `${formatDateShort(sessionDate)} · ` : ''}${category ? `${categoryIconHtml(category, 'kategori-ikon liten')} ${esc(category.name)} · ` : ''}Mål: ${goalText}
           · <a href="#/ovelse/${exercise.id}">historikk</a></p>
         ${lastSession ? `<p class="dus liten forrige-kompakt">Forrige (${formatDateShort(lastSession.date)}): ${esc(lastSession.sets.map((s) => summarizeSet(s, logMode, units)).join(' / '))}</p>` : ''}
       </div>
@@ -113,7 +116,7 @@ export async function render(container, params) {
       ${exercise.video ? `<p class="teknikk-video"><a href="${esc(exercise.video)}" target="_blank" rel="noopener">Se video ↗</a></p>` : ''}
     </section>` : ''}
 
-    <section class="kort sett-accordion-wrap" aria-label="Dagens sett">
+    <section class="kort sett-accordion-wrap" aria-label="${isPastSession ? 'Sett for valgt dato' : 'Dagens sett'}">
       ${logMode === 'bodyweight' ? `
       <label class="bryter-rad logg-tilleggsvekt">
         <input type="checkbox" id="tilleggsvekt" ${showWeight ? 'checked' : ''}>
@@ -138,11 +141,11 @@ export async function render(container, params) {
     const hasContent = s.weight != null || s.reps != null
       || s.durationSec != null || s.rir != null || s.comment;
     if (!hasContent) return;
-    const workout = await store.getOrCreateTodayWorkout();
+    const workout = await store.getOrCreateWorkoutForDate(sessionDate, { retroactive: isPastSession });
     s.workoutId = workout.id;
     const saved = await store.saveSet(s);
     s.id = saved.id;
-    await store.touchWorkoutDuration(workout.id);
+    if (!isPastSession) await store.touchWorkoutDuration(workout.id);
   }
 
   function propagateFromFirst() {

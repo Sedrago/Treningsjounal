@@ -19,6 +19,7 @@ import * as mood from './views/mood.js';
 import * as exercises from './views/exercises.js';
 import { maybeShowMoodPrompt } from './mood-prompt.js';
 import * as exerciseLibrary from './views/exercise-library.js';
+import * as sessionEdit from './views/session-edit.js';
 import * as settings from './views/settings.js';
 
 /** Rutetabell: sti → render-funksjon. */
@@ -29,6 +30,7 @@ const routes = {
   planlegg: strength.render,
   logg: logging.render,
   historikk: history.render,
+  'rediger-okt': sessionEdit.render,
   ovelse: history.renderExercise,
   statistikk: statistics.render,
   kroppsvekt: bodyweight.render,
