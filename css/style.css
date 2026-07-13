@@ -1060,6 +1060,28 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   display: flex;
   justify-content: center;
 }
+.verdi-stripe-rad--hopp {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.verdi-stripe-hopp-mid { min-width: 0; }
+.verdi-stripe-hopp {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  background: var(--flate-2);
+  color: var(--tekst);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.verdi-stripe-hopp:active { background: var(--flate); }
 
 .verdi-stripe-trommel {
   position: relative;

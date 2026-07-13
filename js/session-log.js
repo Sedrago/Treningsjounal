@@ -257,7 +257,13 @@ export async function mountSetLogger(host, {
     btn.addEventListener('click', () => timer.start(parseInt(btn.dataset.sek, 10)));
   });
 
+  function syncDraftFromPickers() {
+    if (pickers.reps?.getValue) draft.reps = pickers.reps.getValue();
+    if (pickers.weight?.getValueKg) draft.weight = pickers.weight.getValueKg();
+  }
+
   wrap.querySelector('#oktt-lagre-sett').addEventListener('click', async () => {
+    syncDraftFromPickers();
     if (!isSetComplete(draft, logMode, showWeight)) {
       toast('Fyll inn vekt og reps før du lagrer', 'feil');
       return;

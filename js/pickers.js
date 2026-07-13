@@ -369,14 +369,19 @@ export function mountValueStrip(host, {
   host.appendChild(wrap);
   current = snap(current);
   buildItems(current);
-  requestAnimationFrame(() => scrollToValue(current, false));
+  requestAnimationFrame(() => {
+    scrollToValue(current, false);
+    onChange(current);
+  });
 
   return {
+    getValue: () => current,
     setValue(v) {
       const n = v != null ? snap(v) : current;
-      if (Math.abs(n - current) < step * 0.01) return;
       current = n;
       scrollToValue(n, false);
+      updateHighlight(n);
+      onChange(n);
     },
     destroy() {
       clearTimeout(scrollTimer);
@@ -390,9 +395,23 @@ export function mountValueStrip(host, {
 export function mountWeightStrip(host, { valueKg, units, onChange, compact = false }) {
   const step = weightStep(units);
   const unit = weightUnit(units);
+  const hop = 10;
   const display = valueKg != null ? snapDisplay(toDisplayWeight(valueKg, units), units) : 40;
-  return mountValueStrip(host, {
-    label: unit,
+
+  host.innerHTML = '';
+  const shell = document.createElement('div');
+  shell.className = `verdi-stripe ${compact ? 'verdi-stripe-kompakt' : ''} verdi-stripe-shell`;
+  shell.innerHTML = `
+    <p class="pill-etikett verdi-stripe-etikett">${unit}</p>
+    <div class="verdi-stripe-rad verdi-stripe-rad--hopp">
+      <button type="button" class="verdi-stripe-hopp" data-hop="${-hop}" aria-label="10 ${unit} mindre">−10</button>
+      <div class="verdi-stripe-hopp-mid"></div>
+      <button type="button" class="verdi-stripe-hopp" data-hop="${hop}" aria-label="10 ${unit} mer">+10</button>
+    </div>`;
+  host.appendChild(shell);
+
+  const strip = mountValueStrip(shell.querySelector('.verdi-stripe-hopp-mid'), {
+    label: '',
     value: display,
     centerHint: display,
     step,
@@ -403,6 +422,27 @@ export function mountWeightStrip(host, { valueKg, units, onChange, compact = fal
     onChange: (d) => onChange(fromInputWeight(d, units)),
     compact,
   });
+
+  shell.querySelectorAll('.verdi-stripe-hopp').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const delta = Number(btn.dataset.hop);
+      const next = Math.max(0, snapDisplay(strip.getValue() + delta, units));
+      strip.setValue(next);
+    });
+  });
+
+  return {
+    getValue: () => strip.getValue(),
+    getValueKg: () => fromInputWeight(strip.getValue(), units),
+    setValue(v) {
+      if (v == null) return;
+      strip.setValue(snapDisplay(toDisplayWeight(v, units), units));
+    },
+    destroy() {
+      strip.destroy();
+      host.innerHTML = '';
+    },
+  };
 }
 
 /**
