@@ -597,29 +597,13 @@ function openCategoryPicker(host, stats, onCategory) {
 async function openExercisePicker(host, categoryId, planItems, onPick, onEdited) {
   const category = store.categoryById(categoryId);
   const catalog = getCatalogByCategory(categoryId);
-  const userByCatalog = await store.getUserExercisesByCatalogId();
+  const activeCatalogIds = new Set(await store.getActiveCatalogIds());
   const inPlan = new Set(planItems.map((it) => it.exerciseId));
-  const catalogIds = new Set(catalog.map((c) => c.id));
-  const customExercises = (await store.getExercisesByCategory(categoryId, { includeInactive: false }))
-    .filter((e) => !e.catalogId || !catalogIds.has(e.catalogId));
+  const mine = await store.getExercisesByCategory(categoryId);
+  const mineById = new Map(mine.map((e) => [e.id, e]));
+  const catalogRest = catalog.filter((c) => !activeCatalogIds.has(c.id));
 
-  const catalogRows = catalog.map((c) => {
-    const user = userByCatalog.get(c.id);
-    const exId = user?.id || c.id;
-    const inApp = Boolean(user && user.active !== false);
-    return `
-    <article class="plan-bib-rad" data-id="${esc(c.id)}" data-catalog="1">
-      <div class="plan-bib-topp">
-        <h3 class="plan-bib-navn">${esc(c.name)}${inPlan.has(exId) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
-        <button type="button" class="plan-bib-bruk" data-id="${esc(c.id)}" ${inPlan.has(exId) ? 'disabled' : ''}>
-          ${inApp ? 'Bruk denne →' : 'Legg til og bruk →'}
-        </button>
-      </div>
-      ${descriptionBlock(c.description, 120)}
-    </article>`;
-  }).join('');
-
-  const customRows = customExercises.map((e) => `
+  const mineRows = mine.map((e) => `
     <article class="plan-bib-rad plan-mine-rad" data-id="${e.id}">
       <div class="plan-bib-topp">
         <h3 class="plan-bib-navn">${esc(e.name)}${inPlan.has(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
@@ -631,7 +615,14 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
       ${descriptionBlock(exercisePickerDescription(e), 120)}
     </article>`).join('');
 
-  const customDesc = new Map(customExercises.map((e) => [e.id, exercisePickerDescription(e)]));
+  const catalogRows = catalogRest.map((c) => `
+    <article class="plan-bib-rad" data-id="${esc(c.id)}" data-catalog="1">
+      <div class="plan-bib-topp">
+        <h3 class="plan-bib-navn">${esc(c.name)}</h3>
+        <button type="button" class="plan-bib-bruk" data-id="${esc(c.id)}">Legg til og bruk →</button>
+      </div>
+      ${descriptionBlock(c.description, 120)}
+    </article>`).join('');
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -640,8 +631,8 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
         <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      ${catalogRows || '<p class="dus liten">Ingen øvelser i kategorien.</p>'}
-      ${customRows ? `<p class="felt-navn plan-bib-tittel">Egne øvelser</p>${customRows}` : ''}
+      ${mineRows ? `<p class="felt-navn plan-bib-tittel">Mine øvelser</p>${mineRows}` : '<p class="dus liten">Ingen aktive øvelser i kategorien ennå.</p>'}
+      ${catalogRows ? `<p class="felt-navn plan-bib-tittel">Fra katalogen</p>${catalogRows}` : ''}
       <form class="ny-ovelse-skjema">
         <input type="text" class="inndata" name="navn" placeholder="Ny egen øvelse …" aria-label="Navn på ny øvelse">
         <button type="submit" class="knapp sekundaer">Legg til</button>
@@ -652,7 +643,8 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
   bindDescriptionToggles(host, (id) => {
     const entry = getCatalogEntry(id);
     if (entry?.description) return entry.description;
-    return customDesc.get(id) || '';
+    const ex = mineById.get(id);
+    return ex ? exercisePickerDescription(ex) : '';
   });
 
   host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {

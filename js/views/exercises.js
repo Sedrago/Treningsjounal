@@ -30,16 +30,16 @@ function renderCatalogRow(item, userEx) {
         <h2 class="bib-navn">${esc(item.name)}</h2>
         ${inApp && active ? '<span class="bib-status dus">Aktiv</span>' : ''}
         ${inApp && !active ? '<span class="bib-status dus">Inaktiv</span>' : ''}
+        ${!inApp ? `<button type="button" class="plan-bib-bruk" data-handling="legg-til" data-catalog-id="${esc(item.id)}">Legg til og bruk →</button>` : ''}
       </div>
       ${descriptionBlock(item.description)}
+      ${inApp ? `
       <div class="bib-handlinger">
-        ${inApp ? `
-          <button type="button" class="knapp sekundaer liten" data-handling="rediger" data-id="${esc(userEx.id)}">Rediger</button>
-          <button type="button" class="knapp sekundaer liten" data-handling="toggle" data-catalog-id="${esc(item.id)}">
-            ${active ? 'Deaktiver' : 'Aktiver'}
-          </button>` : `
-          <button type="button" class="knapp primaer liten" data-handling="legg-til" data-catalog-id="${esc(item.id)}">+ Legg til</button>`}
-      </div>
+        <button type="button" class="knapp sekundaer liten" data-handling="rediger" data-id="${esc(userEx.id)}">Rediger</button>
+        <button type="button" class="knapp sekundaer liten" data-handling="toggle" data-catalog-id="${esc(item.id)}">
+          ${active ? 'Deaktiver' : 'Aktiver'}
+        </button>
+      </div>` : ''}
     </article>`;
 }
 
