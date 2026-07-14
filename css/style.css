@@ -1354,6 +1354,13 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
 .sovn-oppsummert { margin: 0 0 12px; padding: 0 4px; }
+.sovn-varighet-rad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+.sovn-varighet-felt { min-width: 0; }
 .sovn-rad {
   display: flex;
   align-items: flex-start;

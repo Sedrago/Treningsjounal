@@ -1,11 +1,13 @@
 /**
- * views/sleep.js – logging av søvn (timer og valgfri kvalitet).
+ * views/sleep.js – logging av søvn (timer og minutter, valgfri kvalitet).
  */
 
 import * as store from '../store.js';
 import { sleepSummarySince } from '../stats.js';
+import { mountSleepDurationPicker } from '../pickers.js';
 import {
-  esc, fmtNum, formatDateShort, todayStr, toast, windowStartStr,
+  esc, formatDateShort, todayStr, toast, windowStartStr,
+  fmtSleepHours, sleepHoursFromParts,
 } from '../utils.js';
 
 export async function render(container) {
@@ -21,23 +23,17 @@ export async function render(container) {
 
     ${summary ? `
     <p class="dus sovn-oppsummert">
-      Snitt ${fmtNum(summary.avgHours, 1)} t/natt siste 7 dager
-      (${summary.nights} netter${summary.avgQuality != null ? ` · kvalitet ${fmtNum(summary.avgQuality, 1)}/5` : ''})
+      Snitt ${fmtSleepHours(summary.avgHours)}/natt siste 7 dager
+      (${summary.nights} netter${summary.avgQuality != null ? ` · kvalitet ${summary.avgQuality}/5` : ''})
     </p>` : ''}
 
     <form class="kort" id="sovn-skjema" aria-label="Ny søvnregistrering">
       <p class="dus liten">Dato = morgenen du våknet.</p>
-      <div class="skjema-rad">
-        <div class="felt">
-          <label class="felt-navn" for="sl-dato">Dato</label>
-          <input type="date" class="inndata" id="sl-dato" value="${todayStr()}" required>
-        </div>
-        <div class="felt">
-          <label class="felt-navn" for="sl-timer">Timer</label>
-          <input type="number" inputmode="decimal" step="0.5" min="0" max="24"
-            class="inndata" id="sl-timer" required placeholder="7.5">
-        </div>
+      <div class="felt">
+        <label class="felt-navn" for="sl-dato">Dato</label>
+        <input type="date" class="inndata" id="sl-dato" value="${todayStr()}" required>
       </div>
+      <div id="sovn-varighet"></div>
       <label class="felt-navn" for="sl-kvalitet">Kvalitet <span class="dus">(valgfritt)</span></label>
       <select class="inndata" id="sl-kvalitet">
         <option value="">Ikke registrert</option>
@@ -52,7 +48,7 @@ export async function render(container) {
       ${rows.map((s) => `
         <div class="kort sovn-rad" data-id="${s.id}">
           <div>
-            <strong>${fmtNum(s.hours, 1)} t</strong>
+            <strong>${fmtSleepHours(s.hours)}</strong>
             <span class="dus"> · ${formatDateShort(s.date)}</span>
             ${s.quality != null ? `<span class="dus"> · ${esc(store.sleepQualityLabel(s.quality))}</span>` : ''}
             ${s.comment ? `<p class="dus liten">«${esc(s.comment)}»</p>` : ''}
@@ -62,14 +58,16 @@ export async function render(container) {
     </div>
   `;
 
+  const durationPicker = mountSleepDurationPicker(container.querySelector('#sovn-varighet'));
+
   container.querySelector('#sovn-skjema').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const hours = parseFloat(container.querySelector('#sl-timer').value.replace(',', '.'));
-    if (Number.isNaN(hours) || hours <= 0) return;
+    const { hours, minutes } = durationPicker.getValue();
+    if (hours <= 0 && minutes <= 0) return;
     const qRaw = container.querySelector('#sl-kvalitet').value;
     await store.saveSleepEntry({
       date: container.querySelector('#sl-dato').value,
-      hours,
+      hours: sleepHoursFromParts(hours, minutes),
       quality: qRaw === '' ? null : qRaw,
       comment: container.querySelector('#sl-kommentar').value.trim(),
     });

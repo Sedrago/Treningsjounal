@@ -7,7 +7,7 @@ import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant
 import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, moodSummarySince } from '../stats.js';
 import { balanceBars } from '../charts.js';
 import { homeStrengthLabel } from './strength.js';
-import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml } from '../utils.js';
+import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml, fmtSleepHours } from '../utils.js';
 
 export async function render(container) {
   const sets = await store.getEnrichedSets();
@@ -78,7 +78,7 @@ export async function render(container) {
       ${balanceBars(store.KATEGORIER.map((k) => ({ category: k, name: k.name, count: balance.counts.get(k.id) || 0 })))}
       ${balance.missing.length && sets.length ? `<p class="dus liten">Mangler: ${balance.missing.map((k) => esc(k.name)).join(', ')}</p>` : ''}
       ${aerobMin > 0 ? `<p class="dus liten aerob-oppsummert"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> ${aerobMin} min aerob</p>` : ''}
-      ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${sleepSum.avgHours} t søvn (${sleepSum.nights} netter)</p>` : ''}
+      ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${fmtSleepHours(sleepSum.avgHours)} søvn (${sleepSum.nights} netter)</p>` : ''}
       ${moodSum ? `<p class="dus liten mood-oppsummert">🙂 Snitt ${moodSum.avgValue}/100 dagsform (${moodSum.count} registrering${moodSum.count === 1 ? '' : 'er'})</p>` : ''}
     </section>
 

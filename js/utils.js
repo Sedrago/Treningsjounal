@@ -136,6 +136,27 @@ export function fmtDuration(minutes) {
   return h > 0 ? `${h} t ${m} min` : `${m} min`;
 }
 
+/** Desimal timer → '7 t 30 min' / '8 t'. */
+export function fmtSleepHours(hours) {
+  if (hours == null || Number.isNaN(hours)) return '–';
+  const totalMin = Math.round(Number(hours) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (m === 0) return `${h} t`;
+  return `${h} t ${m} min`;
+}
+
+/** Desimal timer → heltall timer og minutter. */
+export function splitSleepHours(hours) {
+  const totalMin = Math.round(Number(hours) * 60);
+  return { hours: Math.floor(totalMin / 60), minutes: totalMin % 60 };
+}
+
+/** Timer og minutter → desimal timer (lagring). */
+export function sleepHoursFromParts(hours, minutes) {
+  return Math.round((Number(hours) + Number(minutes) / 60) * 1000) / 1000;
+}
+
 /** Sekunder → 'M:SS'. */
 export function fmtClock(totalSec) {
   if (totalSec == null || Number.isNaN(totalSec)) return '–';

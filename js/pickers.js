@@ -463,3 +463,54 @@ export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange
     compact,
   });
 }
+
+/**
+ * Timer og minutter for søvnlogging (to horisontale striper).
+ * @returns {{ getValue: () => {hours:number, minutes:number}, destroy: () => void }}
+ */
+export function mountSleepDurationPicker(host, { hours = 7, minutes = 30, onChange } = {}) {
+  host.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'sovn-varighet-rad';
+  const hHost = document.createElement('div');
+  hHost.className = 'sovn-varighet-felt';
+  const mHost = document.createElement('div');
+  mHost.className = 'sovn-varighet-felt';
+  wrap.append(hHost, mHost);
+  host.appendChild(wrap);
+
+  let h = hours;
+  let m = minutes;
+  const emit = () => onChange?.({ hours: h, minutes: m });
+
+  mountValueStrip(hHost, {
+    label: 'Timer',
+    value: h,
+    centerHint: 7,
+    step: 1,
+    min: 0,
+    max: 14,
+    range: 8,
+    format: (v) => String(Math.round(v)),
+    onChange: (v) => { h = v; emit(); },
+    compact: true,
+  });
+
+  mountValueStrip(mHost, {
+    label: 'Minutter',
+    value: m,
+    centerHint: 30,
+    step: 15,
+    min: 0,
+    max: 45,
+    range: 4,
+    format: (v) => String(Math.round(v)),
+    onChange: (v) => { m = v; emit(); },
+    compact: true,
+  });
+
+  return {
+    getValue: () => ({ hours: h, minutes: m }),
+    destroy: () => { host.innerHTML = ''; },
+  };
+}
