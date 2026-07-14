@@ -21,7 +21,7 @@ import * as exercises from './views/exercises.js';
 import { maybeShowMoodPrompt } from './mood-prompt.js';
 import * as exerciseLibrary from './views/exercise-library.js';
 import * as sessionEdit from './views/session-edit.js';
-import * as settings from './views/settings.js';
+import * as calendar from './views/calendar.js';
 
 /** Rutetabell: sti → render-funksjon. */
 const routes = {
@@ -31,6 +31,7 @@ const routes = {
   planlegg: strength.render,
   logg: logging.render,
   historikk: history.render,
+  kalender: calendar.render,
   'rediger-okt': sessionEdit.render,
   ovelse: history.renderExercise,
   statistikk: statistics.render,

@@ -172,31 +172,34 @@ export async function homeStrengthLabel() {
   return { title: 'Styrketrening', sub: statusLine(plan, items, todaySets) };
 }
 
-export async function render(container) {
+export async function render(container, params, query = {}) {
   await initContent();
   const enriched = await store.getEnrichedSets();
   const today = todayStr();
-  const todaySets = enriched.filter((s) => s.date === today);
+  const viewDate = query.dato && /^\d{4}-\d{2}-\d{2}$/.test(query.dato) ? query.dato : today;
+  const isToday = viewDate === today;
+  const daySets = enriched.filter((s) => s.date === viewDate);
   const exercises = await store.getExercises({ includeInactive: true });
   const exMap = new Map(exercises.map((e) => [e.id, e]));
-  const plan = await store.getTodayWorkoutPlan();
+  const plan = await store.getWorkoutPlanForDate(viewDate);
   const items = plan?.items || [];
   const stats = categoryStats(enriched);
   const workouts = await store.getWorkouts();
-  const todayWorkout = workouts.find((w) => w.date === today) || null;
+  const dayWorkout = workouts.find((w) => w.date === viewDate) || null;
 
-  const setsByEx = groupBy(todaySets, (s) => s.exerciseId);
-  const { done: progDone, total: progTotal } = sessionProgress(items, todaySets);
+  const setsByEx = groupBy(daySets, (s) => s.exerciseId);
+  const { done: progDone, total: progTotal } = sessionProgress(items, daySets);
   const allProgramDone = items.length > 0 && progDone >= progTotal && progTotal > 0;
-  const hasPartialLog = todaySets.length > 0 && !allProgramDone;
+  const hasPartialLog = daySets.length > 0 && !allProgramDone;
 
   // Fortsett automatisk hvis økt pågår; ellers kreves «Start økt».
-  if (allProgramDone || !items.length) {
-    sessionStorage.removeItem(SESSION_KEY);
+  if (!isToday || allProgramDone || !items.length) {
+    if (!isToday) sessionStorage.removeItem(SESSION_KEY);
+    else if (allProgramDone || !items.length) sessionStorage.removeItem(SESSION_KEY);
   } else if (hasPartialLog) {
     sessionStorage.setItem(SESSION_KEY, '1');
   }
-  const sessionActive = sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
+  const sessionActive = isToday && sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
   const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
   const teknikkOpenId = sessionStorage.getItem(TEKNIKK_KEY);
   const expandedId = sessionStorage.getItem(EXPAND_KEY);
@@ -263,6 +266,7 @@ export async function render(container) {
   }).join('');
 
   const menuItems = [
+    { action: 'kalender', label: 'Kalender' },
     { action: 'historikk', label: 'Hent fra tidligere økt' },
     { action: 'mal', label: 'Lagrede programmer' },
     ...(items.length ? [{ action: 'lagre-mal', label: 'Lagre som program' }] : []),
@@ -275,11 +279,11 @@ export async function render(container) {
       <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
       <div>
         <h1>Styrketrening</h1>
-        <p class="dus">${formatDateLong(today)}${plan?.name ? ` · ${esc(plan.name)}` : ''} · ${esc(statusLine(plan, items, todaySets))}</p>
+        <p class="dus">${formatDateLong(viewDate)}${plan?.name ? ` · ${esc(plan.name)}` : ''}${isToday ? ` · ${esc(statusLine(plan, items, daySets))}` : viewDate > today ? ' · Planlagt' : ''}</p>
       </div>
     </header>
 
-    <section class="kort styrke-program" aria-label="Dagens program">
+    <section class="kort styrke-program" aria-label="${isToday ? 'Dagens program' : 'Program'}">
       <div class="styrke-program-hode">
         <h2 class="kort-tittel">Program${items.length ? ` (${items.length})` : ''}</h2>
         <div class="styrke-meny-wrap">
@@ -293,14 +297,15 @@ export async function render(container) {
       <div id="styrke-liste">${rows}</div>
     </section>
 
-    ${!sessionActive && items.length ? '<button type="button" class="knapp primaer stor" id="start-okt">Start økt</button>' : ''}
+    ${isToday && !sessionActive && items.length ? '<button type="button" class="knapp primaer stor" id="start-okt">Start økt</button>' : ''}
     <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
 
+    ${isToday ? `
     <section class="kort">
       <label class="felt-navn" for="okt-notat">Notat for økten</label>
       <textarea id="okt-notat" class="inndata" rows="2"
-        placeholder="Dagsform, fokus …">${esc(todayWorkout?.notes || '')}</textarea>
-    </section>
+        placeholder="Dagsform, fokus …">${esc(dayWorkout?.notes || '')}</textarea>
+    </section>` : ''}
 
     ${sessionActive ? `
     <div class="oktt-bunn" id="oktt-bunn">
@@ -335,17 +340,17 @@ export async function render(container) {
   });
 
   async function updateItems(newItems) {
-    await store.savePlanForDate(today, {
+    await store.savePlanForDate(viewDate, {
       id: plan?.id,
       items: newItems,
       name: plan?.name || '',
       sourceTemplateId: plan?.sourceTemplateId || '',
     });
-    render(container);
+    render(container, params, query);
   }
 
   container.querySelector('#okt-notat')?.addEventListener('input', debounce(async (e) => {
-    const w = await store.getOrCreateTodayWorkout();
+    const w = await store.getOrCreateWorkoutForDate(viewDate, { retroactive: viewDate < today });
     w.notes = e.target.value;
     await store.saveWorkout(w);
   }, 600));
@@ -360,13 +365,15 @@ export async function render(container) {
 
   async function handleProgramAction(action) {
     closeMenu();
-    if (action === 'legg-til') {
+    if (action === 'kalender') {
+      location.hash = '#/kalender';
+    } else if (action === 'legg-til') {
       openCategoryPicker(host, stats, (catId) => {
         openExercisePicker(host, catId, items, (ex) => {
           host.innerHTML = '';
           addExercise(ex);
           toast(`«${ex.name}» lagt til`, 'suksess');
-        }, () => render(container));
+        }, () => render(container, params, query));
       });
     } else if (action === 'historikk') {
       openCopySheet(host, enriched, exMap, async (dayItems) => {
@@ -385,7 +392,7 @@ export async function render(container) {
         if (!tpl?.items?.length) return;
         if (replace && items.length && !confirm('Erstatt nåværende program med malen?')) return;
         if (replace) {
-          await store.loadTemplateIntoDate(templateId, today);
+          await store.loadTemplateIntoDate(templateId, viewDate);
         } else {
           const existing = new Set(items.map((it) => it.exerciseId));
           const merged = [...items.map((it) => ({ ...it }))];
@@ -397,33 +404,33 @@ export async function render(container) {
         toast(`«${tpl.name || 'Program'}» lastet inn`, 'suksess');
       });
     } else if (action === 'lagre-mal') {
-      openSaveTemplateSheet(host, items, today, async ({ name, scheduleDate }) => {
+      openSaveTemplateSheet(host, items, viewDate, async ({ name, scheduleDate }) => {
         await store.saveAsTemplate(name, items.map((it) => ({ ...it })), { scheduleDate });
         toast(scheduleDate
           ? `«${name}» lagret og lagt på ${formatDateShort(scheduleDate)}`
           : `Programmet «${name}» er lagret`, 'suksess');
       });
     } else if (action === 'tom') {
-      if (!confirm('Tømme hele programmet? Loggede sett i dag beholdes.')) return;
+      if (!confirm('Tømme hele programmet? Loggede sett beholdes.')) return;
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(FOCUS_KEY);
       sessionStorage.removeItem(TEKNIKK_KEY);
       sessionStorage.removeItem(EXPAND_KEY);
       if (plan) await store.deletePlan(plan.id);
-      render(container);
+      render(container, params, query);
     } else if (action === 'pause') {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(FOCUS_KEY);
       sessionStorage.removeItem(TEKNIKK_KEY);
       sessionStorage.removeItem(EXPAND_KEY);
-      render(container);
+      render(container, params, query);
     }
   }
 
   container.querySelector('#start-okt')?.addEventListener('click', () => {
     if (!items.length) return;
     sessionStorage.setItem(SESSION_KEY, '1');
-    render(container);
+    render(container, params, query);
   });
 
   container.querySelector('#legg-til-ovelse')?.addEventListener('click', () => handleProgramAction('legg-til'));
@@ -447,7 +454,7 @@ export async function render(container) {
         if (sessionStorage.getItem(EXPAND_KEY) && sessionStorage.getItem(EXPAND_KEY) !== row.dataset.exId) {
           sessionStorage.removeItem(EXPAND_KEY);
         }
-        render(container);
+        render(container, params, query);
       });
     }
     row.querySelectorAll('[data-handling]').forEach((btn) => {
@@ -463,20 +470,20 @@ export async function render(container) {
           } else {
             sessionStorage.setItem(EXPAND_KEY, row.dataset.exId);
           }
-          render(container);
+          render(container, params, query);
           return;
         }
         if (action === 'teknikk') {
           const open = sessionStorage.getItem(TEKNIKK_KEY) === row.dataset.exId;
           if (open) sessionStorage.removeItem(TEKNIKK_KEY);
           else sessionStorage.setItem(TEKNIKK_KEY, row.dataset.exId);
-          render(container);
+          render(container, params, query);
           return;
         }
         if (action === 'teknikk-lukk') {
           if (e.target.closest('[data-handling="video"]')) return;
           sessionStorage.removeItem(TEKNIKK_KEY);
-          render(container);
+          render(container, params, query);
           return;
         }
         const next = items.map((it) => ({ ...it }));
@@ -492,23 +499,23 @@ export async function render(container) {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         sessionStorage.removeItem(TEKNIKK_KEY);
-        render(container);
+        render(container, params, query);
       }
     });
   });
 
   container.querySelectorAll('.styrke-fullforte').forEach((el) => {
-    bindCompletedSetsList(el, { onDelete: () => render(container) });
+    bindCompletedSetsList(el, { onDelete: () => render(container, params, query) });
   });
 
   container.querySelector('.styrke-rad--aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const sessionHost = container.querySelector('#oktt-panel');
   if (sessionActive) {
-    const workout = todayWorkout || await store.getOrCreateTodayWorkout();
+    const workout = dayWorkout || await store.getOrCreateTodayWorkout();
     const moodHost = container.querySelector('#oktt-mood');
     if (moodHost && await workoutNeedsMood(workout.id)) {
-      mountMoodInline(moodHost, { workoutId: workout.id, onDone: () => render(container) });
+      mountMoodInline(moodHost, { workoutId: workout.id, onDone: () => render(container, params, query) });
     } else if (moodHost) {
       moodHost.innerHTML = '';
     }
@@ -525,7 +532,7 @@ export async function render(container) {
       sessionStorage.removeItem(FOCUS_KEY);
       sessionStorage.removeItem(TEKNIKK_KEY);
       sessionStorage.removeItem(EXPAND_KEY);
-      render(container);
+      render(container, params, query);
     });
   } else if (sessionActive && active?.exercise) {
     const exSets = setsByEx.get(active.item.exerciseId) || [];
@@ -546,9 +553,9 @@ export async function render(container) {
       onSaved: () => {
         sessionStorage.removeItem(FOCUS_KEY);
         toast('Sett lagret', 'suksess');
-        render(container);
+        render(container, params, query);
       },
-      onDeleted: () => render(container),
+      onDeleted: () => render(container, params, query),
     });
   }
 
@@ -855,7 +862,8 @@ async function openTemplatesSheet(host, exMap, onSelect) {
   });
 }
 
-function openSaveTemplateSheet(host, items, today, onSave) {
+function openSaveTemplateSheet(host, items, defaultDate, onSave) {
+  const today = todayStr();
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
     <div class="ark" role="dialog" aria-label="Lagre program">
@@ -875,7 +883,7 @@ function openSaveTemplateSheet(host, items, today, onSave) {
 
         <div id="mal-dato-wrap" class="skjult">
           <label class="felt-navn" for="mal-dato">Dato</label>
-          <input type="date" class="inndata" id="mal-dato" value="${today}">
+          <input type="date" class="inndata" id="mal-dato" value="${defaultDate}" min="${today}">
         </div>
 
         <button type="submit" class="knapp primaer bred">Lagre program</button>

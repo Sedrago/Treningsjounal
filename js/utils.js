@@ -90,6 +90,30 @@ export function startOfWeek(d) {
   return date;
 }
 
+/** Syv datoer (man–søn) for uken som inneholder `dateStr`. */
+export function datesForWeek(dateStr) {
+  const start = startOfWeek(parseDate(dateStr));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return todayStr(d);
+  });
+}
+
+/** Legg til / trekk fra dager på en datostreng. */
+export function addDaysStr(dateStr, days) {
+  const d = parseDate(dateStr);
+  d.setDate(d.getDate() + days);
+  return todayStr(d);
+}
+
+const UKEDAG_KORT = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
+
+/** Kort ukedag for datostreng ('man', 'tir', …). */
+export function weekdayShort(dateStr) {
+  return UKEDAG_KORT[parseDate(dateStr).getDay()];
+}
+
 /** Estimert 1RM (Epley). Reps=1 gir vekten selv. */
 export function epley1RM(weight, reps) {
   if (!weight || !reps) return 0;

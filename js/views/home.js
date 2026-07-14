@@ -83,6 +83,7 @@ export async function render(container) {
     </section>
 
     <nav class="hjem-meny" aria-label="Hovedmeny">
+      <a href="#/kalender" class="meny-knapp"><span aria-hidden="true">📅</span>Kalender</a>
       <a href="#/historikk" class="meny-knapp"><span aria-hidden="true">📖</span>Historikk</a>
       <a href="#/statistikk" class="meny-knapp"><span aria-hidden="true">📊</span>Statistikk</a>
       <a href="#/ovelser" class="meny-knapp"><span aria-hidden="true">🏷️</span>Øvelser</a>
