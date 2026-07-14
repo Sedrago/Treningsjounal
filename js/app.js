@@ -6,7 +6,7 @@ import * as store from './store.js';
 import * as sync from './sync.js';
 import * as api from './api.js';
 import { initContent, initContentFromCache, checkContentUpdate, getStarterPackEntries } from './content.js';
-import { toast } from './utils.js';
+import { toast, esc } from './utils.js';
 
 import * as home from './views/home.js';
 import * as strength from './views/strength.js';
@@ -22,6 +22,7 @@ import { maybeShowMoodPrompt } from './mood-prompt.js';
 import * as exerciseLibrary from './views/exercise-library.js';
 import * as sessionEdit from './views/session-edit.js';
 import * as calendar from './views/calendar.js';
+import * as settings from './views/settings.js';
 
 /** Rutetabell: sti → render-funksjon. */
 const routes = {
@@ -155,4 +156,8 @@ async function main() {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  const el = document.getElementById('app');
+  if (el) el.innerHTML = `<p class="tomt">Kunne ikke starte appen: ${esc(err.message)}</p>`;
+});
