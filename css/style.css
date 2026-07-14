@@ -1618,6 +1618,68 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .kalender-lenke:hover { text-decoration: underline; }
 
+.mal-strip {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kant);
+}
+.mal-strip-hode { margin-bottom: 8px; }
+.mal-strip-hode .kort-tittel { margin: 0 0 4px; font-size: 1rem; }
+.mal-strip-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 8px;
+}
+.mal-strip-tom { margin: 0; padding: 8px 4px; }
+.mal-kort {
+  flex: 0 0 min(220px, 78vw);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius);
+  background: var(--flate);
+  text-align: left;
+  cursor: grab;
+  font-family: inherit;
+  color: inherit;
+}
+.mal-kort:active { cursor: grabbing; }
+.mal-kort--valgt {
+  border-color: var(--aksent);
+  box-shadow: 0 0 0 1px var(--aksent);
+}
+.mal-kort--drar { opacity: 0.55; }
+.mal-kort-navn { font-weight: 600; font-size: 0.95rem; }
+.mal-kort-preview { line-height: 1.35; }
+.mal-kort-hint { margin-top: 4px; font-size: 0.75rem; }
+.kalender-uke-handlinger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.kalender-kolonne--over {
+  border-color: var(--aksent);
+  background: color-mix(in srgb, var(--aksent) 8%, var(--flate));
+}
+.kalender-kolonne--drar { opacity: 0.6; }
+.kalender-dra {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--tekst-dus);
+  font-size: 1rem;
+  cursor: grab;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.kalender-dra:active { cursor: grabbing; }
+
 /* ---------- Historikk ---------- */
 
 .hist-linje { margin: 5px 0; display: flex; justify-content: space-between; gap: 8px; }

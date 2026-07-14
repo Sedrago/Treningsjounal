@@ -8,7 +8,7 @@
 
 import * as db from './db.js';
 import { scheduleFlush } from './sync.js';
-import { uuid, nowIso, todayStr } from './utils.js';
+import { uuid, nowIso, todayStr, addDaysStr } from './utils.js';
 
 /** Legger en operasjon i synk-køen og planlegger sending. */
 async function queueOp(entity, op, data) {
@@ -822,6 +822,38 @@ export async function schedulePlanFromItems(date, items, { name = '', sourceTemp
     name,
     sourceTemplateId,
   });
+}
+
+/** Kopier mal inn i program for en dato (default i dag). */
+export async function scheduleTemplate(templateId, date) {
+  return loadTemplateIntoDate(templateId, date);
+}
+
+/** Flytt planlagt program til ny dato (erstatter evt. eksisterende plan der). */
+export async function reschedulePlan(planId, newDate) {
+  const raw = await db.get('plans', planId);
+  if (!raw || raw.deleted || raw.status !== 'planlagt') return null;
+  const plan = parsePlanItems(raw);
+  const existing = await getScheduledPlan(newDate);
+  if (existing && existing.id !== planId) await deletePlan(existing.id);
+  return savePlan({ ...plan, date: newDate, status: 'planlagt' });
+}
+
+/** Kopier planlagte økter fra én uke til en annen (man–søn). */
+export async function copyWeekPlans(sourceMonday, targetMonday) {
+  let copied = 0;
+  for (let i = 0; i < 7; i++) {
+    const srcDate = addDaysStr(sourceMonday, i);
+    const tgtDate = addDaysStr(targetMonday, i);
+    const plan = await getScheduledPlan(srcDate);
+    if (!plan?.items?.length) continue;
+    await schedulePlanFromItems(tgtDate, plan.items, {
+      name: plan.name,
+      sourceTemplateId: plan.sourceTemplateId,
+    });
+    copied += 1;
+  }
+  return copied;
 }
 
 /** Kopier mal inn i program for en dato (default i dag). */
