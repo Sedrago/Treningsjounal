@@ -8,7 +8,7 @@
 import * as db from './db.js';
 
 /** Laveste støttede versjon (under dette avvises pakken). */
-const MIN_CONTENT_VERSION = 4;
+const MIN_CONTENT_VERSION = 6;
 
 /** Minst tid mellom bakgrunnssjekk når appen hentes frem (1 time). */
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -141,13 +141,30 @@ export function getCatalogEntry(catalogId) {
   return entryToCatalog(catalogId, pack.entries[catalogId]);
 }
 
+/** Alle katalogøvelser, sortert på navn. */
+export function getAllCatalogEntries() {
+  if (!pack) return [];
+  return Object.entries(pack.entries)
+    .map(([id, raw]) => entryToCatalog(id, raw))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
+}
+
+/** Søk i katalogen på navn. */
+export function searchCatalog(query, { categoryId = null } = {}) {
+  const q = query.trim().toLowerCase();
+  let list = getAllCatalogEntries();
+  if (categoryId) list = list.filter((e) => e.category === categoryId);
+  if (!q) return list;
+  return list.filter((e) => e.name.toLowerCase().includes(q));
+}
+
 /** Alle katalogøvelser i én kategori, sortert på navn. */
 export function getCatalogByCategory(categoryId) {
   if (!pack) return [];
   return Object.entries(pack.entries)
     .filter(([, raw]) => raw.category === categoryId)
     .map(([id, raw]) => entryToCatalog(id, raw))
-    .sort((a, b) => a.name.localeCompare(b.name, 'no'));
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }
 
 /** Antall katalogøvelser som ikke finnes i brukerens aktive bibliotek. */

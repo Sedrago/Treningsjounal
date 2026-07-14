@@ -80,10 +80,8 @@ export async function pull() {
       if (key === 'apiKey') continue;
       await db.put('settings', { key, value });
     }
-    const { initSettings, ensureDefaultExercises } = await import('./store.js');
+    const { initSettings } = await import('./store.js');
     await initSettings();
-    const hasExercises = (data.exercises || []).some((e) => e.deleted !== true);
-    if (!hasExercises) await ensureDefaultExercises();
 
     state.lastError = null;
     state.lastSync = new Date().toISOString();

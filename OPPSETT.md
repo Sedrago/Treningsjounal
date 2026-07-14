@@ -108,10 +108,20 @@ Versjon: Ny versjon → Distribuer**. URL-en forblir den samme.
 - **«Ugyldig API-nøkkel»** – sjekk at nøkkelen i appen er identisk med verdien
   for `apiKey` i Settings-arket.
 - **«Oppsett mangler»** – kjør `kjorOppsett` i Apps Script (del 1, steg 5).
-- **Ingen øvelser i kategoriene** – appen legger inn 27 standardøvelser
-  automatisk ved oppstart hvis listen er tom. Gå til **Øvelser** og trykk
-  «Legg til standardøvelser», eller kjør `kjorSeedOvelser` i Apps Script
-  (kun hvis Exercises-arket er tomt).
+- **Ingen øvelser i kategoriene** – gå til **Øvelser**, søk i katalogen og trykk
+  **+ Legg til** på øvelsene du vil bruke.
+
+## Øvelseskatalog (utvikling)
+
+Katalogen (`data/ovelsesinnhold.json`) bygges fra `exercises.json` i rotmappen:
+
+```bash
+node scripts/build-catalog.mjs
+```
+
+Kjør dette etter endringer i `exercises.json`. Filen må være lagret på disk
+(⌘S) før bygging. `app_category` mappes til appens åtte kategorier
+(`accessory` → `valgfri`).
 - **Test tilkobling feiler** – sjekk at URL-en slutter på `/exec` og at
   distribusjonen har tilgang «Alle».
 - **Endringer synkroniseres ikke** – åpne Innstillinger og se synk-status.

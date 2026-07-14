@@ -58,7 +58,7 @@ export async function render(container) {
           <input type="number" class="inndata" id="s-rir" value="${s('defaultRir')}" min="0" max="10">
         </div>
         <div class="felt">
-          <label class="felt-navn" for="s-sett">Standard sett <span class="dus">(ny øvelse fra bibliotek)</span></label>
+          <label class="felt-navn" for="s-sett">Standard sett <span class="dus">(ny øvelse)</span></label>
           <input type="number" class="inndata" id="s-sett" value="${s('defaultSets')}" min="1" max="10">
         </div>
       </div>

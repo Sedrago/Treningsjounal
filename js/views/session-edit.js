@@ -4,6 +4,7 @@
 
 import * as store from '../store.js';
 import { groupBy, totalVolume } from '../stats.js';
+import { initContent, getCatalogByCategory, getCatalogEntry } from '../content.js';
 import {
   esc, fmtVolume, formatDateLong, todayStr, toast, debounce,
   summarizeSet, categoryIconHtml,
@@ -36,17 +37,16 @@ function openAddSessionSheet(host, onPick) {
   });
 }
 
-function openExercisePicker(host, onPick) {
-  store.getExercises().then((exercises) => {
-    const active = exercises.filter((e) => e.active !== false);
+function openExercisePicker(host, date, onPick) {
+  initContent().then(() => {
     const sections = store.KATEGORIER.map((cat) => {
-      const catExercises = active.filter((e) => e.category === cat.id);
-      if (!catExercises.length) return '';
+      const items = getCatalogByCategory(cat.id);
+      if (!items.length) return '';
       return `
         <p class="felt-navn plan-bib-tittel">${categoryIconHtml(cat)} ${esc(cat.name)}</p>
-        ${catExercises.map((e) => `
-          <button type="button" class="ovelse-rad" data-id="${e.id}">
-            <span>${esc(e.name)}</span>
+        ${items.map((item) => `
+          <button type="button" class="ovelse-rad" data-catalog-id="${esc(item.id)}">
+            <span>${esc(item.name)}</span>
             <span class="dus">›</span>
           </button>`).join('')}`;
     }).join('');
@@ -58,15 +58,18 @@ function openExercisePicker(host, onPick) {
           <h2>Legg til øvelse</h2>
           <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
         </div>
-        ${sections || '<p class="dus liten">Ingen aktive øvelser. Legg til under Øvelser først.</p>'}
+        ${sections || '<p class="dus liten">Katalogen er ikke lastet.</p>'}
       </div>`;
 
     const close = () => { host.innerHTML = ''; };
     host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', close));
-    host.querySelectorAll('.ovelse-rad').forEach((btn) => {
-      btn.addEventListener('click', () => {
+    host.querySelectorAll('[data-catalog-id]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const entry = getCatalogEntry(btn.dataset.catalogId);
+        if (!entry) return;
         close();
-        onPick(btn.dataset.id);
+        const ex = await store.addExerciseFromCatalog(entry.id, entry);
+        onPick(ex.id);
       });
     });
   });
@@ -147,7 +150,7 @@ export async function render(container, params) {
   container.querySelector('#okt-notat').addEventListener('input', saveNotes);
 
   container.querySelector('#legg-til-ovelse').addEventListener('click', () => {
-    openExercisePicker(container.querySelector('#skjema-vert'), (exerciseId) => {
+    openExercisePicker(container.querySelector('#skjema-vert'), date, (exerciseId) => {
       location.hash = `#/logg/${exerciseId}?date=${date}`;
     });
   });

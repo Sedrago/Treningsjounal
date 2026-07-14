@@ -1,10 +1,12 @@
 /**
- * views/exercises.js – øvelsesbiblioteket: opprette, redigere, slette
- * og flytte øvelser mellom kategorier.
+ * views/exercises.js – øvelseskatalog og brukerens aktive øvelser i én visning.
  */
 
 import * as store from '../store.js';
-import { initContent, getDescription, countCatalogNotInApp } from '../content.js';
+import {
+  initContent, getCatalogByCategory, getCatalogEntry, searchCatalog, isContentLoaded,
+} from '../content.js';
+import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { esc, toast, categoryIconHtml } from '../utils.js';
 
 function goalSummary(ex) {
@@ -18,54 +20,159 @@ function logModeLabel(id) {
   return store.LOG_MODES.find((m) => m.id === id)?.name || id;
 }
 
-export async function render(container) {
-  await initContent();
-  const exercises = await store.getExercises({ includeInactive: true });
-  const availableCount = countCatalogNotInApp(await store.getActiveCatalogIds());
+function renderCatalogRow(item, userEx) {
+  const active = userEx && userEx.active !== false;
+  const inApp = Boolean(userEx && !userEx.deleted);
+  return `
+    <article class="kort bib-kort ${inApp && active ? 'bib-i-appen' : ''}" data-id="${esc(item.id)}" data-catalog-id="${esc(item.id)}">
+      <div class="bib-rad-topp">
+        <h2 class="bib-navn">${esc(item.name)}</h2>
+        ${inApp && active ? '<span class="bib-status dus">Aktiv</span>' : ''}
+        ${inApp && !active ? '<span class="bib-status dus">Inaktiv</span>' : ''}
+      </div>
+      ${descriptionBlock(item.description)}
+      <div class="bib-handlinger">
+        ${inApp ? `
+          <button type="button" class="knapp sekundaer liten" data-handling="rediger" data-id="${esc(userEx.id)}">Rediger</button>
+          <button type="button" class="knapp sekundaer liten" data-handling="toggle" data-catalog-id="${esc(item.id)}">
+            ${active ? 'Deaktiver' : 'Aktiver'}
+          </button>` : `
+          <button type="button" class="knapp primaer liten" data-handling="legg-til" data-catalog-id="${esc(item.id)}">+ Legg til</button>`}
+      </div>
+    </article>`;
+}
 
-  const sections = store.KATEGORIER.map((k) => {
-    const catExercises = exercises.filter((e) => e.category === k.id);
-    return `
-      <section class="kort" aria-label="${esc(k.name)}">
-        <h2 class="kort-tittel kategori-tittel">${categoryIconHtml(k)} ${esc(k.name)}</h2>
-        ${catExercises.map((e) => `
-          <button type="button" class="ovelse-rad ${e.active === false ? 'inaktiv' : ''}" data-id="${e.id}">
-            <span>${esc(e.name)}${e.active === false ? ' <span class="dus">(inaktiv)</span>' : ''}</span>
-            <span class="dus">${logModeLabel(store.logModeOf(e))} · ${goalSummary(e)} ›</span>
-          </button>`).join('') || '<p class="dus liten">Ingen øvelser.</p>'}
-      </section>`;
-  }).join('');
+export async function render(container, params, query = {}) {
+  await initContent();
+  if (!isContentLoaded()) {
+    container.innerHTML = '<p class="tomt">Kunne ikke laste øvelseskatalogen. Prøv å laste siden på nytt.</p>';
+    return;
+  }
+
+  const filterCat = query.kat || params[0] || '';
+  const search = query.q || '';
+  const userByCatalog = await store.getUserExercisesByCatalogId();
+  const allUser = await store.getExercises({ includeInactive: true });
+  const catalogIds = new Set(
+    store.KATEGORIER.flatMap((k) => getCatalogByCategory(k.id).map((c) => c.id)),
+  );
+  const customExercises = allUser.filter((e) => !e.catalogId || !catalogIds.has(e.catalogId));
+
+  const categories = filterCat
+    ? store.KATEGORIER.filter((k) => k.id === filterCat)
+    : store.KATEGORIER;
 
   container.innerHTML = `
     <header class="side-topp">
       <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
       <h1>Øvelser</h1>
     </header>
-    <a href="#/bibliotek" class="knapp primaer bred" id="apne-bibliotek">
-      + Legg til fra bibliotek${availableCount ? ` (${availableCount} tilgjengelig)` : ''}
-    </a>
+    <input type="search" class="inndata sok" id="ovelse-sok" placeholder="Søk i øvelseskatalogen …"
+      value="${esc(search)}" aria-label="Søk øvelser">
+    <div class="filter-linje ovelse-filter" role="tablist" aria-label="Kategori">
+      <button type="button" role="tab" aria-selected="${!filterCat}" class="filter-knapp ${!filterCat ? 'aktiv' : ''}" data-kat="">Alle</button>
+      ${store.KATEGORIER.map((k) => `
+        <button type="button" role="tab" aria-selected="${k.id === filterCat}" class="filter-knapp ${k.id === filterCat ? 'aktiv' : ''}" data-kat="${k.id}">${esc(k.name)}</button>`).join('')}
+    </div>
+    <p class="dus bib-intro">Velg øvelser du vil bruke i programmet. Teknikk er på norsk; navn er på engelsk.</p>
     <button type="button" class="knapp sekundaer bred" id="ny-ovelse">+ Ny egen øvelse</button>
-    ${!exercises.length ? `
-    <button type="button" class="knapp sekundaer bred" id="legg-til-standard">
-      Legg til standardøvelser (27 stk)
-    </button>` : ''}
-    ${sections}
+    <div id="ovelse-liste"></div>
     <div id="skjema-vert"></div>
   `;
 
-  container.querySelector('#ny-ovelse').addEventListener('click', () => {
-    openForm(container.querySelector('#skjema-vert'), null, () => render(container));
-  });
-  container.querySelector('#legg-til-standard')?.addEventListener('click', async () => {
-    const added = await store.ensureDefaultExercises();
-    toast(added ? 'Standardøvelser lagt til' : 'Øvelser finnes allerede', added ? 'suksess' : 'info');
-    render(container);
-  });
-  container.querySelectorAll('.ovelse-rad').forEach((row) => {
-    row.addEventListener('click', async () => {
-      const ex = await store.getExercise(row.dataset.id);
-      openForm(container.querySelector('#skjema-vert'), ex, () => render(container));
+  const listEl = container.querySelector('#ovelse-liste');
+  const host = container.querySelector('#skjema-vert');
+
+  function draw() {
+    const q = container.querySelector('#ovelse-sok').value.trim();
+    let html = '';
+
+    for (const k of categories) {
+      const catItems = q ? searchCatalog(q, { categoryId: k.id }) : getCatalogByCategory(k.id);
+      if (!catItems.length) continue;
+      html += `
+        <section class="ovelse-kategori-seksjon">
+          <h2 class="kort-tittel kategori-tittel">${categoryIconHtml(k)} ${esc(k.name)}
+            <span class="dus liten">${catItems.length} øvelser</span></h2>
+          ${catItems.map((item) => renderCatalogRow(item, userByCatalog.get(item.id))).join('')}
+        </section>`;
+    }
+
+    if (customExercises.length) {
+      html += `
+        <section class="ovelse-kategori-seksjon">
+          <h2 class="kort-tittel">Egne øvelser</h2>
+          ${customExercises.map((e) => `
+            <button type="button" class="ovelse-rad ${e.active === false ? 'inaktiv' : ''}" data-id="${e.id}">
+              <span>${esc(e.name)}${e.active === false ? ' <span class="dus">(inaktiv)</span>' : ''}</span>
+              <span class="dus">${logModeLabel(store.logModeOf(e))} · ${goalSummary(e)} ›</span>
+            </button>`).join('')}
+        </section>`;
+    }
+
+    listEl.innerHTML = html || '<p class="tomt">Ingen øvelser funnet.</p>';
+    bindDescriptionToggles(listEl, (id) => getCatalogEntry(id)?.description || '');
+    bindListEvents();
+  }
+
+  function bindListEvents() {
+    listEl.querySelectorAll('[data-handling="legg-til"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const entry = getCatalogEntry(btn.dataset.catalogId);
+        if (!entry) return;
+        await store.addExerciseFromCatalog(entry.id, entry);
+        toast(`${entry.name} lagt til`, 'suksess');
+        render(container, params, { ...query, q: container.querySelector('#ovelse-sok').value, kat: filterCat });
+      });
     });
+
+    listEl.querySelectorAll('[data-handling="toggle"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const ex = await store.findExerciseByCatalogId(btn.dataset.catalogId);
+        if (!ex) return;
+        const nextActive = ex.active === false;
+        await store.saveExercise({ ...ex, active: nextActive });
+        toast(nextActive ? 'Øvelse aktivert' : 'Øvelse deaktivert', 'suksess');
+        render(container, params, { ...query, q: container.querySelector('#ovelse-sok').value, kat: filterCat });
+      });
+    });
+
+    listEl.querySelectorAll('[data-handling="rediger"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const ex = await store.getExercise(btn.dataset.id);
+        openForm(host, ex, () => render(container, params, query));
+      });
+    });
+
+    listEl.querySelectorAll('.ovelse-rad').forEach((row) => {
+      row.addEventListener('click', async () => {
+        const ex = await store.getExercise(row.dataset.id);
+        openForm(host, ex, () => render(container, params, query));
+      });
+    });
+  }
+
+  draw();
+
+  container.querySelectorAll('.ovelse-filter .filter-knapp').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const kat = btn.dataset.kat;
+      const q = container.querySelector('#ovelse-sok').value;
+      const params = new URLSearchParams();
+      if (kat) params.set('kat', kat);
+      if (q) params.set('q', q);
+      location.hash = `#/ovelser${params.toString() ? `?${params}` : ''}`;
+    });
+  });
+
+  let searchTimer;
+  container.querySelector('#ovelse-sok').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(draw, 300);
+  });
+
+  container.querySelector('#ny-ovelse').addEventListener('click', () => {
+    openForm(host, null, () => render(container, params, query));
   });
 }
 
@@ -79,8 +186,9 @@ export function openForm(host, exercise, onDone) {
     goalRepsMin: store.defaultGoals().goalRepsMin,
     goalRepsMax: store.defaultGoals().goalRepsMax,
   };
-  const description = getDescription(e);
+  const description = getCatalogEntry(e.catalogId)?.description || '';
   const mode = store.logModeOf(e);
+  const isCatalog = Boolean(e.catalogId && getCatalogEntry(e.catalogId));
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -91,10 +199,10 @@ export function openForm(host, exercise, onDone) {
       </div>
       <form id="ovelse-skjema">
         <label class="felt-navn" for="f-navn">Navn</label>
-        <input type="text" class="inndata" id="f-navn" value="${esc(e.name)}" required>
+        <input type="text" class="inndata" id="f-navn" value="${esc(e.name)}" required ${isCatalog ? 'readonly' : ''}>
 
         <label class="felt-navn" for="f-kategori">Kategori</label>
-        <select class="inndata" id="f-kategori">
+        <select class="inndata" id="f-kategori" ${isCatalog ? 'disabled' : ''}>
           ${store.KATEGORIER.map((k) => `<option value="${k.id}" ${k.id === e.category ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}
         </select>
 
@@ -128,7 +236,7 @@ export function openForm(host, exercise, onDone) {
         </label>
 
         <button type="submit" class="knapp primaer bred">${isNew ? 'Opprett' : 'Lagre'}</button>
-        ${!isNew ? '<button type="button" class="knapp farlig bred" id="f-slett">Slett øvelse</button>' : ''}
+        ${!isNew && !isCatalog ? '<button type="button" class="knapp farlig bred" id="f-slett">Slett øvelse</button>' : ''}
       </form>
     </div>`;
 

@@ -119,8 +119,6 @@ async function main() {
 
   // Vis UI raskt – cache først, nett og synk i bakgrunnen.
   await initContentFromCache();
-  await store.ensureDefaultExercises();
-  await store.migrateExerciseCatalogIds();
   await renderRoute();
 
   sync.init();

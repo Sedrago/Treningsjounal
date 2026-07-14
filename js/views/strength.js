@@ -593,17 +593,33 @@ function openCategoryPicker(host, stats, onCategory) {
   });
 }
 
-/** Bunn-ark: velg blant mine øvelser + biblioteket for en kategori. */
+/** Bunn-ark: velg øvelse fra katalogen for en kategori. */
 async function openExercisePicker(host, categoryId, planItems, onPick, onEdited) {
   const category = store.categoryById(categoryId);
-  const mine = await store.getExercisesByCategory(categoryId);
-  const activeCatalogIds = new Set(await store.getActiveCatalogIds());
-  const catalogRest = getCatalogByCategory(categoryId)
-    .filter((c) => !activeCatalogIds.has(c.id));
+  const catalog = getCatalogByCategory(categoryId);
+  const userByCatalog = await store.getUserExercisesByCatalogId();
   const inPlan = new Set(planItems.map((it) => it.exerciseId));
-  const mineById = new Map(mine.map((e) => [e.id, e]));
+  const catalogIds = new Set(catalog.map((c) => c.id));
+  const customExercises = (await store.getExercisesByCategory(categoryId, { includeInactive: false }))
+    .filter((e) => !e.catalogId || !catalogIds.has(e.catalogId));
 
-  const mineRows = mine.map((e) => `
+  const catalogRows = catalog.map((c) => {
+    const user = userByCatalog.get(c.id);
+    const exId = user?.id || c.id;
+    const inApp = Boolean(user && user.active !== false);
+    return `
+    <article class="plan-bib-rad" data-id="${esc(c.id)}" data-catalog="1">
+      <div class="plan-bib-topp">
+        <h3 class="plan-bib-navn">${esc(c.name)}${inPlan.has(exId) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
+        <button type="button" class="plan-bib-bruk" data-id="${esc(c.id)}" ${inPlan.has(exId) ? 'disabled' : ''}>
+          ${inApp ? 'Bruk denne →' : 'Legg til og bruk →'}
+        </button>
+      </div>
+      ${descriptionBlock(c.description, 120)}
+    </article>`;
+  }).join('');
+
+  const customRows = customExercises.map((e) => `
     <article class="plan-bib-rad plan-mine-rad" data-id="${e.id}">
       <div class="plan-bib-topp">
         <h3 class="plan-bib-navn">${esc(e.name)}${inPlan.has(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
@@ -615,14 +631,7 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
       ${descriptionBlock(exercisePickerDescription(e), 120)}
     </article>`).join('');
 
-  const bibRows = catalogRest.map((c) => `
-    <article class="plan-bib-rad" data-id="${esc(c.id)}">
-      <div class="plan-bib-topp">
-        <h3 class="plan-bib-navn">${esc(c.name)}</h3>
-        <button type="button" class="plan-bib-bruk" data-id="${esc(c.id)}">Bruk denne →</button>
-      </div>
-      ${descriptionBlock(c.description, 120)}
-    </article>`).join('');
+  const customDesc = new Map(customExercises.map((e) => [e.id, exercisePickerDescription(e)]));
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -631,10 +640,10 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
         <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      ${mineRows ? `<p class="felt-navn plan-bib-tittel">Mine øvelser</p>${mineRows}` : '<p class="dus liten">Ingen egne øvelser i kategorien ennå.</p>'}
-      ${bibRows ? `<p class="felt-navn plan-bib-tittel">Fra biblioteket</p>${bibRows}` : ''}
+      ${catalogRows || '<p class="dus liten">Ingen øvelser i kategorien.</p>'}
+      ${customRows ? `<p class="felt-navn plan-bib-tittel">Egne øvelser</p>${customRows}` : ''}
       <form class="ny-ovelse-skjema">
-        <input type="text" class="inndata" name="navn" placeholder="Ny øvelse …" aria-label="Navn på ny øvelse">
+        <input type="text" class="inndata" name="navn" placeholder="Ny egen øvelse …" aria-label="Navn på ny øvelse">
         <button type="submit" class="knapp sekundaer">Legg til</button>
       </form>
     </div>`;
@@ -643,15 +652,16 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
   bindDescriptionToggles(host, (id) => {
     const entry = getCatalogEntry(id);
     if (entry?.description) return entry.description;
-    const ex = mineById.get(id);
-    return ex ? exercisePickerDescription(ex) : '';
+    return customDesc.get(id) || '';
   });
 
   host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (btn.disabled) return;
-      const catalogEntry = getCatalogEntry(btn.dataset.id);
-      if (catalogEntry) {
+      const row = btn.closest('[data-catalog]');
+      if (row) {
+        const catalogEntry = getCatalogEntry(btn.dataset.id);
+        if (!catalogEntry) return;
         const ex = await store.addExerciseFromCatalog(catalogEntry.id, catalogEntry);
         host.innerHTML = '';
         onPick(ex);
