@@ -302,6 +302,18 @@ export async function removeExerciseFromCatalog(catalogId) {
   if (ex && !ex.deleted) await deleteExercise(ex.id);
 }
 
+/** Legger inn startpakken (grunnleggende øvelser fra katalogen). */
+export async function addStarterPack(entries) {
+  let added = 0;
+  for (const entry of entries) {
+    const existing = await findExerciseByCatalogId(entry.id);
+    if (existing && !existing.deleted) continue;
+    await addExerciseFromCatalog(entry.id, entry);
+    added++;
+  }
+  return added;
+}
+
 /* ---------- Økter ---------- */
 
 export async function getWorkouts() {

@@ -12,6 +12,46 @@ const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'exercises.json');
 const OUT = path.join(ROOT, 'data/ovelsesinnhold.json');
 
+/** Grunnleggende øvelser per kategori (3–4 stk) – engelske navn fra exercises.json. */
+const STARTER_PACK_IDS = [
+  // Horisontal push
+  'Barbell_Bench_Press_-_Medium_Grip',
+  'Pushups',
+  'Dips_-_Chest_Version',
+  'Dumbbell_Bench_Press',
+  // Horisontal pull
+  'Bent_Over_Barbell_Row',
+  'Seated_Cable_Rows',
+  'Face_Pull',
+  // Vertikal push
+  'Barbell_Shoulder_Press',
+  'Standing_Military_Press',
+  'Arnold_Dumbbell_Press',
+  // Vertikal pull
+  'Pullups',
+  'Chin-Up',
+  'Close-Grip_Front_Lat_Pulldown',
+  // Knebøydominant
+  'Barbell_Squat',
+  'Front_Barbell_Squat',
+  'Leg_Press',
+  'Split_Squats',
+  // Hoftehengsel
+  'Barbell_Deadlift',
+  'Romanian_Deadlift',
+  'Barbell_Hip_Thrust',
+  'Good_Morning',
+  // Core
+  'Plank',
+  'Dead_Bug',
+  'Cable_Crunch',
+  // Valgfri
+  'Barbell_Curl',
+  'Triceps_Pushdown',
+  'Side_Lateral_Raise',
+  'Standing_Calf_Raises',
+];
+
 const VALID_APP_CATEGORIES = new Set([
   'horisontal-push',
   'horisontal-pull',
@@ -75,7 +115,9 @@ function main() {
 
   const entries = {};
   const perCat = {};
+  const starterSet = new Set(STARTER_PACK_IDS);
   let skipped = 0;
+  const missingStarter = [];
 
   for (const ex of source) {
     const category = mapCategory(ex.app_category);
@@ -102,14 +144,25 @@ function main() {
       description,
       equipment: ex.equipment || '',
       level: ex.level || '',
+      ...(starterSet.has(id) ? { starter: true } : {}),
     };
     perCat[category] = (perCat[category] || 0) + 1;
   }
 
-  const out = { version: 6, entries };
+  for (const id of STARTER_PACK_IDS) {
+    if (!entries[id]) missingStarter.push(id);
+  }
+  if (missingStarter.length) {
+    console.error('Startpakke-id finnes ikke i katalogen:', missingStarter.join(', '));
+    process.exit(1);
+  }
+
+  const starterPack = STARTER_PACK_IDS.filter((id) => entries[id]);
+
+  const out = { version: 6, starterPack, entries };
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`);
 
-  console.log(`Ferdig: ${Object.keys(entries).length} øvelser (${skipped} hoppet over)`);
+  console.log(`Ferdig: ${Object.keys(entries).length} øvelser (${skipped} hoppet over), startpakke: ${starterPack.length}`);
   console.log('Per kategori:', perCat);
 }
 

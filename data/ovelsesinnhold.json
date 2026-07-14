@@ -1,5 +1,35 @@
 {
   "version": 6,
+  "starterPack": [
+    "Barbell_Bench_Press_-_Medium_Grip",
+    "Pushups",
+    "Dips_-_Chest_Version",
+    "Dumbbell_Bench_Press",
+    "Bent_Over_Barbell_Row",
+    "Seated_Cable_Rows",
+    "Face_Pull",
+    "Barbell_Shoulder_Press",
+    "Standing_Military_Press",
+    "Arnold_Dumbbell_Press",
+    "Pullups",
+    "Chin-Up",
+    "Close-Grip_Front_Lat_Pulldown",
+    "Barbell_Squat",
+    "Front_Barbell_Squat",
+    "Leg_Press",
+    "Split_Squats",
+    "Barbell_Deadlift",
+    "Romanian_Deadlift",
+    "Barbell_Hip_Thrust",
+    "Good_Morning",
+    "Plank",
+    "Dead_Bug",
+    "Cable_Crunch",
+    "Barbell_Curl",
+    "Triceps_Pushdown",
+    "Side_Lateral_Raise",
+    "Standing_Calf_Raises"
+  ],
   "entries": {
     "3_4_Sit-Up": {
       "name": "3/4 Sit-Up",
@@ -181,7 +211,8 @@
       "category": "vertikal-push",
       "description": "Sitt på en treningsbenk med god ryggstøtte og hold to manualer foran deg i skulderhøyde med bøyde albuer og håndflatene vendt inn mot kroppen. Press manualene kontrollert opp over hodet samtidig som du roterer underarmene, slik at håndflatene vender rett fremover når armene er helt utstrakte i topposisjonen. Pause kort og snu bevegelsen rolig.",
       "equipment": "dumbbell",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Around_The_Worlds": {
       "name": "Around The Worlds",
@@ -307,14 +338,16 @@
       "category": "horisontal-push",
       "description": "Ligg på en flatbenk og grip vektstangen med et middels bredt grep som gir en nitti graders vinkel mellom underarm og overarm i bunnposisjon. Løft stangen av stativet og hold den på strake armer over brystet. Senk stangen langsomt ned til midten av brystet, gjør en kort pause, og press den kraftig opp igjen ved å aktivere brystmuskulaturen.",
       "equipment": "barbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Barbell_Curl": {
       "name": "Barbell Curl",
       "category": "valgfri",
       "description": "Stå oppreist med overkroppen rak og hold en vektstang med et skulderbredt underhåndsgrep. Hold albuene tett inntil kroppen og overarmene helt i ro mens du bøyer i albuene og løfter stangen opp til skulderhøyde. Klem biceps hardt sammen i topposisjonen i et sekund før du senker stangen rolig tilbake til startposisjonen.",
       "equipment": "barbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Barbell_Curls_Lying_Against_An_Incline": {
       "name": "Barbell Curls Lying Against An Incline",
@@ -328,7 +361,8 @@
       "category": "hoftehengsel",
       "description": "Stå foran en lastet vektstang med skulderbred fotstilling. Bøy knærne, len overkroppen frem med rett rygg og grip stangen med et skulderbredt overhåndsgrep. Start løftet ved å presse fra med bena samtidig som du retter opp overkroppen. Skyv brystet frem og trekk skulderbladene godt sammen på toppen, før du senker stangen kontrollert tilbake til gulvet.",
       "equipment": "barbell",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Barbell_Full_Squat": {
       "name": "Barbell Full Squat",
@@ -363,7 +397,8 @@
       "category": "hoftehengsel",
       "description": "Sitt på gulvet med en treningsbenk direkte bak deg og rull en lastet vektstang over lårene til den hviler over hoftene. Len øvre del av ryggen mot benken slik at skulderbladene er nær kanten. Press føttene hardt i gulvet og strekk hoftene maksimalt opp mot taket slik at kroppen støttes av skuldre og føtter, før du senker kontrollert ned igjen.",
       "equipment": "barbell",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Barbell_Incline_Bench_Press_-_Medium_Grip": {
       "name": "Barbell Incline Bench Press - Medium Grip",
@@ -412,7 +447,8 @@
       "category": "vertikal-push",
       "description": "Sitt på en benk med ryggstøtte i et knebøystativ. Grip vektstangen med et overhåndsgrep, løft den av stativet og hold den på strake armer over hodet. Senk stangen langsomt ned til skuldrene, og press den kontrollert tilbake til startposisjonen.",
       "equipment": "barbell",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Barbell_Shrug": {
       "name": "Barbell Shrug",
@@ -447,7 +483,8 @@
       "category": "kneboy",
       "description": "Løft stangen av stativet med skuldrene og ta et skritt tilbake til en skulderbred fotstilling. Hold ryggen rett og blikket frem mens du senker hoftene og bøy knærne kontrollert til vinkelen i kneleddet er rett under nitti grader. Pass på at knærne ikke skyves forbi tærne, og press opp via hælene.",
       "equipment": "barbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Barbell_Squat_To_A_Bench": {
       "name": "Barbell Squat To A Bench",
@@ -559,7 +596,8 @@
       "category": "horisontal-pull",
       "description": "Hold en vektstang med et overhåndsgrep, bøy lett i knærne og len overkroppen frem til den er nesten parallell med gulvet med rett rygg. La stangen henge rett ned foran deg. Trekk stangen kontrollert opp mot magen mens du holder albuene tett inntil kroppen, og klem ryggmusklene hardt sammen i topposisjonen før du senker rolig.",
       "equipment": "barbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Bent_Over_Dumbbell_Rear_Delt_Raise_With_Head_On_Bench": {
       "name": "Bent Over Dumbbell Rear Delt Raise With Head On Bench",
@@ -783,7 +821,8 @@
       "category": "core",
       "description": "Stå på kne foran et høyt kabeltrekk med tau. Grip tauet og hold hendene stabilt plassert ved siden av ansiktet. Hold hoftene helt i ro og bøy overkroppen kontrollert nedover ved å trekke magen hardt sammen, slik at albuene beveger seg mot midten av lårene. Hold spenningen kort og returner langsomt.",
       "equipment": "cable",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Cable_Deadlifts": {
       "name": "Cable Deadlifts",
@@ -1119,7 +1158,8 @@
       "category": "vertikal-pull",
       "description": "Grip opptrekkstangen med et smalt underhåndsgrep der håndflatene vender mot deg. Hold en naturlig svai i korsryggen og skyt brystet frem. Trekk overkroppen kontrollert opp til hodet er på linje med stangen ved å aktivere biceps aktivt, og hold albuene tett inntil kroppen.",
       "equipment": "body only",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Chin_To_Chest_Stretch": {
       "name": "Chin To Chest Stretch",
@@ -1231,7 +1271,8 @@
       "category": "vertikal-pull",
       "description": "Sitt i nedtrekkmaskinen med knærne godt støttet under putene. Grip stangen med et smalt underhåndsgrep som er mindre enn skulderbredde. Len overkroppen omtrent tretti grader bakover, skyt brystet frem og trekk stangen kontrollert ned til øvre del av brystet ved å føre albuene ned og bakover, før du slipper rolig opp.",
       "equipment": "cable",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Close-Grip_Push-Up_off_of_a_Dumbbell": {
       "name": "Close-Grip Push-Up off of a Dumbbell",
@@ -1343,7 +1384,8 @@
       "category": "core",
       "description": "Ligg på ryggen med armene strukket opp mot taket og bøy hofter og knær i nitti grader. Pust godt ut for å trekke ned ribbena, press korsryggen helt flatt mot gulvet og stram setet. Hold denne spenningen mens du strekker ut det ene benet kontrollert til det er rett over bakken, og returner rolig før du bytter side.",
       "equipment": "body only",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Deadlift_with_Bands": {
       "name": "Deadlift with Bands",
@@ -1462,7 +1504,8 @@
       "category": "horisontal-push",
       "description": "Hold deg på strake armer over parallellstengene. Senk deg langsomt ned mens du lener overkroppen fremover i omtrent tretti grader og lar albuene peke svakt utover til du kjenner en god strekk i brystet. Press kroppen kontrollert tilbake til startposisjonen ved å aktivere brystmuskulaturen.",
       "equipment": "other",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Dips_-_Triceps_Version": {
       "name": "Dips - Triceps Version",
@@ -1553,7 +1596,8 @@
       "category": "horisontal-push",
       "description": "Ligg på en flatbenk med en manual i hver hånd. Hjelp til med lårene for å føre vektene opp i skulderbredde, og roter håndleddene slik at håndflatene vender fremover. Senk manualene kontrollert ned mot siden av brystet til armene danner en nitti graders vinkel, og press dem kraftig opp igjen ved å bruke brystmuskulaturen.",
       "equipment": "dumbbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Dumbbell_Bench_Press_with_Neutral_Grip": {
       "name": "Dumbbell Bench Press with Neutral Grip",
@@ -1868,7 +1912,8 @@
       "category": "horisontal-pull",
       "description": "Stå vendt mot et høyt kabeltrekk med tau eller doble håndtak. Trekk vekten kontrollert direkte mot ansiktet samtidig som du fører hendene fra hverandre i ytterstillingen. Sørg for å holde overarmene parallelle med gulvet gjennom hele bevegelsen.",
       "equipment": "cable",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Farmers_Walk": {
       "name": "Farmer's Walk",
@@ -1994,7 +2039,8 @@
       "category": "kneboy",
       "description": "Gå under vektstangen i stativet og la den hvile på forsiden av skuldrene mens du holder albuene høyt. Kryss armene over stangen for full kontroll og løft den av. Ta et skritt tilbake til skulderbred fotstilling og gjør en dyp knebøy med oppreist overkropp, før du presser opp igjen.",
       "equipment": "barbell",
-      "level": "expert"
+      "level": "expert",
+      "starter": true
     },
     "Front_Barbell_Squat_To_A_Bench": {
       "name": "Front Barbell Squat To A Bench",
@@ -2120,7 +2166,8 @@
       "category": "hoftehengsel",
       "description": "Plasser vektstangen over baksiden av skuldrene og stå med en liten knekk i knærne. Bøy overkroppen kontrollert fremover i hoftene til ryggen er tilnærmet parallell med gulvet, mens du holder ryggsøylen rett. Reis deg opp igjen ved å stramme setet og baksiden av lårene.",
       "equipment": "barbell",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Good_Morning_off_Pins": {
       "name": "Good Morning off Pins",
@@ -2883,7 +2930,8 @@
       "category": "kneboy",
       "description": "Sitt i benpressmaskinen og plasser føttene i skulderbredde på plattformen. Frigjør sikringen og press plattformen opp til beina er utstrakte uten å låse knærne. Senk plattformen kontrollert til knærne har en nitti graders vinkel, og press opp igjen hovedsakelig gjennom hælene.",
       "equipment": "machine",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Leg_Pull-In": {
       "name": "Leg Pull-In",
@@ -3772,7 +3820,8 @@
       "category": "core",
       "description": "Ligg på magen og løft kroppen opp slik at du hviler kun på tærne og underarmene. Plasser albuene direkte under skuldrene. Hold kroppen i en helt rett linje som en planke gjennom hele øvelsen, og unngå at hoften synker ned mot gulvet.",
       "equipment": "body only",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Plate_Pinch": {
       "name": "Plate Pinch",
@@ -3919,7 +3968,8 @@
       "category": "vertikal-pull",
       "description": "Grip hakehevstangen med håndflatene vendt fremover i ønsket bredde. Len overkroppen svakt bakover, skyt brystet opp og trekk deg kontrollert opp til stangen berører øvre del av brystet. Klem skulderbladene godt sammen på toppen, og senk deg rolig tilbake.",
       "equipment": "body only",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Push-Up_Wide": {
       "name": "Push-Up Wide",
@@ -3975,7 +4025,8 @@
       "category": "horisontal-push",
       "description": "Ligg på magen og plasser hendene stabilt i gulvet med god avstand. Hold kroppen i en helt rett linje og senk brystet kontrollert til det nesten berører underlaget. Press overkroppen kraftfullt tilbake til startposisjonen ved å aktivere brystmusklene til armene er strake.",
       "equipment": "body only",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Pushups_Close_and_Wide_Hand_Positions": {
       "name": "Pushups (Close and Wide Hand Positions)",
@@ -4227,7 +4278,8 @@
       "category": "hoftehengsel",
       "description": "Grip stangen litt bredere enn skulderbredde og stå oppreist. Hold en liten knekk i knærne og skinnleggene vertikale. Skyv hoften kontrollert bakover og senk stangen langs beina med helt rett rygg til du kjenner en god strekk på baksiden av lårene. Press hoften frem igjen.",
       "equipment": "barbell",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Romanian_Deadlift_from_Deficit": {
       "name": "Romanian Deadlift from Deficit",
@@ -4381,7 +4433,8 @@
       "category": "horisontal-pull",
       "description": "Sitt på maskinen med en lett knekk i knærne, rett rygg og skyt brystet frem. Grip V-håndtaket på strake armer slik at overkroppen har nitti graders vinkel med beina. Trekk håndtakene kontrollert inn mot magen mens du holder albuene tett inntil kroppen, og klem ryggmusklene sammen.",
       "equipment": "cable",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Seated_Cable_Shoulder_Press": {
       "name": "Seated Cable Shoulder Press",
@@ -4654,7 +4707,8 @@
       "category": "valgfri",
       "description": "Stå oppreist med en manual i hver hånd hengende rett ned langs siden med håndflatene innover. Hold overkroppen helt i ro og løft manualene ut til sidene i en bue til armene er parallelle med gulvet. Vipp hendene svakt fremover på toppen, og senk vektene rolig tilbake.",
       "equipment": "dumbbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Side_Laterals_to_Front_Raise": {
       "name": "Side Laterals to Front Raise",
@@ -5137,7 +5191,8 @@
       "category": "kneboy",
       "description": "Start i stående posisjon. Hopp ut i en splittstilling med ett bein frem og ett bak, og senk hoften noe. Snu bevegelsen umiddelbart i bunnen ved å eksplodere oppover i et nytt hopp, og bytt om på beinas posisjon i luften før du lander mykt.",
       "equipment": "",
-      "level": "intermediate"
+      "level": "intermediate",
+      "starter": true
     },
     "Squat_Jerk": {
       "name": "Squat Jerk",
@@ -5263,7 +5318,8 @@
       "category": "valgfri",
       "description": "Juster tåhevmaskinen og plasser skuldrene under putene. Stå med tåballene på kanten av plattformen og hælene fritt på utsiden. Hold en svak bøy i knærne og press deg så høyt opp på tærne som mulig mens du spenner leggene. Hold i ett sekund før du senker hælene rolig ned til full strekk.",
       "equipment": "machine",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Standing_Concentration_Curl": {
       "name": "Standing Concentration Curl",
@@ -5403,7 +5459,8 @@
       "category": "vertikal-push",
       "description": "Løft stangen fra et stativ i brysthøyde og plasser den på kragebeinet med et overhåndsgrep som er bredere enn skulderbredde. Stå med skulderbreddes avstand og press stangen opp over hodet til armene er strake. Senk stangen rolig tilbake til kragebeinet.",
       "equipment": "barbell",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Standing_Olympic_Plate_Hand_Squeeze": {
       "name": "Standing Olympic Plate Hand Squeeze",
@@ -5774,7 +5831,8 @@
       "category": "valgfri",
       "description": "Fest en stang til en høy kabeltrinse og grip den med et skulderbredt overhåndsgrep. Stå oppreist med en minimal fremoverlening og hold overarmene låst inntil kroppen. Press stangen kontrollert ned til den berører forsiden av lårene og armene er helt utstrakte. Før stangen rolig tilbake.",
       "equipment": "cable",
-      "level": "beginner"
+      "level": "beginner",
+      "starter": true
     },
     "Triceps_Pushdown_-_Rope_Attachment": {
       "name": "Triceps Pushdown - Rope Attachment",

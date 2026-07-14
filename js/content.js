@@ -132,7 +132,22 @@ function entryToCatalog(id, raw) {
     name: raw.name || id,
     category: raw.category || '',
     description: raw.description || '',
+    starter: Boolean(raw.starter),
   };
+}
+
+/** Id-er for grunnleggende startpakke (3–4 per kategori). */
+export function getStarterPackIds() {
+  if (!pack?.starterPack?.length) return [];
+  return pack.starterPack;
+}
+
+/** Katalogposter i startpakken. */
+export function getStarterPackEntries() {
+  if (!pack) return [];
+  return getStarterPackIds()
+    .map((id) => entryToCatalog(id, pack.entries[id]))
+    .filter(Boolean);
 }
 
 /** @returns {object|null} Katalogpost med id, name, category, description. */

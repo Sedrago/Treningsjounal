@@ -5,6 +5,7 @@
 import * as store from '../store.js';
 import {
   initContent, getCatalogByCategory, getCatalogEntry, searchCatalog, isContentLoaded,
+  getStarterPackEntries,
 } from '../content.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { esc, toast, categoryIconHtml } from '../utils.js';
@@ -57,6 +58,8 @@ export async function render(container, params, query = {}) {
     store.KATEGORIER.flatMap((k) => getCatalogByCategory(k.id).map((c) => c.id)),
   );
   const customExercises = allUser.filter((e) => !e.catalogId || !catalogIds.has(e.catalogId));
+  const hasAnyUserExercise = allUser.some((e) => !e.deleted);
+  const starterEntries = getStarterPackEntries();
 
   const categories = filterCat
     ? store.KATEGORIER.filter((k) => k.id === filterCat)
@@ -75,6 +78,11 @@ export async function render(container, params, query = {}) {
         <button type="button" role="tab" aria-selected="${k.id === filterCat}" class="filter-knapp ${k.id === filterCat ? 'aktiv' : ''}" data-kat="${k.id}">${esc(k.name)}</button>`).join('')}
     </div>
     <p class="dus bib-intro">Velg øvelser du vil bruke i programmet. Teknikk er på norsk; navn er på engelsk.</p>
+    ${!hasAnyUserExercise && starterEntries.length ? `
+    <button type="button" class="knapp primaer bred" id="legg-til-startpakke">
+      Legg til startpakke (${starterEntries.length} grunnleggende øvelser)
+    </button>
+    <p class="dus liten startpakke-hint">Benkpress, knebøy, markløft osv. – én knapp for å komme i gang.</p>` : ''}
     <button type="button" class="knapp sekundaer bred" id="ny-ovelse">+ Ny egen øvelse</button>
     <div id="ovelse-liste"></div>
     <div id="skjema-vert"></div>
@@ -173,6 +181,12 @@ export async function render(container, params, query = {}) {
 
   container.querySelector('#ny-ovelse').addEventListener('click', () => {
     openForm(host, null, () => render(container, params, query));
+  });
+
+  container.querySelector('#legg-til-startpakke')?.addEventListener('click', async () => {
+    const n = await store.addStarterPack(starterEntries);
+    toast(n ? `${n} øvelser lagt til` : 'Startpakken finnes allerede', n ? 'suksess' : 'info');
+    render(container, params, query);
   });
 }
 

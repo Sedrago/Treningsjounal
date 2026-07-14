@@ -156,7 +156,7 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
 .bib-rad-topp .bib-navn { margin: 0; font-size: 1rem; }
 .ovelse-kategori-seksjon { margin-bottom: 16px; }
 .ovelse-kategori-seksjon .kort-tittel { margin-bottom: 8px; }
-.ovelse-filter { flex-wrap: wrap; margin-bottom: 8px; }
+.startpakke-hint { margin: -4px 0 12px; padding: 0 4px; }
 
 .bib-intro { margin: 0 0 16px; line-height: 1.45; }
 .bib-kategori { display: block; text-decoration: none; color: inherit; margin-bottom: 10px; }
