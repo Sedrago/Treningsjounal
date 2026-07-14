@@ -675,10 +675,10 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
         <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      <input type="search" class="inndata sok" id="picker-sok" placeholder="Søk øvelser …" aria-label="Søk øvelser">
       <div id="picker-filtre">
         ${renderExerciseFilterSelects({ filters, filterOptions, showCategory: false })}
       </div>
+      <input type="search" class="inndata sok picker-sok" id="picker-sok" placeholder="Søk på øvelsesnavn …" aria-label="Søk øvelser">
       <p class="felt-navn plan-bib-tittel">Mine øvelser</p>
       <div id="picker-mine">${renderMineRows(filteredMine())}</div>
       <details class="plan-bib-seksjon" id="picker-katalog">

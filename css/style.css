@@ -1471,6 +1471,7 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 /* ---------- Historikk ---------- */
 
 .sok { margin-bottom: 0; }
+.picker-sok { margin: 8px 0 12px; }
 
 .filter-linje { display: flex; gap: 8px; }
 .filter-knapp {
