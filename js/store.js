@@ -314,6 +314,37 @@ export async function addStarterPack(entries) {
   return added;
 }
 
+/** Antall startpakke-øvelser brukeren mangler. */
+export async function countMissingStarterExercises(entries) {
+  if (!entries?.length) return 0;
+  const userMap = await getUserExercisesByCatalogId();
+  return entries.filter((e) => !userMap.has(e.id)).length;
+}
+
+/**
+ * Eksisterende bruker med øvelser men uten startpakke får den lagt inn én gang.
+ * Nye brukere (tom liste) velger selv via knapp på Øvelser.
+ */
+export async function ensureStarterPackForExistingUser(entries) {
+  if (!entries?.length) return 0;
+  if (await db.getMeta('starterPackAutoApplied')) return 0;
+
+  const all = await db.getAll('exercises');
+  const hasAnyExercise = all.some((e) => !e.deleted);
+  if (!hasAnyExercise) return 0;
+
+  const userMap = await getUserExercisesByCatalogId();
+  const hasAnyStarter = entries.some((e) => userMap.has(e.id));
+  if (hasAnyStarter) {
+    await db.setMeta('starterPackAutoApplied', '1');
+    return 0;
+  }
+
+  const added = await addStarterPack(entries);
+  if (added > 0) await db.setMeta('starterPackAutoApplied', '1');
+  return added;
+}
+
 /* ---------- Økter ---------- */
 
 export async function getWorkouts() {

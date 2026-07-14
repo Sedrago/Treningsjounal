@@ -5,7 +5,8 @@
 import * as store from './store.js';
 import * as sync from './sync.js';
 import * as api from './api.js';
-import { initContent, initContentFromCache, checkContentUpdate } from './content.js';
+import { initContent, initContentFromCache, checkContentUpdate, getStarterPackEntries } from './content.js';
+import { toast } from './utils.js';
 
 import * as home from './views/home.js';
 import * as strength from './views/strength.js';
@@ -66,6 +67,13 @@ function parseHash() {
   return { route, params: segments.slice(1), query };
 }
 
+async function applyStarterPackIfNeeded() {
+  const entries = getStarterPackEntries();
+  const added = await store.ensureStarterPackForExistingUser(entries);
+  if (added > 0) toast(`${added} startøvelser lagt til`, 'suksess');
+  return added;
+}
+
 async function renderRoute() {
   const { route, params, query } = parseHash();
   const renderFn = routes[route] || home.render;
@@ -108,8 +116,8 @@ async function main() {
   setupSyncBadge();
 
   window.addEventListener('hashchange', renderRoute);
-  window.addEventListener('content-updated', () => renderRoute());
-  window.addEventListener('sync-complete', () => renderRoute());
+  window.addEventListener('content-updated', () => applyStarterPackIfNeeded().then(() => renderRoute()));
+  window.addEventListener('sync-complete', () => applyStarterPackIfNeeded().then(() => renderRoute()));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkContentUpdate();
@@ -119,11 +127,15 @@ async function main() {
 
   // Vis UI raskt – cache først, nett og synk i bakgrunnen.
   await initContentFromCache();
+  await applyStarterPackIfNeeded();
   await renderRoute();
 
   sync.init();
-  initContent({ force: false }).then((ok) => {
-    if (ok) renderRoute();
+  initContent({ force: false }).then(async (ok) => {
+    if (ok) {
+      await applyStarterPackIfNeeded();
+      renderRoute();
+    }
   });
 
   // Førstegangsbruk: pek mot innstillinger hvis tilkobling mangler.

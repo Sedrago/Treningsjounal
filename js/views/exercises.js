@@ -58,8 +58,8 @@ export async function render(container, params, query = {}) {
     store.KATEGORIER.flatMap((k) => getCatalogByCategory(k.id).map((c) => c.id)),
   );
   const customExercises = allUser.filter((e) => !e.catalogId || !catalogIds.has(e.catalogId));
-  const hasAnyUserExercise = allUser.some((e) => !e.deleted);
   const starterEntries = getStarterPackEntries();
+  const missingStarter = starterEntries.filter((e) => !userByCatalog.has(e.id)).length;
 
   const categories = filterCat
     ? store.KATEGORIER.filter((k) => k.id === filterCat)
@@ -78,11 +78,14 @@ export async function render(container, params, query = {}) {
         <button type="button" role="tab" aria-selected="${k.id === filterCat}" class="filter-knapp ${k.id === filterCat ? 'aktiv' : ''}" data-kat="${k.id}">${esc(k.name)}</button>`).join('')}
     </div>
     <p class="dus bib-intro">Velg øvelser du vil bruke i programmet. Teknikk er på norsk; navn er på engelsk.</p>
-    ${!hasAnyUserExercise && starterEntries.length ? `
-    <button type="button" class="knapp primaer bred" id="legg-til-startpakke">
-      Legg til startpakke (${starterEntries.length} grunnleggende øvelser)
+    ${missingStarter > 0 ? `
+    <button type="button" class="knapp ${missingStarter === starterEntries.length ? 'primaer' : 'sekundaer'} bred" id="legg-til-startpakke">
+      ${missingStarter === starterEntries.length
+    ? `Legg til startpakke (${starterEntries.length} grunnleggende øvelser)`
+    : `Legg til manglende fra startpakke (${missingStarter})`}
     </button>
-    <p class="dus liten startpakke-hint">Benkpress, knebøy, markløft osv. – én knapp for å komme i gang.</p>` : ''}
+    ${missingStarter === starterEntries.length ? `
+    <p class="dus liten startpakke-hint">Benkpress, knebøy, markløft osv. – én knapp for å komme i gang.</p>` : ''}` : ''}
     <button type="button" class="knapp sekundaer bred" id="ny-ovelse">+ Ny egen øvelse</button>
     <div id="ovelse-liste"></div>
     <div id="skjema-vert"></div>
