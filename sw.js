@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'treningsjournal-v55';
+const CACHE = 'treningsjournal-v56';
 
 const ASSETS = [
   './',
@@ -16,6 +16,7 @@ const ASSETS = [
   'js/db.js',
   'js/store.js',
   'js/content.js',
+  'js/exercise-filters.js',
   'js/api.js',
   'js/sync.js',
   'js/stats.js',

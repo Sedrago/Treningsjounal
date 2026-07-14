@@ -159,62 +159,26 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
 .startpakke-hint { margin: -4px 0 12px; padding: 0 4px; }
 
 .ovelse-filtre { margin-bottom: 16px; max-width: 100%; }
-.filter-gruppe { margin-bottom: 12px; }
-.filter-gruppe-label {
-  margin: 0 0 6px;
+.ovelse-filtre--rad {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
+  gap: 10px;
+}
+.filter-felt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.filter-felt-label {
+  margin: 0;
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--tekst-dus);
 }
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-width: 100%;
-}
-.filter-chip {
-  flex: 0 1 auto;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--kant);
-  border-radius: 999px;
-  background: var(--flate);
-  color: var(--tekst-dus);
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.filter-chip.aktiv {
-  background: var(--aksent);
-  border-color: var(--aksent);
-  color: var(--aksent-tekst);
-}
-.ovelse-filter-mer {
-  margin-top: 4px;
-  border-top: 1px solid var(--kant);
-  padding-top: 8px;
-}
-.ovelse-filter-mer summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.92rem;
-  color: var(--tekst-dus);
-  list-style: none;
-  padding: 6px 0;
-}
-.ovelse-filter-mer summary::-webkit-details-marker { display: none; }
-.ovelse-filter-mer summary::before {
-  content: '›';
-  display: inline-block;
-  margin-right: 6px;
-  transition: transform 0.15s ease;
-}
-.ovelse-filter-mer[open] summary::before { transform: rotate(90deg); }
-.ovelse-filter-mer-innhold { padding-top: 4px; }
+.filter-select { width: 100%; margin: 0; }
 
 .plan-bib-seksjon { margin-top: 8px; }
 .plan-bib-seksjon summary.plan-bib-toggle {

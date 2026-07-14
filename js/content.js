@@ -233,11 +233,13 @@ export function searchCatalog(query, { categoryId = null } = {}) {
   return filterCatalog({ categoryId, query });
 }
 
-/** Utstyr og muskelgrupper som finnes i katalogen (for filterchips). */
-export function getCatalogFilterOptions() {
+/** Utstyr og muskelgrupper som finnes i katalogen (for filter-dropdowns). */
+export function getCatalogFilterOptions({ categoryId = null } = {}) {
+  let entries = getAllCatalogEntries();
+  if (categoryId) entries = entries.filter((e) => e.category === categoryId);
   const equipment = new Set();
   const muscles = new Set();
-  for (const entry of getAllCatalogEntries()) {
+  for (const entry of entries) {
     equipment.add(entry.equipment || '');
     for (const muscle of entry.primaryMuscles || []) muscles.add(muscle);
   }

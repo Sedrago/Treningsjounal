@@ -3,7 +3,10 @@
  */
 
 import * as store from '../store.js';
-import { initContent, getCatalogByCategory, getCatalogEntry, getDescription } from '../content.js';
+import { initContent, getCatalogByCategory, getCatalogEntry, getDescription, filterCatalog, getCatalogFilterOptions } from '../content.js';
+import {
+  renderExerciseFilterSelects, bindExerciseFilterSelects, matchesUserExerciseFilter,
+} from '../exercise-filters.js';
 import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { mountSetLogger, completedSetsHtml, bindCompletedSetsList } from '../session-log.js';
@@ -602,8 +605,34 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
   const mine = await store.getExercisesByCategory(categoryId);
   const mineById = new Map(mine.map((e) => [e.id, e]));
   const catalogRest = catalog.filter((c) => !activeCatalogIds.has(c.id));
+  const filterOptions = getCatalogFilterOptions({ categoryId });
 
-  const mineRows = mine.map((e) => `
+  let filters = { utstyr: '', muskel: '' };
+  let searchQuery = '';
+
+  function currentFilters() {
+    return { ...filters, q: searchQuery };
+  }
+
+  function filteredMine() {
+    return mine.filter((e) => matchesUserExerciseFilter(e, currentFilters()));
+  }
+
+  function filteredCatalog() {
+    return filterCatalog({
+      categoryId,
+      equipment: filters.utstyr || null,
+      muscle: filters.muskel || null,
+      query: searchQuery,
+    }).filter((c) => !activeCatalogIds.has(c.id));
+  }
+
+  function renderMineRows(list) {
+    if (!list.length) {
+      if (!mine.length) return '<p class="dus liten">Ingen aktive øvelser i kategorien ennå.</p>';
+      return '<p class="dus liten">Ingen øvelser matcher filteret.</p>';
+    }
+    return list.map((e) => `
     <article class="plan-bib-rad plan-mine-rad" data-id="${e.id}">
       <div class="plan-bib-topp">
         <h3 class="plan-bib-navn">${esc(e.name)}${inPlan.has(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
@@ -614,8 +643,14 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
       </div>
       ${descriptionBlock(exercisePickerDescription(e), 120)}
     </article>`).join('');
+  }
 
-  const catalogRows = catalogRest.map((c) => `
+  function renderCatalogRows(list) {
+    if (!list.length) {
+      if (!catalogRest.length) return '<p class="dus liten">Alle katalogøvelser er allerede lagt til.</p>';
+      return '<p class="dus liten">Ingen øvelser matcher filteret.</p>';
+    }
+    return list.map((c) => `
     <article class="plan-bib-rad" data-id="${esc(c.id)}" data-catalog="1">
       <div class="plan-bib-topp">
         <h3 class="plan-bib-navn">${esc(c.name)}</h3>
@@ -623,6 +658,7 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
       </div>
       ${descriptionBlock(c.description, 120)}
     </article>`).join('');
+  }
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -631,52 +667,97 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
         <h2 class="kategori-tittel">${categoryIconHtml(category)} ${esc(category.name)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      ${mineRows ? `<p class="felt-navn plan-bib-tittel">Mine øvelser</p>${mineRows}` : '<p class="dus liten">Ingen aktive øvelser i kategorien ennå.</p>'}
-      ${catalogRows ? `
-      <details class="plan-bib-seksjon">
-        <summary class="plan-bib-tittel plan-bib-toggle">Fra katalogen <span class="dus liten">(${catalogRest.length})</span></summary>
-        ${catalogRows}
-      </details>` : ''}
+      <input type="search" class="inndata sok" id="picker-sok" placeholder="Søk øvelser …" aria-label="Søk øvelser">
+      <div id="picker-filtre">
+        ${renderExerciseFilterSelects({ filters, filterOptions, showCategory: false })}
+      </div>
+      <p class="felt-navn plan-bib-tittel">Mine øvelser</p>
+      <div id="picker-mine">${renderMineRows(filteredMine())}</div>
+      <details class="plan-bib-seksjon" id="picker-katalog">
+        <summary class="plan-bib-tittel plan-bib-toggle">Fra katalogen <span class="dus liten" id="picker-katalog-antall">(${catalogRest.length})</span></summary>
+        <div id="picker-katalog-liste">${renderCatalogRows(filteredCatalog())}</div>
+      </details>
       <form class="ny-ovelse-skjema">
         <input type="text" class="inndata" name="navn" placeholder="Ny egen øvelse …" aria-label="Navn på ny øvelse">
         <button type="submit" class="knapp sekundaer">Legg til</button>
       </form>
     </div>`;
 
+  const filterRoot = host.querySelector('#picker-filtre');
+  const mineEl = host.querySelector('#picker-mine');
+  const catalogListEl = host.querySelector('#picker-katalog-liste');
+  const catalogCountEl = host.querySelector('#picker-katalog-antall');
+  const catalogDetails = host.querySelector('#picker-katalog');
+  const searchEl = host.querySelector('#picker-sok');
+
+  function redrawLists() {
+    const catalogOpen = catalogDetails.open;
+    const filtered = filteredCatalog();
+    mineEl.innerHTML = renderMineRows(filteredMine());
+    catalogListEl.innerHTML = renderCatalogRows(filtered);
+    catalogCountEl.textContent = `(${filtered.length})`;
+    catalogDetails.open = catalogOpen;
+    bindPickerEvents();
+    bindDescriptionToggles(host, (id) => {
+      const entry = getCatalogEntry(id);
+      if (entry?.description) return entry.description;
+      const ex = mineById.get(id);
+      return ex ? exercisePickerDescription(ex) : '';
+    });
+  }
+
+  function bindPickerEvents() {
+    host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        const row = btn.closest('[data-catalog]');
+        if (row) {
+          const catalogEntry = getCatalogEntry(btn.dataset.id);
+          if (!catalogEntry) return;
+          const ex = await store.addExerciseFromCatalog(catalogEntry.id, catalogEntry);
+          host.innerHTML = '';
+          onPick(ex);
+          return;
+        }
+        const ex = await store.getExercise(btn.dataset.id);
+        if (!ex) return;
+        host.innerHTML = '';
+        onPick(ex);
+      });
+    });
+
+    host.querySelectorAll('.plan-rediger').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ex = await store.getExercise(btn.dataset.id);
+        if (!ex) return;
+        openForm(host, ex, () => onEdited());
+      });
+    });
+  }
+
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+
+  bindExerciseFilterSelects(filterRoot, (next) => {
+    filters = next;
+    redrawLists();
+  });
+
+  let searchTimer;
+  searchEl.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      searchQuery = searchEl.value.trim();
+      redrawLists();
+    }, 300);
+  });
+
+  bindPickerEvents();
   bindDescriptionToggles(host, (id) => {
     const entry = getCatalogEntry(id);
     if (entry?.description) return entry.description;
     const ex = mineById.get(id);
     return ex ? exercisePickerDescription(ex) : '';
-  });
-
-  host.querySelectorAll('.plan-bib-bruk').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (btn.disabled) return;
-      const row = btn.closest('[data-catalog]');
-      if (row) {
-        const catalogEntry = getCatalogEntry(btn.dataset.id);
-        if (!catalogEntry) return;
-        const ex = await store.addExerciseFromCatalog(catalogEntry.id, catalogEntry);
-        host.innerHTML = '';
-        onPick(ex);
-        return;
-      }
-      const ex = await store.getExercise(btn.dataset.id);
-      if (!ex) return;
-      host.innerHTML = '';
-      onPick(ex);
-    });
-  });
-
-  host.querySelectorAll('.plan-rediger').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const ex = await store.getExercise(btn.dataset.id);
-      if (!ex) return;
-      openForm(host, ex, () => onEdited());
-    });
   });
 
   host.querySelector('.ny-ovelse-skjema').addEventListener('submit', async (e) => {
