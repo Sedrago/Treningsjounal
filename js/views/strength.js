@@ -632,7 +632,11 @@ async function openExercisePicker(host, categoryId, planItems, onPick, onEdited)
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
       ${mineRows ? `<p class="felt-navn plan-bib-tittel">Mine øvelser</p>${mineRows}` : '<p class="dus liten">Ingen aktive øvelser i kategorien ennå.</p>'}
-      ${catalogRows ? `<p class="felt-navn plan-bib-tittel">Fra katalogen</p>${catalogRows}` : ''}
+      ${catalogRows ? `
+      <details class="plan-bib-seksjon">
+        <summary class="plan-bib-tittel plan-bib-toggle">Fra katalogen <span class="dus liten">(${catalogRest.length})</span></summary>
+        ${catalogRows}
+      </details>` : ''}
       <form class="ny-ovelse-skjema">
         <input type="text" class="inndata" name="navn" placeholder="Ny egen øvelse …" aria-label="Navn på ny øvelse">
         <button type="submit" class="knapp sekundaer">Legg til</button>

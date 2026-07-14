@@ -4,8 +4,8 @@
 
 import * as store from '../store.js';
 import {
-  initContent, getCatalogByCategory, getCatalogEntry, searchCatalog, isContentLoaded,
-  getStarterPackEntries,
+  initContent, getCatalogEntry, filterCatalog, isContentLoaded,
+  getStarterPackEntries, getCatalogFilterOptions, equipmentLabel, muscleLabel,
 } from '../content.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { esc, toast, categoryIconHtml } from '../utils.js';
@@ -19,6 +19,32 @@ function goalSummary(ex) {
 
 function logModeLabel(id) {
   return store.LOG_MODES.find((m) => m.id === id)?.name || id;
+}
+
+function buildOvelserHash(query) {
+  const params = new URLSearchParams();
+  if (query.kat) params.set('kat', query.kat);
+  if (query.utstyr) params.set('utstyr', query.utstyr);
+  if (query.muskel) params.set('muskel', query.muskel);
+  if (query.q) params.set('q', query.q);
+  const qs = params.toString();
+  return `#/ovelser${qs ? `?${qs}` : ''}`;
+}
+
+function renderFilterChips({ label, ariaLabel, param, active, options, allLabel = 'Alle' }) {
+  const chips = [
+    `<button type="button" class="filter-chip ${!active ? 'aktiv' : ''}" data-filter-param="${param}" data-filter-value="">${allLabel}</button>`,
+    ...options.map((opt) => {
+      const value = typeof opt === 'string' ? opt : opt.value;
+      const text = typeof opt === 'string' ? opt : opt.label;
+      return `<button type="button" class="filter-chip ${active === value ? 'aktiv' : ''}" data-filter-param="${param}" data-filter-value="${esc(value)}">${esc(text)}</button>`;
+    }),
+  ].join('');
+  return `
+    <div class="filter-gruppe">
+      <p class="filter-gruppe-label">${esc(label)}</p>
+      <div class="filter-chips" role="group" aria-label="${esc(ariaLabel)}">${chips}</div>
+    </div>`;
 }
 
 function renderCatalogRow(item, userEx) {
@@ -51,19 +77,18 @@ export async function render(container, params, query = {}) {
   }
 
   const filterCat = query.kat || params[0] || '';
+  const filterUtstyr = query.utstyr || '';
+  const filterMuskel = query.muskel || '';
   const search = query.q || '';
+  const filterOptions = getCatalogFilterOptions();
   const userByCatalog = await store.getUserExercisesByCatalogId();
   const allUser = await store.getExercises({ includeInactive: true });
   const catalogIds = new Set(
-    store.KATEGORIER.flatMap((k) => getCatalogByCategory(k.id).map((c) => c.id)),
+    store.KATEGORIER.flatMap((k) => filterCatalog({ categoryId: k.id }).map((c) => c.id)),
   );
   const customExercises = allUser.filter((e) => !e.catalogId || !catalogIds.has(e.catalogId));
   const starterEntries = getStarterPackEntries();
   const missingStarter = starterEntries.filter((e) => !userByCatalog.has(e.id)).length;
-
-  const categories = filterCat
-    ? store.KATEGORIER.filter((k) => k.id === filterCat)
-    : store.KATEGORIER;
 
   container.innerHTML = `
     <header class="side-topp">
@@ -72,10 +97,33 @@ export async function render(container, params, query = {}) {
     </header>
     <input type="search" class="inndata sok" id="ovelse-sok" placeholder="Søk i øvelseskatalogen …"
       value="${esc(search)}" aria-label="Søk øvelser">
-    <div class="filter-linje ovelse-filter" role="tablist" aria-label="Kategori">
-      <button type="button" role="tab" aria-selected="${!filterCat}" class="filter-knapp ${!filterCat ? 'aktiv' : ''}" data-kat="">Alle</button>
-      ${store.KATEGORIER.map((k) => `
-        <button type="button" role="tab" aria-selected="${k.id === filterCat}" class="filter-knapp ${k.id === filterCat ? 'aktiv' : ''}" data-kat="${k.id}">${esc(k.name)}</button>`).join('')}
+    <div class="ovelse-filtre">
+      ${renderFilterChips({
+    label: 'Kategori',
+    ariaLabel: 'Kategori',
+    param: 'kat',
+    active: filterCat,
+    options: store.KATEGORIER.map((k) => ({ value: k.id, label: k.name })),
+  })}
+      <details class="ovelse-filter-mer"${filterUtstyr || filterMuskel ? ' open' : ''}>
+        <summary>Utstyr og muskelgrupper</summary>
+        <div class="ovelse-filter-mer-innhold">
+          ${renderFilterChips({
+    label: 'Utstyr',
+    ariaLabel: 'Utstyr',
+    param: 'utstyr',
+    active: filterUtstyr,
+    options: filterOptions.equipment.map((id) => ({ value: id, label: equipmentLabel(id) })),
+  })}
+          ${renderFilterChips({
+    label: 'Primær muskel',
+    ariaLabel: 'Primær muskelgruppe',
+    param: 'muskel',
+    active: filterMuskel,
+    options: filterOptions.muscles.map((id) => ({ value: id, label: muscleLabel(id) })),
+  })}
+        </div>
+      </details>
     </div>
     <p class="dus bib-intro">Velg øvelser du vil bruke i programmet. Teknikk er på norsk; navn er på engelsk.</p>
     ${missingStarter > 0 ? `
@@ -94,12 +142,34 @@ export async function render(container, params, query = {}) {
   const listEl = container.querySelector('#ovelse-liste');
   const host = container.querySelector('#skjema-vert');
 
+  function currentQuery() {
+    return {
+      kat: filterCat,
+      utstyr: filterUtstyr,
+      muskel: filterMuskel,
+      q: container.querySelector('#ovelse-sok').value.trim(),
+    };
+  }
+
+  function navigateFilters(patch) {
+    location.hash = buildOvelserHash({ ...currentQuery(), ...patch });
+  }
+
   function draw() {
     const q = container.querySelector('#ovelse-sok').value.trim();
+    const baseFilter = {
+      equipment: filterUtstyr || null,
+      muscle: filterMuskel || null,
+      query: q,
+    };
     let html = '';
 
+    const categories = filterCat
+      ? store.KATEGORIER.filter((k) => k.id === filterCat)
+      : store.KATEGORIER;
+
     for (const k of categories) {
-      const catItems = q ? searchCatalog(q, { categoryId: k.id }) : getCatalogByCategory(k.id);
+      const catItems = filterCatalog({ ...baseFilter, categoryId: k.id });
       if (!catItems.length) continue;
       html += `
         <section class="ovelse-kategori-seksjon">
@@ -133,7 +203,7 @@ export async function render(container, params, query = {}) {
         if (!entry) return;
         await store.addExerciseFromCatalog(entry.id, entry);
         toast(`${entry.name} lagt til`, 'suksess');
-        render(container, params, { ...query, q: container.querySelector('#ovelse-sok').value, kat: filterCat });
+        render(container, params, currentQuery());
       });
     });
 
@@ -144,7 +214,7 @@ export async function render(container, params, query = {}) {
         const nextActive = ex.active === false;
         await store.saveExercise({ ...ex, active: nextActive });
         toast(nextActive ? 'Øvelse aktivert' : 'Øvelse deaktivert', 'suksess');
-        render(container, params, { ...query, q: container.querySelector('#ovelse-sok').value, kat: filterCat });
+        render(container, params, currentQuery());
       });
     });
 
@@ -165,14 +235,11 @@ export async function render(container, params, query = {}) {
 
   draw();
 
-  container.querySelectorAll('.ovelse-filter .filter-knapp').forEach((btn) => {
+  container.querySelectorAll('[data-filter-param]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const kat = btn.dataset.kat;
-      const q = container.querySelector('#ovelse-sok').value;
-      const params = new URLSearchParams();
-      if (kat) params.set('kat', kat);
-      if (q) params.set('q', q);
-      location.hash = `#/ovelser${params.toString() ? `?${params}` : ''}`;
+      const param = btn.dataset.filterParam;
+      const value = btn.dataset.filterValue;
+      navigateFilters({ [param]: value, q: container.querySelector('#ovelse-sok').value.trim() });
     });
   });
 

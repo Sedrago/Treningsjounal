@@ -143,6 +143,7 @@ function main() {
       category,
       description,
       equipment: ex.equipment || '',
+      primaryMuscles: Array.isArray(ex.primaryMuscles) ? ex.primaryMuscles : [],
       level: ex.level || '',
       ...(starterSet.has(id) ? { starter: true } : {}),
     };
@@ -159,7 +160,7 @@ function main() {
 
   const starterPack = STARTER_PACK_IDS.filter((id) => entries[id]);
 
-  const out = { version: 6, starterPack, entries };
+  const out = { version: 7, starterPack, entries };
   fs.writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`);
 
   console.log(`Ferdig: ${Object.keys(entries).length} øvelser (${skipped} hoppet over), startpakke: ${starterPack.length}`);

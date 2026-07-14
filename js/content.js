@@ -8,7 +8,53 @@
 import * as db from './db.js';
 
 /** Laveste støttede versjon (under dette avvises pakken). */
-const MIN_CONTENT_VERSION = 6;
+const MIN_CONTENT_VERSION = 7;
+
+/** Norske etiketter for utstyr i katalogen. */
+export const EQUIPMENT_LABELS = {
+  barbell: 'Stang',
+  dumbbell: 'Manual',
+  'body only': 'Kroppsvekt',
+  cable: 'Kabler',
+  machine: 'Maskin',
+  kettlebells: 'Kettlebells',
+  bands: 'Strikkbånd',
+  other: 'Annet',
+  'medicine ball': 'Medisinball',
+  'exercise ball': 'Gymball',
+  'foam roll': 'Foam roller',
+  'e-z curl bar': 'EZ-stang',
+};
+
+/** Norske etiketter for primære muskelgrupper. */
+export const MUSCLE_LABELS = {
+  quadriceps: 'Quadriceps',
+  shoulders: 'Skuldre',
+  abdominals: 'Mage',
+  chest: 'Bryst',
+  hamstrings: 'Hamstrings',
+  triceps: 'Triceps',
+  biceps: 'Biceps',
+  lats: 'Latissimus',
+  'middle back': 'Midtre rygg',
+  calves: 'Legger',
+  'lower back': 'Korsrygg',
+  forearms: 'Underarmer',
+  glutes: 'Setemuskler',
+  traps: 'Trapez',
+  adductors: 'Adduktorer',
+  neck: 'Nakke',
+  abductors: 'Abduktorer',
+};
+
+export function equipmentLabel(id) {
+  if (!id) return 'Uspesifisert';
+  return EQUIPMENT_LABELS[id] || id;
+}
+
+export function muscleLabel(id) {
+  return MUSCLE_LABELS[id] || id;
+}
 
 /** Minst tid mellom bakgrunnssjekk når appen hentes frem (1 time). */
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -132,6 +178,8 @@ function entryToCatalog(id, raw) {
     name: raw.name || id,
     category: raw.category || '',
     description: raw.description || '',
+    equipment: raw.equipment || '',
+    primaryMuscles: Array.isArray(raw.primaryMuscles) ? raw.primaryMuscles : [],
     starter: Boolean(raw.starter),
   };
 }
@@ -164,13 +212,39 @@ export function getAllCatalogEntries() {
     .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }
 
-/** Søk i katalogen på navn. */
-export function searchCatalog(query, { categoryId = null } = {}) {
+/** Filtrer katalogen på kategori, utstyr, muskel og navn. */
+export function filterCatalog({
+  categoryId = null,
+  equipment = null,
+  muscle = null,
+  query = '',
+} = {}) {
   const q = query.trim().toLowerCase();
   let list = getAllCatalogEntries();
   if (categoryId) list = list.filter((e) => e.category === categoryId);
-  if (!q) return list;
-  return list.filter((e) => e.name.toLowerCase().includes(q));
+  if (equipment) list = list.filter((e) => (e.equipment || '') === equipment);
+  if (muscle) list = list.filter((e) => (e.primaryMuscles || []).includes(muscle));
+  if (q) list = list.filter((e) => e.name.toLowerCase().includes(q));
+  return list;
+}
+
+/** Søk i katalogen på navn. */
+export function searchCatalog(query, { categoryId = null } = {}) {
+  return filterCatalog({ categoryId, query });
+}
+
+/** Utstyr og muskelgrupper som finnes i katalogen (for filterchips). */
+export function getCatalogFilterOptions() {
+  const equipment = new Set();
+  const muscles = new Set();
+  for (const entry of getAllCatalogEntries()) {
+    equipment.add(entry.equipment || '');
+    for (const muscle of entry.primaryMuscles || []) muscles.add(muscle);
+  }
+  return {
+    equipment: [...equipment].sort((a, b) => equipmentLabel(a).localeCompare(equipmentLabel(b), 'no')),
+    muscles: [...muscles].sort((a, b) => muscleLabel(a).localeCompare(muscleLabel(b), 'no')),
+  };
 }
 
 /** Alle katalogøvelser i én kategori, sortert på navn. */

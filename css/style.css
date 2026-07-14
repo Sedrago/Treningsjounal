@@ -158,6 +158,81 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
 .ovelse-kategori-seksjon .kort-tittel { margin-bottom: 8px; }
 .startpakke-hint { margin: -4px 0 12px; padding: 0 4px; }
 
+.ovelse-filtre { margin-bottom: 16px; max-width: 100%; }
+.filter-gruppe { margin-bottom: 12px; }
+.filter-gruppe-label {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tekst-dus);
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+.filter-chip {
+  flex: 0 1 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--kant);
+  border-radius: 999px;
+  background: var(--flate);
+  color: var(--tekst-dus);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-chip.aktiv {
+  background: var(--aksent);
+  border-color: var(--aksent);
+  color: var(--aksent-tekst);
+}
+.ovelse-filter-mer {
+  margin-top: 4px;
+  border-top: 1px solid var(--kant);
+  padding-top: 8px;
+}
+.ovelse-filter-mer summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--tekst-dus);
+  list-style: none;
+  padding: 6px 0;
+}
+.ovelse-filter-mer summary::-webkit-details-marker { display: none; }
+.ovelse-filter-mer summary::before {
+  content: '›';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 0.15s ease;
+}
+.ovelse-filter-mer[open] summary::before { transform: rotate(90deg); }
+.ovelse-filter-mer-innhold { padding-top: 4px; }
+
+.plan-bib-seksjon { margin-top: 8px; }
+.plan-bib-seksjon summary.plan-bib-toggle {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.plan-bib-seksjon summary.plan-bib-toggle::-webkit-details-marker { display: none; }
+.plan-bib-seksjon summary.plan-bib-toggle::before {
+  content: '›';
+  display: inline-block;
+  margin-right: 2px;
+  transition: transform 0.15s ease;
+}
+.plan-bib-seksjon[open] summary.plan-bib-toggle::before { transform: rotate(90deg); }
+
 .bib-intro { margin: 0 0 16px; line-height: 1.45; }
 .bib-kategori { display: block; text-decoration: none; color: inherit; margin-bottom: 10px; }
 .bib-kategori:hover { text-decoration: none; }
