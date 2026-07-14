@@ -156,7 +156,7 @@ function resolveActive(items, setsByEx, exMap) {
 export async function homeStrengthLabel() {
   const enriched = await store.getEnrichedSets();
   const today = todayStr();
-  const plan = await store.getActivePlan();
+  const plan = await store.getTodayWorkoutPlan();
   const items = plan?.items || [];
   const todaySets = enriched.filter((s) => s.date === today);
   if (!items.length && !todaySets.length) {
@@ -179,7 +179,7 @@ export async function render(container) {
   const todaySets = enriched.filter((s) => s.date === today);
   const exercises = await store.getExercises({ includeInactive: true });
   const exMap = new Map(exercises.map((e) => [e.id, e]));
-  const plan = await store.getActivePlan();
+  const plan = await store.getTodayWorkoutPlan();
   const items = plan?.items || [];
   const stats = categoryStats(enriched);
   const workouts = await store.getWorkouts();
@@ -275,7 +275,7 @@ export async function render(container) {
       <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
       <div>
         <h1>Styrketrening</h1>
-        <p class="dus">${formatDateLong(today)} · ${esc(statusLine(plan, items, todaySets))}</p>
+        <p class="dus">${formatDateLong(today)}${plan?.name ? ` · ${esc(plan.name)}` : ''} · ${esc(statusLine(plan, items, todaySets))}</p>
       </div>
     </header>
 
@@ -335,13 +335,12 @@ export async function render(container) {
   });
 
   async function updateItems(newItems) {
-    if (plan && !newItems.length) {
-      await store.deletePlan(plan.id);
-    } else if (plan) {
-      await store.savePlan({ ...plan, items: newItems, date: today });
-    } else if (newItems.length) {
-      await store.savePlan({ items: newItems, status: 'aktiv', date: today });
-    }
+    await store.savePlanForDate(today, {
+      id: plan?.id,
+      items: newItems,
+      name: plan?.name || '',
+      sourceTemplateId: plan?.sourceTemplateId || '',
+    });
     render(container);
   }
 
@@ -386,7 +385,7 @@ export async function render(container) {
         if (!tpl?.items?.length) return;
         if (replace && items.length && !confirm('Erstatt nåværende program med malen?')) return;
         if (replace) {
-          await store.loadTemplateIntoActive(templateId);
+          await store.loadTemplateIntoDate(templateId, today);
         } else {
           const existing = new Set(items.map((it) => it.exerciseId));
           const merged = [...items.map((it) => ({ ...it }))];
@@ -398,9 +397,11 @@ export async function render(container) {
         toast(`«${tpl.name || 'Program'}» lastet inn`, 'suksess');
       });
     } else if (action === 'lagre-mal') {
-      openSaveTemplateSheet(host, items, async (name) => {
-        await store.saveAsTemplate(name, items.map((it) => ({ ...it })));
-        toast(`Programmet «${name}» er lagret`, 'suksess');
+      openSaveTemplateSheet(host, items, today, async ({ name, scheduleDate }) => {
+        await store.saveAsTemplate(name, items.map((it) => ({ ...it })), { scheduleDate });
+        toast(scheduleDate
+          ? `«${name}» lagret og lagt på ${formatDateShort(scheduleDate)}`
+          : `Programmet «${name}» er lagret`, 'suksess');
       });
     } else if (action === 'tom') {
       if (!confirm('Tømme hele programmet? Loggede sett i dag beholdes.')) return;
@@ -854,7 +855,7 @@ async function openTemplatesSheet(host, exMap, onSelect) {
   });
 }
 
-function openSaveTemplateSheet(host, items, onSave) {
+function openSaveTemplateSheet(host, items, today, onSave) {
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
     <div class="ark" role="dialog" aria-label="Lagre program">
@@ -862,20 +863,38 @@ function openSaveTemplateSheet(host, items, onSave) {
         <h2>Lagre som program</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      <p class="dus liten">${items.length} øvelse${items.length === 1 ? '' : 'r'} lagres som mal du kan gjenbruke senere.</p>
+      <p class="dus liten">${items.length} øvelse${items.length === 1 ? '' : 'r'} lagres i biblioteket ditt som gjenbrukbar mal.</p>
       <form id="lagre-mal-skjema">
         <label class="felt-navn" for="mal-navn">Navn</label>
         <input type="text" class="inndata" id="mal-navn" placeholder="F.eks. Uke A" required autofocus>
+
+        <label class="bryter-rad">
+          <input type="checkbox" id="mal-planlegg">
+          <span>Legg også på kalender</span>
+        </label>
+
+        <div id="mal-dato-wrap" class="skjult">
+          <label class="felt-navn" for="mal-dato">Dato</label>
+          <input type="date" class="inndata" id="mal-dato" value="${today}">
+        </div>
+
         <button type="submit" class="knapp primaer bred">Lagre program</button>
       </form>
     </div>`;
+
+  const planleggCb = host.querySelector('#mal-planlegg');
+  const datoWrap = host.querySelector('#mal-dato-wrap');
+  planleggCb.addEventListener('change', () => {
+    datoWrap.classList.toggle('skjult', !planleggCb.checked);
+  });
 
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
   host.querySelector('#lagre-mal-skjema').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = host.querySelector('#mal-navn').value.trim();
     if (!name) return;
+    const scheduleDate = planleggCb.checked ? host.querySelector('#mal-dato').value : null;
     host.innerHTML = '';
-    onSave(name);
+    onSave({ name, scheduleDate });
   });
 }

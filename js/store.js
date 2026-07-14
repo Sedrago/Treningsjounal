@@ -618,22 +618,136 @@ function parsePlanItems(plan) {
   return { ...plan, items: Array.isArray(items) ? items : [] };
 }
 
-/** Aktiv økt (status aktiv), foretrekker dagens dato. */
-export async function getActivePlan() {
+function planRecord(plan, existing = null) {
+  const status = plan.status || 'planlagt';
+  return {
+    id: plan.id || uuid(),
+    date: plan.date || todayStr(),
+    name: plan.name ?? existing?.name ?? '',
+    items: JSON.stringify(plan.items ?? (existing ? parsePlanItems(existing).items : [])),
+    status,
+    sourceTemplateId: plan.sourceTemplateId ?? existing?.sourceTemplateId ?? '',
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+}
+
+/** Én gangs migrering: aktiv → planlagt, dedupliser per dato. */
+export async function migratePlanModelOnce() {
+  if (await db.getMeta('planModelV2')) return;
+
   const all = await db.getAll('plans');
   const today = todayStr();
-  const active = all
-    .filter((p) => !p.deleted && p.status === 'aktiv')
-    .sort((a, b) => {
-      if (a.date === today && b.date !== today) return -1;
-      if (b.date === today && a.date !== today) return 1;
-      return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+
+  for (const p of all) {
+    if (p.deleted || p.status === 'mal' || p.status === 'fullfort') continue;
+    if (p.status === 'aktiv') {
+      const next = { ...p, status: 'planlagt', date: p.date || today, updatedAt: nowIso() };
+      await db.put('plans', next);
+      await queueOp('plan', 'upsert', next);
+    }
+  }
+
+  const refreshed = await db.getAll('plans');
+  const byDate = new Map();
+  for (const p of refreshed) {
+    if (p.deleted || p.status !== 'planlagt') continue;
+    const prev = byDate.get(p.date);
+    if (!prev || (p.updatedAt || '') > (prev.updatedAt || '')) byDate.set(p.date, p);
+  }
+  for (const p of refreshed) {
+    if (p.deleted || p.status !== 'planlagt') continue;
+    const keeper = byDate.get(p.date);
+    if (keeper && keeper.id !== p.id) {
+      p.deleted = true;
+      p.updatedAt = nowIso();
+      await db.put('plans', p);
+      await queueOp('plan', 'upsert', p);
+    }
+  }
+
+  await db.setMeta('planModelV2', '1');
+}
+
+/** Planlagt program for én dato (eller null). */
+export async function getScheduledPlan(date) {
+  await migratePlanModelOnce();
+  const all = await db.getAll('plans');
+  const matches = all
+    .filter((p) => !p.deleted && p.status === 'planlagt' && p.date === date)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  return matches.length ? parsePlanItems(matches[0]) : null;
+}
+
+/** Planlagte programmer i et datointervall (inklusive). */
+export async function getScheduledPlans({ from, to }) {
+  await migratePlanModelOnce();
+  const all = await db.getAll('plans');
+  return all
+    .filter((p) => !p.deleted && p.status === 'planlagt' && p.date >= from && p.date <= to)
+    .map(parsePlanItems)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Program for en dato – primært planlagt (default i dag). */
+export async function getWorkoutPlanForDate(date = todayStr()) {
+  const scheduled = await getScheduledPlan(date);
+  if (scheduled) return scheduled;
+
+  const all = await db.getAll('plans');
+  const legacy = all
+    .filter((p) => !p.deleted && p.status === 'aktiv' && p.date === date)
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  return legacy.length ? parsePlanItems(legacy[0]) : null;
+}
+
+/** @deprecated – bruk getWorkoutPlanForDate(todayStr()). */
+export async function getActivePlan() {
+  return getWorkoutPlanForDate(todayStr());
+}
+
+/** Dagens program på Styrketrening-siden. */
+export async function getTodayWorkoutPlan() {
+  return getWorkoutPlanForDate(todayStr());
+}
+
+/** Lagrer / oppdaterer planlagt program for en dato. Sletter posten hvis items er tom. */
+export async function savePlanForDate(date, { items, name, id, sourceTemplateId } = {}) {
+  const existing = id
+    ? parsePlanItems(await db.get('plans', id))
+    : await getScheduledPlan(date);
+
+  if (items && !items.length) {
+    if (existing?.id) await deletePlan(existing.id);
+    return null;
+  }
+
+  if (existing?.id) {
+    return savePlan({
+      ...existing,
+      items: items ?? existing.items,
+      name: name ?? existing.name,
+      sourceTemplateId: sourceTemplateId ?? existing.sourceTemplateId,
+      date,
+      status: 'planlagt',
     });
-  return active.length ? parsePlanItems(active[0]) : null;
+  }
+
+  if (!items?.length) return null;
+
+  return savePlan({
+    id,
+    items,
+    name: name || '',
+    date,
+    status: 'planlagt',
+    sourceTemplateId: sourceTemplateId || '',
+  });
 }
 
 /** Lagrede programmaler (status mal). */
 export async function getSavedTemplates() {
+  await migratePlanModelOnce();
   const all = await db.getAll('plans');
   return all
     .filter((p) => !p.deleted && p.status === 'mal')
@@ -643,14 +757,30 @@ export async function getSavedTemplates() {
 
 /**
  * Lagrer plan/mal. items: [{exerciseId, goalSets}] i ønsket rekkefølge.
- * Ny aktiv plan avslutter andre aktive – maler påvirkes ikke.
+ * planlagt: maks én per dato. mal: bibliotek uten kalenderbinding.
  */
 export async function savePlan(plan) {
-  const status = plan.status || 'aktiv';
-  if (!plan.id && status === 'aktiv') {
+  await migratePlanModelOnce();
+  const status = plan.status || 'planlagt';
+  const existing = plan.id ? await db.get('plans', plan.id) : null;
+  const record = planRecord(plan, existing);
+
+  if (status === 'planlagt') {
     const all = await db.getAll('plans');
     for (const p of all) {
-      if (!p.deleted && p.status === 'aktiv') {
+      if (!p.deleted && p.status === 'planlagt' && p.date === record.date && p.id !== record.id) {
+        p.deleted = true;
+        p.updatedAt = nowIso();
+        await db.put('plans', p);
+        await queueOp('plan', 'upsert', p);
+      }
+    }
+  }
+
+  if (status === 'aktiv') {
+    const all = await db.getAll('plans');
+    for (const p of all) {
+      if (!p.deleted && p.status === 'aktiv' && p.id !== record.id) {
         p.status = 'fullfort';
         p.updatedAt = nowIso();
         await db.put('plans', p);
@@ -658,35 +788,56 @@ export async function savePlan(plan) {
       }
     }
   }
-  const record = {
-    id: plan.id || uuid(),
-    date: plan.date || todayStr(),
-    name: plan.name || '',
-    items: JSON.stringify(plan.items || []),
-    status,
-    deleted: false,
-    updatedAt: nowIso(),
-  };
+
   await db.put('plans', record);
   await queueOp('plan', 'upsert', record);
   return parsePlanItems(record);
 }
 
-/** Lagrer nåværende øktliste som navngitt mal. */
-export async function saveAsTemplate(name, items) {
-  return savePlan({ name: name.trim(), items, status: 'mal', date: todayStr() });
+/**
+ * Lagrer nåværende øktliste som navngitt mal.
+ * scheduleDate: valgfri kalenderdato for en planlagt kopi.
+ */
+export async function saveAsTemplate(name, items, { scheduleDate = null } = {}) {
+  const template = await savePlan({
+    name: name.trim(),
+    items: items.map((it) => ({ ...it })),
+    status: 'mal',
+    date: todayStr(),
+    sourceTemplateId: '',
+  });
+  if (scheduleDate) {
+    await schedulePlanFromItems(scheduleDate, items, {
+      name: name.trim(),
+      sourceTemplateId: template.id,
+    });
+  }
+  return template;
 }
 
-/** Erstatter aktiv økt med innhold fra mal. */
-export async function loadTemplateIntoActive(templateId) {
+/** Oppretter eller erstatter planlagt program på dato fra øvelsesliste. */
+export async function schedulePlanFromItems(date, items, { name = '', sourceTemplateId = '' } = {}) {
+  return savePlanForDate(date, {
+    items: items.map((it) => ({ ...it })),
+    name,
+    sourceTemplateId,
+  });
+}
+
+/** Kopier mal inn i program for en dato (default i dag). */
+export async function loadTemplateIntoDate(templateId, date = todayStr()) {
   const raw = await db.get('plans', templateId);
   if (!raw || raw.deleted || raw.status !== 'mal') return null;
-  const items = parsePlanItems(raw).items.map((it) => ({ ...it }));
-  const active = await getActivePlan();
-  if (active) {
-    return savePlan({ ...active, items, date: todayStr() });
-  }
-  return savePlan({ items, status: 'aktiv', date: todayStr() });
+  const tpl = parsePlanItems(raw);
+  return schedulePlanFromItems(date, tpl.items, {
+    name: tpl.name || '',
+    sourceTemplateId: templateId,
+  });
+}
+
+/** @deprecated – bruk loadTemplateIntoDate. */
+export async function loadTemplateIntoActive(templateId) {
+  return loadTemplateIntoDate(templateId, todayStr());
 }
 
 /** Markerer planen som fullført (ved avsluttet økt). */

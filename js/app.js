@@ -108,6 +108,7 @@ function setupSyncBadge() {
 
 async function main() {
   await store.initSettings();
+  await store.migratePlanModelOnce();
   applyTheme();
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
     if (store.getSetting('theme') === 'auto') applyTheme();
