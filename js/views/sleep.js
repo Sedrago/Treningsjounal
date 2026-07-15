@@ -7,8 +7,13 @@ import { sleepSummarySince } from '../stats.js';
 import { mountSleepDurationPicker, mountPillRow } from '../pickers.js';
 import {
   esc, formatDateShort, todayStr, toast, windowStartStr,
-  fmtSleepHours, sleepHoursFromParts,
+  fmtSleepHours, sleepHoursFromParts, splitSleepHours,
 } from '../utils.js';
+
+function fmtSleepAvgPerNight(hours) {
+  const { hours: h, minutes: m } = splitSleepHours(hours);
+  return `${h} t ${m} min/natt`;
+}
 
 export async function render(container) {
   const rows = await store.getSleepEntries();
@@ -23,10 +28,13 @@ export async function render(container) {
 
     <form class="kort" id="sovn-skjema" aria-label="Ny søvnregistrering">
       ${summary ? `
-      <p class="dus liten sovn-oppsummert">
-        Snitt ${fmtSleepHours(summary.avgHours)}/natt siste 7 dager
-        (${summary.nights} netter${summary.avgQuality != null ? ` · kvalitet ${summary.avgQuality}/5` : ''})
-      </p>` : ''}
+      <div class="sovn-oppsummert">
+        <p class="sovn-oppsummert-tittel">Siste 7 netter:</p>
+        <p class="sovn-oppsummert-linje dus liten">
+          Snitt ${fmtSleepAvgPerNight(summary.avgHours)}
+          <span class="sovn-oppsummert-kvalitet">Kvalitet ${summary.avgQuality != null ? summary.avgQuality.toFixed(1) : '–'}/5</span>
+        </p>
+      </div>` : ''}
       <div class="felt">
         <label class="felt-navn" for="sl-dato">Dato = morgenen du våknet.</label>
         <input type="date" class="inndata inndata-dato" id="sl-dato" value="${todayStr()}" required>

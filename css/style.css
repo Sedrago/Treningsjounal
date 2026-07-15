@@ -1422,6 +1422,14 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
 .sovn-oppsummert { margin: 0 0 12px; }
+.sovn-oppsummert-tittel {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tekst-dus);
+}
+.sovn-oppsummert-linje { margin: 0; }
+.sovn-oppsummert-kvalitet { margin-left: 1em; }
 .sovn-varighet-rad {
   display: grid;
   grid-template-columns: 1fr 1fr;
