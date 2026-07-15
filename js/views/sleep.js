@@ -21,16 +21,14 @@ export async function render(container) {
       <h1>Søvn</h1>
     </header>
 
-    ${summary ? `
-    <p class="dus sovn-oppsummert">
-      Snitt ${fmtSleepHours(summary.avgHours)}/natt siste 7 dager
-      (${summary.nights} netter${summary.avgQuality != null ? ` · kvalitet ${summary.avgQuality}/5` : ''})
-    </p>` : ''}
-
     <form class="kort" id="sovn-skjema" aria-label="Ny søvnregistrering">
-      <p class="dus liten">Dato = morgenen du våknet.</p>
+      ${summary ? `
+      <p class="dus liten sovn-oppsummert">
+        Snitt ${fmtSleepHours(summary.avgHours)}/natt siste 7 dager
+        (${summary.nights} netter${summary.avgQuality != null ? ` · kvalitet ${summary.avgQuality}/5` : ''})
+      </p>` : ''}
       <div class="felt">
-        <label class="felt-navn" for="sl-dato">Dato</label>
+        <label class="felt-navn" for="sl-dato">Dato = morgenen du våknet.</label>
         <input type="date" class="inndata inndata-dato" id="sl-dato" value="${todayStr()}" required>
       </div>
       <div id="sovn-varighet"></div>

@@ -1421,7 +1421,7 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   gap: 12px;
 }
 .aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
-.sovn-oppsummert { margin: 0 0 12px; padding: 0 4px; }
+.sovn-oppsummert { margin: 0 0 12px; }
 .sovn-varighet-rad {
   display: grid;
   grid-template-columns: 1fr 1fr;
