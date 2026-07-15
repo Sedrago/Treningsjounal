@@ -1423,12 +1423,46 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
 .sovn-oppsummert { margin: 0 0 12px; padding: 0 4px; }
 .sovn-varighet-rad {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
   margin: 8px 0 12px;
 }
 .sovn-varighet-felt { min-width: 0; }
+
+.sovn-verdi-grid-wrap { min-width: 0; }
+
+.sovn-verdi-rutenett {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.sovn-verdi-kort {
+  min-height: 44px;
+  padding: 6px 4px;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  background: var(--flate-2);
+  color: var(--tekst);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sovn-verdi-kort.valgt {
+  background: var(--aksent);
+  color: var(--aksent-tekst);
+  border-color: var(--aksent-dyp);
+}
+
+.sovn-verdi-kort:active { transform: scale(0.97); }
 
 .sovn-rad {
   display: flex;

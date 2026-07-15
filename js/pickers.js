@@ -495,7 +495,71 @@ export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange
 }
 
 /**
- * Timer og minutter for søvnlogging (horisontale striper).
+ * Rutenettvelger (4×3) – kalender-lignende valg av tall.
+ * @returns {{ getValue: () => number, setValue: (v: number) => void, destroy: () => void }}
+ */
+function mountValueGrid(host, { label, values, value, onChange }) {
+  host.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'sovn-verdi-grid-wrap';
+
+  if (label) {
+    const lbl = document.createElement('p');
+    lbl.className = 'pill-etikett verdi-stripe-etikett';
+    lbl.textContent = label;
+    wrap.appendChild(lbl);
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'sovn-verdi-rutenett';
+  grid.setAttribute('role', 'group');
+  if (label) grid.setAttribute('aria-label', label);
+
+  let current = value;
+
+  function render() {
+    grid.querySelectorAll('.sovn-verdi-kort').forEach((btn) => {
+      const v = Number(btn.dataset.value);
+      const selected = v === current;
+      btn.classList.toggle('valgt', selected);
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+  }
+
+  for (const v of values) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sovn-verdi-kort';
+    btn.dataset.value = String(v);
+    btn.textContent = String(v);
+    btn.setAttribute('aria-pressed', 'false');
+    btn.addEventListener('click', () => {
+      if (v === current) return;
+      current = v;
+      render();
+      onChange(v);
+    });
+    grid.appendChild(btn);
+  }
+
+  wrap.appendChild(grid);
+  host.appendChild(wrap);
+  render();
+
+  return {
+    getValue: () => current,
+    setValue(v) {
+      if (!values.includes(v)) return;
+      current = v;
+      render();
+      onChange(v);
+    },
+    destroy() { host.innerHTML = ''; },
+  };
+}
+
+/**
+ * Timer og minutter for søvnlogging (4×3 rutenett side om side).
  * @returns {{ getValue: () => {hours:number, minutes:number}, destroy: () => void }}
  */
 export function mountSleepDurationPicker(host, { hours = 7, minutes = 30, onChange } = {}) {
@@ -509,36 +573,27 @@ export function mountSleepDurationPicker(host, { hours = 7, minutes = 30, onChan
   wrap.append(hHost, mHost);
   host.appendChild(wrap);
 
-  let h = Math.max(0, Math.min(14, Math.round(Number(hours) || 0)));
+  const hourValues = Array.from({ length: 12 }, (_, i) => i);
+  const minuteValues = Array.from({ length: 12 }, (_, i) => i * 5);
+
+  let h = Math.max(0, Math.min(11, Math.round(Number(hours) || 0)));
   let m = Math.max(0, Math.min(55, Math.round(Number(minutes) || 0)));
   m = Math.round(m / 5) * 5;
 
   const emit = () => onChange?.({ hours: h, minutes: m });
 
-  mountValueStrip(hHost, {
+  mountValueGrid(hHost, {
     label: 'Timer',
+    values: hourValues,
     value: h,
-    centerHint: 7,
-    step: 1,
-    min: 0,
-    max: 14,
-    range: 7,
-    format: (v) => String(Math.round(v)),
     onChange: (v) => { h = v; emit(); },
-    compact: true,
   });
 
-  mountValueStrip(mHost, {
+  mountValueGrid(mHost, {
     label: 'Minutter',
+    values: minuteValues,
     value: m,
-    centerHint: 30,
-    step: 5,
-    min: 0,
-    max: 55,
-    range: 6,
-    format: (v) => String(Math.round(v)),
     onChange: (v) => { m = v; emit(); },
-    compact: true,
   });
 
   return {
