@@ -94,6 +94,8 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--skygge);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .kort-tittel {
@@ -268,6 +270,8 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
 
 .inndata {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: var(--trykk);
   padding: 12px 14px;
   border: 1px solid var(--kant);
@@ -277,6 +281,13 @@ details[open] .teknikk-summary::before { transform: rotate(90deg); }
   font-size: 1.05rem;
   font-family: inherit;
 }
+.inndata-dato {
+  display: block;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.felt { min-width: 0; }
 .inndata::placeholder { color: var(--tekst-dus); opacity: 0.7; }
 textarea.inndata { resize: vertical; min-height: 64px; }
 select.inndata { appearance: none; }

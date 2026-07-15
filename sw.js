@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'treningsjournal-v63';
+const CACHE = 'treningsjournal-v64';
 
 const ASSETS = [
   './',
@@ -94,6 +94,22 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match(cacheKey))
+    );
+    return;
+  }
+
+  // JS/CSS: nett først slik at oppdateringer treffer med én gang.
+  if (/\.(js|css)$/.test(url.pathname)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
