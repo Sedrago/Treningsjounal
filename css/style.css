@@ -1415,6 +1415,41 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   margin: 8px 0 12px;
 }
 .sovn-varighet-felt { min-width: 0; }
+
+.sovn-teller {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 6px;
+}
+
+.sovn-teller-knapp {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  background: var(--flate-2);
+  color: var(--tekst);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sovn-teller-knapp:active:not(:disabled) { background: var(--flate); }
+.sovn-teller-knapp:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.sovn-teller-verdi {
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--aksent);
+  font-variant-numeric: tabular-nums;
+}
 .sovn-rad {
   display: flex;
   align-items: flex-start;

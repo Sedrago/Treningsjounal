@@ -277,13 +277,15 @@ export function mountValueStrip(host, {
   let current = value ?? centerHint ?? min;
 
   function snap(val) {
-    if (step >= 1) return Math.max(min, Math.min(max, Math.round(val)));
+    if (step === 1) return Math.max(min, Math.min(max, Math.round(val)));
     return Math.max(min, Math.min(max, Math.round(val / step) * step));
   }
 
   function buildItems(center) {
-    const lo = Math.max(min, center - range);
-    const hi = Math.min(max, center + range);
+    const c = snap(center);
+    const span = step > 1 ? range * step : range;
+    const lo = Math.max(min, c - span);
+    const hi = Math.min(max, c + span);
     list.innerHTML = '';
     list.style.paddingLeft = `${PAD}px`;
     list.style.paddingRight = `${PAD}px`;
@@ -465,49 +467,72 @@ export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange
 }
 
 /**
- * Timer og minutter for søvnlogging (to horisontale striper).
+ * Timer og minutter for søvnlogging (+/− steppere).
  * @returns {{ getValue: () => {hours:number, minutes:number}, destroy: () => void }}
  */
 export function mountSleepDurationPicker(host, { hours = 7, minutes = 30, onChange } = {}) {
   host.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'sovn-varighet-rad';
-  const hHost = document.createElement('div');
-  hHost.className = 'sovn-varighet-felt';
-  const mHost = document.createElement('div');
-  mHost.className = 'sovn-varighet-felt';
-  wrap.append(hHost, mHost);
-  host.appendChild(wrap);
 
-  let h = hours;
-  let m = minutes;
+  let h = Math.max(0, Math.min(14, Math.round(Number(hours) || 0)));
+  let m = Math.max(0, Math.min(59, Math.round(Number(minutes) || 0)));
   const emit = () => onChange?.({ hours: h, minutes: m });
 
-  mountValueStrip(hHost, {
-    label: 'Timer',
-    value: h,
-    centerHint: 7,
-    step: 1,
+  function mountStepper(parent, label, { get, set, min, max, step = 1 }) {
+    const field = document.createElement('div');
+    field.className = 'sovn-varighet-felt';
+    field.innerHTML = `
+      <p class="pill-etikett verdi-stripe-etikett">${label}</p>
+      <div class="sovn-teller">
+        <button type="button" class="sovn-teller-knapp" data-delta="${-step}" aria-label="${label} mindre">−</button>
+        <span class="sovn-teller-verdi" aria-live="polite"></span>
+        <button type="button" class="sovn-teller-knapp" data-delta="${step}" aria-label="${label} mer">+</button>
+      </div>`;
+
+    const valEl = field.querySelector('.sovn-teller-verdi');
+    const buttons = [...field.querySelectorAll('.sovn-teller-knapp')];
+    const decBtn = buttons.find((b) => Number(b.dataset.delta) < 0);
+    const incBtn = buttons.find((b) => Number(b.dataset.delta) > 0);
+
+    const sync = () => {
+      valEl.textContent = String(get());
+      decBtn.disabled = get() <= min;
+      incBtn.disabled = get() >= max;
+    };
+
+    field.querySelectorAll('.sovn-teller-knapp').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const delta = Number(btn.dataset.delta);
+        const next = Math.max(min, Math.min(max, get() + delta));
+        if (next === get()) return;
+        set(next);
+        sync();
+        emit();
+      });
+    });
+
+    sync();
+    parent.appendChild(field);
+  }
+
+  mountStepper(wrap, 'Timer', {
+    get: () => h,
+    set: (v) => { h = v; },
     min: 0,
     max: 14,
-    range: 8,
-    format: (v) => String(Math.round(v)),
-    onChange: (v) => { h = v; emit(); },
-    compact: true,
+    step: 1,
   });
 
-  mountValueStrip(mHost, {
-    label: 'Minutter',
-    value: m,
-    centerHint: 30,
-    step: 15,
+  mountStepper(wrap, 'Minutter', {
+    get: () => m,
+    set: (v) => { m = v; },
     min: 0,
-    max: 45,
-    range: 4,
-    format: (v) => String(Math.round(v)),
-    onChange: (v) => { m = v; emit(); },
-    compact: true,
+    max: 59,
+    step: 1,
   });
+
+  host.appendChild(wrap);
 
   return {
     getValue: () => ({ hours: h, minutes: m }),
