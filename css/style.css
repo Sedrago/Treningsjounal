@@ -1157,7 +1157,10 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  cursor: grab;
+  touch-action: pan-x;
 }
+.verdi-stripe-trommel:active { cursor: grabbing; }
 .verdi-stripe-kompakt .verdi-stripe-trommel { height: 42px; }
 .verdi-stripe-trommel::-webkit-scrollbar { display: none; }
 
@@ -1420,47 +1423,13 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .aerob-oppsummert { margin: 0 0 12px; padding: 0 4px; }
 .sovn-oppsummert { margin: 0 0 12px; padding: 0 4px; }
 .sovn-varighet-rad {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin: 8px 0 12px;
 }
 .sovn-varighet-felt { min-width: 0; }
 
-.sovn-teller {
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
-  gap: 6px;
-}
-
-.sovn-teller-knapp {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 1px solid var(--kant);
-  border-radius: var(--radius-liten);
-  background: var(--flate-2);
-  color: var(--tekst);
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.sovn-teller-knapp:active:not(:disabled) { background: var(--flate); }
-.sovn-teller-knapp:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.sovn-teller-verdi {
-  text-align: center;
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--aksent);
-  font-variant-numeric: tabular-nums;
-}
 .sovn-rad {
   display: flex;
   align-items: flex-start;

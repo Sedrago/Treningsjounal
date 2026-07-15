@@ -4,34 +4,11 @@
 
 import * as store from '../store.js';
 import { sleepSummarySince } from '../stats.js';
+import { mountSleepDurationPicker } from '../pickers.js';
 import {
   esc, formatDateShort, todayStr, toast, windowStartStr,
   fmtSleepHours, sleepHoursFromParts,
 } from '../utils.js';
-
-function bindStepper(root, { get, set, min, max, step = 1 }) {
-  const valEl = root.querySelector('.sovn-teller-verdi');
-  const decBtn = root.querySelector('[data-delta="-1"]');
-  const incBtn = root.querySelector('[data-delta="1"]');
-
-  const sync = () => {
-    valEl.textContent = String(get());
-    decBtn.disabled = get() <= min;
-    incBtn.disabled = get() >= max;
-  };
-
-  root.querySelectorAll('.sovn-teller-knapp').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const delta = Number(btn.dataset.delta) * step;
-      const next = Math.max(min, Math.min(max, get() + delta));
-      if (next === get()) return;
-      set(next);
-      sync();
-    });
-  });
-
-  sync();
-}
 
 export async function render(container) {
   const rows = await store.getSleepEntries();
@@ -56,24 +33,7 @@ export async function render(container) {
         <label class="felt-navn" for="sl-dato">Dato</label>
         <input type="date" class="inndata inndata-dato" id="sl-dato" value="${todayStr()}" required>
       </div>
-      <div class="sovn-varighet-rad">
-        <div class="sovn-varighet-felt">
-          <p class="pill-etikett verdi-stripe-etikett">Timer</p>
-          <div class="sovn-teller" id="sovn-timer">
-            <button type="button" class="sovn-teller-knapp" data-delta="-1" aria-label="Timer mindre">−</button>
-            <span class="sovn-teller-verdi" aria-live="polite">7</span>
-            <button type="button" class="sovn-teller-knapp" data-delta="1" aria-label="Timer mer">+</button>
-          </div>
-        </div>
-        <div class="sovn-varighet-felt">
-          <p class="pill-etikett verdi-stripe-etikett">Minutter</p>
-          <div class="sovn-teller" id="sovn-minutter">
-            <button type="button" class="sovn-teller-knapp" data-delta="-1" aria-label="Minutter mindre">−</button>
-            <span class="sovn-teller-verdi" aria-live="polite">30</span>
-            <button type="button" class="sovn-teller-knapp" data-delta="1" aria-label="Minutter mer">+</button>
-          </div>
-        </div>
-      </div>
+      <div id="sovn-varighet"></div>
       <label class="felt-navn" for="sl-kvalitet">Kvalitet <span class="dus">(valgfritt)</span></label>
       <select class="inndata" id="sl-kvalitet">
         <option value="">Ikke registrert</option>
@@ -98,25 +58,11 @@ export async function render(container) {
     </div>
   `;
 
-  let hours = 7;
-  let minutes = 30;
-
-  bindStepper(container.querySelector('#sovn-timer'), {
-    get: () => hours,
-    set: (v) => { hours = v; },
-    min: 0,
-    max: 14,
-  });
-
-  bindStepper(container.querySelector('#sovn-minutter'), {
-    get: () => minutes,
-    set: (v) => { minutes = v; },
-    min: 0,
-    max: 59,
-  });
+  const durationPicker = mountSleepDurationPicker(container.querySelector('#sovn-varighet'));
 
   container.querySelector('#sovn-skjema').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const { hours, minutes } = durationPicker.getValue();
     if (hours <= 0 && minutes <= 0) return;
     const qRaw = container.querySelector('#sl-kvalitet').value;
     await store.saveSleepEntry({

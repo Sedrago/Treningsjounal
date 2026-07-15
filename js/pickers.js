@@ -289,7 +289,10 @@ export function mountValueStrip(host, {
     list.innerHTML = '';
     list.style.paddingLeft = `${PAD}px`;
     list.style.paddingRight = `${PAD}px`;
-    for (let v = lo; v <= hi + step * 0.001; v += step) {
+    let v = step === 1
+      ? lo
+      : Math.max(min, Math.round((lo - min) / step) * step + min);
+    for (; v <= hi + step * 0.001; v += step) {
       const val = Math.round(v * 100) / 100;
       const li = document.createElement('li');
       li.className = 'verdi-stripe-item';
@@ -367,6 +370,31 @@ export function mountValueStrip(host, {
   }
 
   drum.addEventListener('scroll', onScroll, { passive: true });
+
+  let dragActive = false;
+  let dragStartX = 0;
+  let dragStartScroll = 0;
+
+  drum.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    dragActive = true;
+    dragStartX = e.clientX;
+    dragStartScroll = drum.scrollLeft;
+    drum.setPointerCapture(e.pointerId);
+  });
+
+  drum.addEventListener('pointermove', (e) => {
+    if (!dragActive) return;
+    drum.scrollLeft = dragStartScroll - (e.clientX - dragStartX);
+  });
+
+  const endDrag = (e) => {
+    if (!dragActive) return;
+    dragActive = false;
+    if (e.pointerId != null) drum.releasePointerCapture(e.pointerId);
+  };
+  drum.addEventListener('pointerup', endDrag);
+  drum.addEventListener('pointercancel', endDrag);
 
   host.appendChild(wrap);
   current = snap(current);
@@ -464,4 +492,57 @@ export function mountRepStrip(host, { value, centerHint = 8, max = 100, onChange
     onChange,
     compact,
   });
+}
+
+/**
+ * Timer og minutter for søvnlogging (horisontale striper).
+ * @returns {{ getValue: () => {hours:number, minutes:number}, destroy: () => void }}
+ */
+export function mountSleepDurationPicker(host, { hours = 7, minutes = 30, onChange } = {}) {
+  host.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'sovn-varighet-rad';
+  const hHost = document.createElement('div');
+  hHost.className = 'sovn-varighet-felt';
+  const mHost = document.createElement('div');
+  mHost.className = 'sovn-varighet-felt';
+  wrap.append(hHost, mHost);
+  host.appendChild(wrap);
+
+  let h = Math.max(0, Math.min(14, Math.round(Number(hours) || 0)));
+  let m = Math.max(0, Math.min(55, Math.round(Number(minutes) || 0)));
+  m = Math.round(m / 5) * 5;
+
+  const emit = () => onChange?.({ hours: h, minutes: m });
+
+  mountValueStrip(hHost, {
+    label: 'Timer',
+    value: h,
+    centerHint: 7,
+    step: 1,
+    min: 0,
+    max: 14,
+    range: 7,
+    format: (v) => String(Math.round(v)),
+    onChange: (v) => { h = v; emit(); },
+    compact: true,
+  });
+
+  mountValueStrip(mHost, {
+    label: 'Minutter',
+    value: m,
+    centerHint: 30,
+    step: 5,
+    min: 0,
+    max: 55,
+    range: 6,
+    format: (v) => String(Math.round(v)),
+    onChange: (v) => { m = v; emit(); },
+    compact: true,
+  });
+
+  return {
+    getValue: () => ({ hours: h, minutes: m }),
+    destroy: () => { host.innerHTML = ''; },
+  };
 }
