@@ -4,7 +4,7 @@
 
 import * as store from '../store.js';
 import { sleepSummarySince } from '../stats.js';
-import { mountSleepDurationPicker } from '../pickers.js';
+import { mountSleepDurationPicker, mountPillRow } from '../pickers.js';
 import {
   esc, formatDateShort, todayStr, toast, windowStartStr,
   fmtSleepHours, sleepHoursFromParts,
@@ -34,11 +34,7 @@ export async function render(container) {
         <input type="date" class="inndata inndata-dato" id="sl-dato" value="${todayStr()}" required>
       </div>
       <div id="sovn-varighet"></div>
-      <label class="felt-navn" for="sl-kvalitet">Kvalitet <span class="dus">(valgfritt)</span></label>
-      <select class="inndata" id="sl-kvalitet">
-        <option value="">Ikke registrert</option>
-        ${store.SLEEP_QUALITY.map((q) => `<option value="${q.value}">${q.name}</option>`).join('')}
-      </select>
+      <div id="sovn-kvalitet" class="sovn-kvalitet-pills"></div>
       <label class="felt-navn" for="sl-kommentar">Kommentar <span class="dus">(valgfritt)</span></label>
       <input type="text" class="inndata" id="sl-kommentar" placeholder="F.eks. våknet én gang …">
       <button type="submit" class="knapp primaer bred">Lagre</button>
@@ -60,15 +56,27 @@ export async function render(container) {
 
   const durationPicker = mountSleepDurationPicker(container.querySelector('#sovn-varighet'));
 
+  let quality = null;
+  mountPillRow(container.querySelector('#sovn-kvalitet'), {
+    label: 'Kvalitet (valgfritt)',
+    options: store.SLEEP_QUALITY.map((q) => ({ value: q.value, label: q.name })),
+    value: null,
+    onChange: (v) => { quality = v; },
+  });
+
+  const dateInput = container.querySelector('#sl-dato');
+  dateInput.addEventListener('change', () => {
+    requestAnimationFrame(() => dateInput.blur());
+  });
+
   container.querySelector('#sovn-skjema').addEventListener('submit', async (e) => {
     e.preventDefault();
     const { hours, minutes } = durationPicker.getValue();
     if (hours <= 0 && minutes <= 0) return;
-    const qRaw = container.querySelector('#sl-kvalitet').value;
     await store.saveSleepEntry({
-      date: container.querySelector('#sl-dato').value,
+      date: dateInput.value,
       hours: sleepHoursFromParts(hours, minutes),
-      quality: qRaw === '' ? null : qRaw,
+      quality,
       comment: container.querySelector('#sl-kommentar').value.trim(),
     });
     toast('Søvn lagret', 'suksess');

@@ -1464,6 +1464,19 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 .sovn-verdi-kort:active { transform: scale(0.97); }
 
+.sovn-kvalitet-pills .pill-rad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sovn-kvalitet-pills .pill {
+  min-width: 0;
+  width: 100%;
+  padding: 10px 8px;
+  font-size: 0.9rem;
+}
+
 .sovn-rad {
   display: flex;
   align-items: flex-start;
