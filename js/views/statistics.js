@@ -62,7 +62,7 @@ export async function render(container) {
 
     <section class="kort" aria-label="Aktivitet">
       <h2 class="kort-tittel">Aktivitet</h2>
-      <p class="dus liten">Grønt = mengde · Oransje = hardere · Blå glød = aerob samme dag.</p>
+      <p class="dus liten">Grønt = mengde · Rødt = hardere · Blå glød = aerob samme dag.</p>
       <div id="heatmap"></div>
     </section>
 

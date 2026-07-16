@@ -226,13 +226,15 @@ function smoothPath(pts, xFn, yFn) {
   return d;
 }
 
-/** Farge for aktivitets-celle: mengde → metning, intensitet → grønt mot oransje. */
+/** Farge for aktivitets-celle: mengde → metning, intensitet → grønt mot rødt. */
 function activityCellFill(volume, intensity) {
   if (volume <= 0) return 'var(--hm-tom)';
-  const hue = 128 - intensity * 88;
-  const sat = 35 + volume * 60;
-  const light = 18 + volume * 32;
-  return `hsl(${hue} ${sat}% ${light}%)`;
+  const hue = 132 - intensity * 128;
+  const volSat = 38 + volume * 52;
+  const volLight = 20 + volume * 28;
+  const sat = Math.min(100, volSat + intensity * 32);
+  const light = Math.max(14, volLight - intensity * 14);
+  return `hsl(${Math.round(hue)} ${Math.round(sat)}% ${Math.round(light)}%)`;
 }
 
 /** Blå fyll for aerob-celle (normalisert 0–1). */
@@ -335,7 +337,7 @@ export function progressionChart(container, points, opts = {}) {
 }
 
 /**
- * Aktivitets-heatmap à la GitHub: mengde (grønt) + intensitet (oransje) + aerob-glød (blått).
+ * Aktivitets-heatmap à la GitHub: mengde (grønt) + intensitet (rødt) + aerob-glød (blått).
  * @param {HTMLElement} container
  * @param {Map<string, {volume:number, intensity:number, aerobic:number}>} data
  * @param {number} weeks
@@ -437,7 +439,7 @@ export function activityHeatmap(container, data, weeks = 52) {
       <span class="heatmap-legend-label">Mer</span>
     </span>
     <span class="heatmap-forklaring-rad">
-      <span class="heatmap-legend-brikke intens" style="background:${activityCellFill(0.8, 0.85)}"></span>
+      <span class="heatmap-legend-brikke intens" style="background:${activityCellFill(0.75, 1)}"></span>
       <span class="heatmap-legend-label">Hardere</span>
       <span class="heatmap-legend-brikke aerob" style="background:${activityAerobFill(0.75)}" aria-hidden="true"></span>
       <span class="heatmap-legend-label">Aerob</span>
