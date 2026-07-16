@@ -481,20 +481,6 @@ function updateStatistics_() {
 // Setup – kjør denne én gang
 // =============================================================================
 
-/** Kjør én gang hvis kolonner i Sets/Exercises ser feil ut etter app-oppdatering. */
-function kjorMigrerSkjema() {
-  clearSchemaFlags_();
-  ['Sets', 'Exercises', 'Sleep', 'Mood'].forEach(function (name) {
-    ensureSheetSchema_(getSheet_(name), name);
-  });
-  var message = 'Skjemamigrering fullført.\n\nSjekk Sets-arket: kolonne H skal hete durationSec.';
-  try {
-    SpreadsheetApp.getUi().alert(message);
-  } catch (e) {
-    Logger.log(message);
-  }
-}
-
 function kjorOppsett() {
   Object.keys(COLUMNS).forEach(function (name) { getSheet_(name); });
 
