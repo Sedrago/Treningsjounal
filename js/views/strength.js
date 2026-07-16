@@ -63,6 +63,50 @@ const SESSION_KEY = 'styrkeSessionActive';
 const TEKNIKK_KEY = 'styrkeTeknikkEx';
 const EXPAND_KEY = 'styrkeRadUtvid';
 
+function planMalFieldsHtml(item, ex, { editable }) {
+  if (!ex) return '';
+  const logMode = store.logModeOf(ex);
+  const showWeight = logMode === 'weight';
+  const hint = store.planItemSuggestionText(item, ex);
+  if (!editable) {
+    return hint ? `<p class="plan-mal-hint dus liten">${esc(hint)}</p>` : '';
+  }
+  const val = (key) => item[key] ?? '';
+  return `
+    <div class="plan-mal-felt" data-plan-mal="${item.exerciseId}">
+      <p class="felt-navn liten">Foreslått (valgfritt)</p>
+      <div class="plan-mal-rad">
+        <label class="plan-mal-celle">
+          <span class="dus">Sett</span>
+          <input type="number" class="inndata plan-mal-inp" data-felt="suggestedSets"
+            value="${val('suggestedSets')}" min="1" max="20" placeholder="–" inputmode="numeric" aria-label="Foreslåtte sett">
+        </label>
+        <label class="plan-mal-celle">
+          <span class="dus">Reps</span>
+          <input type="number" class="inndata plan-mal-inp" data-felt="suggestedReps"
+            value="${val('suggestedReps')}" min="1" max="99" placeholder="–" inputmode="numeric" aria-label="Foreslåtte reps">
+        </label>
+        ${showWeight ? `
+        <label class="plan-mal-celle">
+          <span class="dus">Vekt (kg)</span>
+          <input type="number" class="inndata plan-mal-inp" data-felt="suggestedWeightKg"
+            value="${val('suggestedWeightKg')}" min="0" step="0.5" placeholder="–" inputmode="decimal" aria-label="Foreslått vekt i kg">
+        </label>` : ''}
+      </div>
+    </div>`;
+}
+
+function planItemFromMalFields(item, host) {
+  const block = host.querySelector(`[data-plan-mal="${item.exerciseId}"]`);
+  if (!block) return store.sanitizePlanItem({ exerciseId: item.exerciseId });
+  const raw = { exerciseId: item.exerciseId };
+  block.querySelectorAll('.plan-mal-inp').forEach((inp) => {
+    const v = inp.value.trim();
+    if (v) raw[inp.dataset.felt] = v;
+  });
+  return store.sanitizePlanItem(raw);
+}
+
 function nextSetNumber(persisted) {
   if (!persisted.length) return 1;
   const nums = persisted.map((s) => s.setNumber);
@@ -193,6 +237,10 @@ export async function render(container, params, query = {}) {
         </span>` : '';
 
     const exSetsToday = setsByEx.get(item.exerciseId) || [];
+    const suggestionHint = !showDetails && store.planItemSuggestionText(item, ex);
+    const malBlock = showDetails
+      ? planMalFieldsHtml(item, ex, { editable: !sessionActive })
+      : '';
     const completedSetsBlock = sessionActive && showDetails && ex
       ? completedSetsHtml(ex, exSetsToday, store.getSetting('units'))
       : '';
@@ -205,11 +253,13 @@ export async function render(container, params, query = {}) {
           ${cat ? `<span class="styrke-rad-kat">${categoryIconHtml(cat, 'kategori-ikon styrke-kat-ikon')}</span>` : ''}
           <span class="plan-okt-info">
             <span class="plan-navn">${esc(name)}</span>
+            ${suggestionHint ? `<span class="plan-mal-hint dus liten">${esc(suggestionHint)}</span>` : ''}
           </span>
         </div>
         ${progress}
         ${expandBtn}
         ${rowActions}
+        ${malBlock}
         ${completedSetsBlock ? `<div class="styrke-fullforte">${completedSetsBlock}</div>` : ''}
         ${showTeknikk ? renderInlineTeknikk(ex, cat) : ''}
       </div>`;
@@ -351,8 +401,8 @@ export async function render(container, params, query = {}) {
         toast(`«${tpl.name || 'Program'}» lastet inn`, 'suksess');
       });
     } else if (action === 'lagre-mal') {
-      openSaveTemplateSheet(host, items, viewDate, async ({ name, scheduleDate }) => {
-        await store.saveAsTemplate(name, items.map((it) => ({ ...it })), { scheduleDate });
+      openSaveTemplateSheet(host, items, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems }) => {
+        await store.saveAsTemplate(name, saveItems, { scheduleDate });
         toast(scheduleDate
           ? `«${name}» lagret og lagt på ${formatDateShort(scheduleDate)}`
           : `Programmet «${name}» er lagret`, 'suksess');
@@ -453,6 +503,27 @@ export async function render(container, params, query = {}) {
     bindCompletedSetsList(el, { onDelete: () => render(container, params, query) });
   });
 
+  if (!sessionActive) {
+    container.querySelectorAll('.plan-mal-felt').forEach((block) => {
+      block.querySelectorAll('.plan-mal-inp').forEach((inp) => {
+        inp.addEventListener('blur', async () => {
+          const exId = block.dataset.planMal;
+          const idx = items.findIndex((it) => it.exerciseId === exId);
+          if (idx < 0) return;
+          const next = items.map((it) => ({ ...it }));
+          next[idx] = planItemFromMalFields(items[idx], block);
+          await store.savePlanForDate(viewDate, {
+            id: plan?.id,
+            items: next,
+            name: plan?.name || '',
+            sourceTemplateId: plan?.sourceTemplateId || '',
+          });
+          items[idx] = next[idx];
+        });
+      });
+    });
+  }
+
   container.querySelector('.styrke-rad--aktiv')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 
   const sessionHost = container.querySelector('#oktt-panel');
@@ -479,6 +550,7 @@ export async function render(container, params, query = {}) {
       setNumber: active.setNum,
       persistedSet,
       templateSet: prevSet,
+      planItem: active.item,
       completedSets: exSets.filter((s) => s.setNumber !== active.setNum),
       compact: true,
       onSaved: () => {
@@ -793,8 +865,38 @@ async function openTemplatesSheet(host, exMap, onSelect) {
   });
 }
 
-function openSaveTemplateSheet(host, items, defaultDate, onSave) {
+function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave) {
   const today = todayStr();
+  const malRows = items.map((it) => {
+    const ex = exMap.get(it.exerciseId);
+    const name = ex?.name || 'Ukjent øvelse';
+    const logMode = ex ? store.logModeOf(ex) : 'weight';
+    const showWeight = logMode === 'weight';
+    const val = (key) => it[key] ?? '';
+    return `
+      <div class="plan-mal-lagre-rad" data-mal-ex="${it.exerciseId}">
+        <span class="plan-mal-lagre-navn">${esc(name)}</span>
+        <div class="plan-mal-rad plan-mal-rad--kompakt">
+          <label class="plan-mal-celle">
+            <span class="dus">Sett</span>
+            <input type="number" class="inndata mal-mal-inp" data-felt="suggestedSets"
+              value="${val('suggestedSets')}" min="1" max="20" placeholder="–" inputmode="numeric">
+          </label>
+          <label class="plan-mal-celle">
+            <span class="dus">Reps</span>
+            <input type="number" class="inndata mal-mal-inp" data-felt="suggestedReps"
+              value="${val('suggestedReps')}" min="1" max="99" placeholder="–" inputmode="numeric">
+          </label>
+          ${showWeight ? `
+          <label class="plan-mal-celle">
+            <span class="dus">kg</span>
+            <input type="number" class="inndata mal-mal-inp" data-felt="suggestedWeightKg"
+              value="${val('suggestedWeightKg')}" min="0" step="0.5" placeholder="–" inputmode="decimal">
+          </label>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
     <div class="ark" role="dialog" aria-label="Lagre program">
@@ -806,6 +908,16 @@ function openSaveTemplateSheet(host, items, defaultDate, onSave) {
       <form id="lagre-mal-skjema">
         <label class="felt-navn" for="mal-navn">Navn</label>
         <input type="text" class="inndata" id="mal-navn" placeholder="F.eks. Uke A" required autofocus>
+
+        <label class="bryter-rad">
+          <input type="checkbox" id="mal-med-mal">
+          <span>Inkluder mål per øvelse</span>
+        </label>
+
+        <div id="mal-mal-wrap" class="skjult">
+          <div class="plan-mal-liste">${malRows}</div>
+          <button type="button" class="knapp sekundaer liten" id="mal-fra-logging">Fyll inn fra dagens logging</button>
+        </div>
 
         <label class="bryter-rad">
           <input type="checkbox" id="mal-planlegg">
@@ -821,6 +933,25 @@ function openSaveTemplateSheet(host, items, defaultDate, onSave) {
       </form>
     </div>`;
 
+  const malCb = host.querySelector('#mal-med-mal');
+  const malWrap = host.querySelector('#mal-mal-wrap');
+  malCb.addEventListener('change', () => {
+    malWrap.classList.toggle('skjult', !malCb.checked);
+  });
+
+  host.querySelector('#mal-fra-logging')?.addEventListener('click', () => {
+    for (const it of items) {
+      const row = host.querySelector(`[data-mal-ex="${it.exerciseId}"]`);
+      if (!row) continue;
+      const sug = store.suggestionsFromLoggedSets(setsByEx.get(it.exerciseId) || []);
+      row.querySelectorAll('.mal-mal-inp').forEach((inp) => {
+        const v = sug[inp.dataset.felt];
+        inp.value = v != null ? v : '';
+      });
+    }
+    toast('Mål hentet fra dagens logging', 'suksess');
+  });
+
   const planleggCb = host.querySelector('#mal-planlegg');
   const datoWrap = host.querySelector('#mal-dato-wrap');
   planleggCb.addEventListener('change', () => {
@@ -833,7 +964,21 @@ function openSaveTemplateSheet(host, items, defaultDate, onSave) {
     const name = host.querySelector('#mal-navn').value.trim();
     if (!name) return;
     const scheduleDate = planleggCb.checked ? host.querySelector('#mal-dato').value : null;
+    let saveItems;
+    if (malCb.checked) {
+      saveItems = items.map((it) => {
+        const row = host.querySelector(`[data-mal-ex="${it.exerciseId}"]`);
+        const raw = { exerciseId: it.exerciseId };
+        row?.querySelectorAll('.mal-mal-inp').forEach((inp) => {
+          const v = inp.value.trim();
+          if (v) raw[inp.dataset.felt] = v;
+        });
+        return store.sanitizePlanItem(raw);
+      });
+    } else {
+      saveItems = items.map((it) => store.sanitizePlanItem({ exerciseId: it.exerciseId }));
+    }
     host.innerHTML = '';
-    onSave({ name, scheduleDate });
+    onSave({ name, scheduleDate, saveItems });
   });
 }

@@ -24,11 +24,13 @@ function buildWeekHash(fra) {
 
 function renderPlanItems(items, exMap) {
   if (!items?.length) return '';
+  const units = store.getSetting('units');
   return items.map((it) => {
     const ex = exMap.get(it.exerciseId);
     const name = ex?.name || 'Ukjent øvelse';
+    const hint = store.planItemSuggestionText(it, ex, units);
     return `<li class="kalender-ovelse"><span class="kalender-ovelse-navn">${esc(name)}</span>
-      <span class="dus liten">${it.goalSets ? `${it.goalSets} sett` : ''}</span></li>`;
+      <span class="dus liten">${esc(hint)}</span></li>`;
   }).join('');
 }
 

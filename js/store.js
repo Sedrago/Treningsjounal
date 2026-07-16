@@ -8,7 +8,9 @@
 
 import * as db from './db.js';
 import { scheduleFlush } from './sync.js';
-import { uuid, nowIso, todayStr, addDaysStr } from './utils.js';
+import {
+  uuid, nowIso, todayStr, addDaysStr, fmtNum, toDisplayWeight, weightUnit,
+} from './utils.js';
 
 /** Legger en operasjon i synk-køen og planlegger sending. */
 async function queueOp(entity, op, data) {
@@ -159,6 +161,63 @@ export function goalTextFor(exercise) {
   if (!sets || !min || !max) return '';
   if (mode === 'duration') return `${sets} × ${min}–${max} s`;
   return `${sets} × ${min}–${max}`;
+}
+
+function planPosNum(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Normaliserer plan-rad: kun exerciseId + valgfrie suggested*-felt. */
+export function sanitizePlanItem(item) {
+  if (!item?.exerciseId) return null;
+  const out = { exerciseId: String(item.exerciseId) };
+  const sets = planPosNum(item.suggestedSets ?? item.goalSets);
+  const reps = planPosNum(item.suggestedReps ?? item.goalRepsMin ?? item.goalRepsMax);
+  const weight = planPosNum(item.suggestedWeightKg);
+  if (sets) out.suggestedSets = sets;
+  if (reps) out.suggestedReps = reps;
+  if (weight) out.suggestedWeightKg = weight;
+  return out;
+}
+
+export function sanitizePlanItems(items) {
+  return (items || []).map(sanitizePlanItem).filter(Boolean);
+}
+
+/** Lesbar foreslått dose for program-rad, f.eks. «3 × 8 · ca. 60 kg». */
+export function planItemSuggestionText(item, exercise, units = getSetting('units')) {
+  if (!item) return '';
+  const sets = planPosNum(item.suggestedSets ?? item.goalSets);
+  const reps = planPosNum(item.suggestedReps ?? item.goalRepsMin ?? item.goalRepsMax);
+  const weightKg = planPosNum(item.suggestedWeightKg);
+  const logMode = exercise ? logModeOf(exercise) : 'weight';
+  const parts = [];
+  if (sets && reps) parts.push(`${sets} × ${reps}`);
+  else if (sets) parts.push(`${sets} sett`);
+  else if (reps) parts.push(`${reps} reps`);
+  if (weightKg && logMode === 'weight') {
+    parts.push(`ca. ${fmtNum(toDisplayWeight(weightKg, units))} ${weightUnit(units)}`);
+  }
+  return parts.join(' · ');
+}
+
+/** Foreslå mål ut fra loggede sett (antall, snitt reps/vekt). */
+export function suggestionsFromLoggedSets(sets) {
+  if (!sets?.length) return {};
+  const sorted = [...sets].sort((a, b) => a.setNumber - b.setNumber);
+  const withReps = sorted.filter((s) => s.reps != null);
+  const withWeight = sorted.filter((s) => s.weight != null);
+  const out = {};
+  if (sorted.length) out.suggestedSets = sorted.length;
+  if (withReps.length) {
+    out.suggestedReps = Math.round(withReps.reduce((sum, s) => sum + s.reps, 0) / withReps.length);
+  }
+  if (withWeight.length) {
+    const avg = withWeight.reduce((sum, s) => sum + s.weight, 0) / withWeight.length;
+    out.suggestedWeightKg = Math.round(avg * 2) / 2;
+  }
+  return out;
 }
 
 /** Midtpunkt av reps-mål, ellers utgangspunkt fra innstillinger. */
@@ -618,7 +677,8 @@ function parsePlanItems(plan) {
   if (typeof items === 'string') {
     try { items = JSON.parse(items); } catch { items = []; }
   }
-  return { ...plan, items: Array.isArray(items) ? items : [] };
+  const raw = Array.isArray(items) ? items : [];
+  return { ...plan, items: sanitizePlanItems(raw) };
 }
 
 function planRecord(plan, existing = null) {
@@ -627,7 +687,7 @@ function planRecord(plan, existing = null) {
     id: plan.id || uuid(),
     date: plan.date || todayStr(),
     name: plan.name ?? existing?.name ?? '',
-    items: JSON.stringify(plan.items ?? (existing ? parsePlanItems(existing).items : [])),
+    items: JSON.stringify(sanitizePlanItems(plan.items ?? (existing ? parsePlanItems(existing).items : []))),
     status,
     sourceTemplateId: plan.sourceTemplateId ?? existing?.sourceTemplateId ?? '',
     deleted: false,
@@ -759,7 +819,7 @@ export async function getSavedTemplates() {
 }
 
 /**
- * Lagrer plan/mal. items: [{exerciseId, goalSets}] i ønsket rekkefølge.
+ * Lagrer plan/mal. items: [{exerciseId, suggestedSets?, suggestedReps?, suggestedWeightKg?}].
  * planlagt: maks én per dato. mal: bibliotek uten kalenderbinding.
  */
 export async function savePlan(plan) {

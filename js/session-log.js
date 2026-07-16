@@ -62,7 +62,7 @@ export function bindCompletedSetsList(container, { onDelete }) {
   });
 }
 
-function buildDraft(exercise, setNumber, persisted, template) {
+function buildDraft(exercise, setNumber, persisted, template, planItem) {
   const defs = store.logDefaults();
   const logMode = store.logModeOf(exercise);
   const draft = {
@@ -83,6 +83,11 @@ function buildDraft(exercise, setNumber, persisted, template) {
     draft.durationSec = src.durationSec ?? null;
     draft.rir = src.rir ?? draft.rir;
     draft.comment = src.comment || '';
+  } else if (planItem) {
+    if (planItem.suggestedReps != null) draft.reps = planItem.suggestedReps;
+    if (planItem.suggestedWeightKg != null && logMode === 'weight') {
+      draft.weight = planItem.suggestedWeightKg;
+    }
   }
   if (draft.reps == null) draft.reps = store.repMidpoint(exercise);
   if (draft.weight == null && logMode === 'weight') draft.weight = defs.weightKg;
@@ -109,6 +114,7 @@ export async function mountSetLogger(host, {
   setNumber,
   persistedSet,
   templateSet,
+  planItem = null,
   completedSets = [],
   onSaved,
   onDeleted,
@@ -119,13 +125,14 @@ export async function mountSetLogger(host, {
   const units = store.getSetting('units');
   const defs = store.logDefaults();
   const defaultEffort = rirToEffort(defs.effort);
+  const suggestionText = planItem ? store.planItemSuggestionText(planItem, exercise, units) : '';
   const restTimes = String(store.getSetting('restTimes')).split(',')
     .map((t) => parseInt(t.trim(), 10)).filter((t) => t > 0);
 
   let showWeight = logMode === 'weight'
     || (logMode === 'bodyweight' && persistedSet?.weight != null);
 
-  const draft = buildDraft(exercise, setNumber, persistedSet, templateSet);
+  const draft = buildDraft(exercise, setNumber, persistedSet, templateSet, planItem);
   if (draft.rir == null) draft.rir = defaultEffort;
 
   const wrap = document.createElement('div');
@@ -137,6 +144,7 @@ export async function mountSetLogger(host, {
         <div class="oktt-overlay-tittel">
           <strong>${esc(exercise.name)}</strong>
           <span class="dus">· sett ${setNumber}</span>
+          ${suggestionText ? `<span class="plan-mal-hint dus liten">${esc(suggestionText)}</span>` : ''}
         </div>
         ${restTimes.length ? `
         <div class="oktt-overlay-hvile">
@@ -155,7 +163,7 @@ export async function mountSetLogger(host, {
       <div class="oktt-panel-hode">
         <div>
           <h2 class="oktt-tittel">${esc(exercise.name)}</h2>
-          <p class="dus liten oktt-sett-info">Sett ${setNumber}</p>
+          <p class="dus liten oktt-sett-info">Sett ${setNumber}${suggestionText ? ` · ${esc(suggestionText)}` : ''}</p>
         </div>
       </div>
       <div class="oktt-velgere"></div>
@@ -222,7 +230,7 @@ export async function mountSetLogger(host, {
       pickerHost.appendChild(repsHost);
       pickers.reps = mountRepStrip(repsHost, {
         value: draft.reps,
-        centerHint: store.repMidpoint(exercise),
+        centerHint: planItem?.suggestedReps ?? store.repMidpoint(exercise),
         compact,
         onChange: (v) => { draft.reps = v; },
       });

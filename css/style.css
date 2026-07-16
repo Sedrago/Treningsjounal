@@ -944,6 +944,72 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 .styrke-rad--utvidet {
   padding-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.plan-mal-hint {
+  display: block;
+  font-weight: 400;
+  line-height: 1.3;
+  margin-top: 2px;
+  white-space: normal;
+}
+
+.plan-mal-felt {
+  flex: 1 0 100%;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 0 4px;
+  border-top: 1px solid var(--kant);
+}
+
+.plan-mal-rad {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.plan-mal-rad--kompakt { margin-top: 4px; }
+
+.plan-mal-celle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 72px;
+  min-width: 0;
+}
+
+.plan-mal-celle .inndata {
+  padding: 8px 10px;
+  font-size: 0.95rem;
+}
+
+.plan-mal-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.plan-mal-lagre-rad {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-mal-lagre-navn {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+#mal-mal-wrap .knapp.liten { margin-top: 4px; }
+
+.oktt-overlay-tittel .plan-mal-hint {
+  display: block;
+  margin-top: 2px;
 }
 
 .styrke-rad-teknikk {
