@@ -72,15 +72,21 @@ export function trainingStreak(sets, mode = 'rolling7') {
   return mode === 'calendar' ? weekStreak(sets) : rollingWeekStreak(sets);
 }
 
-/** Sett som telles som arbeidssett (RIR registrert og ≤ grense). */
-export function isWorkingSet(set, maxRir = 4) {
+/** Innsats-pill «Lett» (verdi 5) telles ikke som arbeidssett. */
+const EFFORT_LETT = 5;
+
+/** Sett med innsats registrert (unntatt «Lett»). Støtter også eldre RIR-verdier ≤ 4. */
+export function isWorkingSet(set) {
   if (set.rir == null || set.rir === '') return false;
-  return Number(set.rir) <= Number(maxRir);
+  const v = Number(set.rir);
+  if (v === EFFORT_LETT) return false;
+  if ([0, 1, 3].includes(v)) return true;
+  return v <= 4;
 }
 
 /** Antall arbeidssett i en liste. */
-export function countWorkingSets(sets, maxRir = 4) {
-  return sets.filter((s) => isWorkingSet(s, maxRir)).length;
+export function countWorkingSets(sets) {
+  return sets.filter((s) => isWorkingSet(s)).length;
 }
 
 /** Antall unike treningsdager i inneværende kalenderuke. */
@@ -375,17 +381,17 @@ function toSaldoIndex(values) {
 }
 
 /** Mengdedose for én uke (arbeidssett + treningsdager + aerob). */
-function weekVolumeDose(weekSets, weekAerob, maxRir) {
+function weekVolumeDose(weekSets, weekAerob) {
   const days = new Set(weekSets.map((s) => s.date)).size;
   const aerMin = weekAerob.reduce((sum, r) => sum + (Number(r.minutes) || 0), 0);
   if (!weekSets.length && !aerMin) return null;
-  const ws = countWorkingSets(weekSets, maxRir);
+  const ws = countWorkingSets(weekSets);
   return ws + days * 3 + Math.round(aerMin / 5);
 }
 
 /** Innsats-score for arbeidssett (høyere = hardere). */
-function weekIntensityScore(weekSets, maxRir) {
-  const working = weekSets.filter((s) => isWorkingSet(s, maxRir) && s.rir != null);
+function weekIntensityScore(weekSets) {
+  const working = weekSets.filter((s) => isWorkingSet(s) && s.rir != null);
   if (!working.length) return null;
   const avg = avgRir(working);
   return avg == null ? null : 10 - avg;
@@ -434,7 +440,7 @@ function weekStrengthRatio(weekIndex, exByWeekIdx) {
  *
  * @returns {{ weeks: Array, latest: { volume, intensity, strength, strengthExercises }|null }}
  */
-export function saldoHistory(enrichedSets, aerobicRows, { maxRir = 4, numWeeks = 12 } = {}) {
+export function saldoHistory(enrichedSets, aerobicRows, { numWeeks = 12 } = {}) {
   const weeks = recentWeeks(numWeeks);
   const setsByWeek = groupBy(enrichedSets, (s) => isoWeekKey(parseDate(s.date)));
   const aerobByWeek = groupBy(aerobicRows || [], (r) => isoWeekKey(parseDate(r.date)));
@@ -448,8 +454,8 @@ export function saldoHistory(enrichedSets, aerobicRows, { maxRir = 4, numWeeks =
   for (const { week, index } of weeks) {
     const weekSets = setsByWeek.get(week) || [];
     const weekAerob = aerobByWeek.get(week) || [];
-    rawVolume.push(weekVolumeDose(weekSets, weekAerob, maxRir));
-    rawIntensity.push(weekIntensityScore(weekSets, maxRir));
+    rawVolume.push(weekVolumeDose(weekSets, weekAerob));
+    rawIntensity.push(weekIntensityScore(weekSets));
     const ratio = weekStrengthRatio(index, exByWeekIdx);
     rawStrength.push(ratio);
     strengthCounts.push(ratio != null ? countStrengthExercises(index, exByWeekIdx) : 0);
@@ -494,15 +500,15 @@ function countStrengthExercises(weekIndex, exByWeekIdx) {
 }
 
 /** Heatmap: antall arbeidssett per dag (mengde, ikke kg). */
-export function heatmapActivityData(sets, maxRir = 4, days = 182) {
+export function heatmapActivityData(sets, days = 182) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = todayStr(cutoff);
   const map = new Map();
   for (const s of sets) {
     if (s.date < cutoffStr) continue;
-    if (!isWorkingSet(s, maxRir) && s.reps == null) continue;
-    const add = isWorkingSet(s, maxRir) ? 1 : 0.3;
+    if (!isWorkingSet(s) && s.reps == null) continue;
+    const add = isWorkingSet(s) ? 1 : 0.3;
     map.set(s.date, (map.get(s.date) || 0) + add);
   }
   return map;
@@ -515,17 +521,17 @@ function clamp(v, lo, hi) {
 }
 
 /** Mengdescore for én dag (favoriserer kategorier og øvelser). */
-export function dayVolumeScore(daySets, maxRir = 4) {
+export function dayVolumeScore(daySets) {
   if (!daySets.length) return 0;
   const categories = new Set(daySets.map((s) => s.category)).size;
   const exercises = new Set(daySets.map((s) => s.exerciseId)).size;
-  const working = countWorkingSets(daySets, maxRir);
+  const working = countWorkingSets(daySets);
   return categories * 3 + exercises * 1.5 + working * 0.5;
 }
 
 /** Innsats-score for én dag (høyere = hardere). */
-export function dayIntensityRaw(daySets, maxRir = 4) {
-  const working = daySets.filter((s) => isWorkingSet(s, maxRir) && s.rir != null);
+export function dayIntensityRaw(daySets) {
+  const working = daySets.filter((s) => isWorkingSet(s) && s.rir != null);
   if (!working.length) return null;
   const avg = avgRir(working);
   return avg == null ? null : 10 - avg;
@@ -545,7 +551,7 @@ export function dayAerobicScore(sessions) {
  * Heatmap-data per dag: mengde, intensitet (0–1) og aerob-glød (0–1).
  * @returns {Map<string, { volume: number, intensity: number, aerobic: number }>}
  */
-export function activityHeatmapData(enrichedSets, aerobicRows, { maxRir = 4, days = 364 } = {}) {
+export function activityHeatmapData(enrichedSets, aerobicRows, { days = 364 } = {}) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = todayStr(cutoff);
@@ -566,8 +572,8 @@ export function activityHeatmapData(enrichedSets, aerobicRows, { maxRir = 4, day
 
   for (const date of dates) {
     const daySets = setsByDate.get(date) || [];
-    rawVolume.push({ date, value: dayVolumeScore(daySets, maxRir) });
-    rawIntensity.push({ date, value: dayIntensityRaw(daySets, maxRir) });
+    rawVolume.push({ date, value: dayVolumeScore(daySets) });
+    rawIntensity.push({ date, value: dayIntensityRaw(daySets) });
     rawAerobic.push({ date, value: dayAerobicScore(aerobByDate.get(date)) });
   }
 

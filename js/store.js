@@ -45,7 +45,6 @@ export const DEFAULT_SETTINGS = {
   defaultEffort: 3,         // effortPillOptions: 0 Fail, 1 1–2, 3 Mod, 5 Lett
   startPage: 'hjem',        // 'hjem' | 'styrke'
   streakMode: 'rolling7',   // 'rolling7' | 'calendar'
-  workingSetRirMax: 4,      // sett med RIR ≤ dette telles som arbeidssett
 };
 
 /** Typer aerob aktivitet. */

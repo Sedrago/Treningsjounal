@@ -19,7 +19,6 @@ export async function render(container) {
   const bodyweights = await store.getBodyweights();
   const units = store.getSetting('units');
   const unit = weightUnit(units);
-  const maxRir = Number(store.getSetting('workingSetRirMax')) || 4;
   const streakMode = store.getSetting('streakMode');
   const streak = stats.trainingStreak(enriched, streakMode);
 
@@ -40,7 +39,7 @@ export async function render(container) {
     .sort((a, b) => b.oneRM - a.oneRM)
     .slice(0, 8);
 
-  const heatmapData = stats.activityHeatmapData(enriched, aerobic, { maxRir, days: 364 });
+  const heatmapData = stats.activityHeatmapData(enriched, aerobic, { days: 364 });
   const strengthPts = stats.strengthProgression(enriched);
   const sleepPts = stats.sleepProgression(sleepRows);
   const moodPts = stats.moodProgression(moodRows);
