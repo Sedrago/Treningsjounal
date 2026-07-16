@@ -45,6 +45,7 @@ export async function render(container) {
       <input type="text" class="inndata" id="relay-key" value="${esc(relay.getRelayPublishKey())}"
         placeholder="Fra kjorRelayOppsett()" autocomplete="off">
       <button type="button" class="knapp sekundaer" id="test-relay">Test relay</button>
+      <div id="relay-partner-wrap" class="relay-partner-wrap"></div>
     </section>
 
     <section class="kort" aria-label="Preferanser">
@@ -218,5 +219,141 @@ export async function render(container) {
     toast('Lokale data slettet');
     location.hash = '#/hjem';
     location.reload();
+  });
+
+  await renderRelayPartnerSection(container.querySelector('#relay-partner-wrap'));
+}
+
+async function renderRelayPartnerSection(wrap) {
+  if (!wrap) return;
+  if (!relay.isRelayConfigured()) {
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const identity = relay.getRelayIdentity();
+  if (!identity.username) {
+    wrap.innerHTML = `
+      <hr class="program-del-skille">
+      <h3 class="program-del-under-tittel">Partner-deling</h3>
+      <p class="dus liten">Registrer et brukernavn for å sende og motta programmer med partnere.</p>
+      <label class="felt-navn" for="relay-reg-user">Brukernavn</label>
+      <input type="text" class="inndata" id="relay-reg-user" autocapitalize="none" autocomplete="username"
+        placeholder="f.eks. ola" pattern="[a-z0-9_]{3,20}">
+      <button type="button" class="knapp sekundaer" id="relay-registrer">Registrer brukernavn</button>`;
+    wrap.querySelector('#relay-registrer').addEventListener('click', async () => {
+      const username = wrap.querySelector('#relay-reg-user').value.trim();
+      if (!username) {
+        toast('Skriv inn brukernavn', 'feil');
+        return;
+      }
+      try {
+        const data = await relay.relayRegister(username);
+        relay.setRelayIdentity(data);
+        toast(`Registrert som @${data.username}`, 'suksess');
+        await renderRelayPartnerSection(wrap);
+      } catch (err) {
+        toast(err.message || 'Registrering feilet', 'feil');
+      }
+    });
+    return;
+  }
+
+  let partners = [];
+  let incoming = [];
+  try {
+    const [partnerData, inviteData] = await Promise.all([
+      relay.relayListPartners(),
+      relay.relayListPendingInvites(),
+    ]);
+    partners = partnerData.partners || [];
+    incoming = inviteData.incoming || [];
+  } catch (err) {
+    wrap.innerHTML = `
+      <hr class="program-del-skille">
+      <p class="program-import-feil liten">@${esc(identity.username)} — ${esc(err.message)}</p>
+      <button type="button" class="knapp sekundaer liten" id="relay-logg-ut">Logg ut brukernavn</button>`;
+    wrap.querySelector('#relay-logg-ut').addEventListener('click', () => {
+      relay.clearRelayIdentity();
+      renderRelayPartnerSection(wrap);
+    });
+    return;
+  }
+
+  const partnerRows = (partners || []).map((p) => `<li>@${esc(p)}</li>`).join('')
+    || '<li class="dus">Ingen partnere ennå</li>';
+  const inviteRows = (incoming || []).map((inv) => `
+    <div class="relay-invite-rad">
+      <span>@${esc(inv.from)}</span>
+      <div class="knapp-rad">
+        <button type="button" class="knapp sekundaer liten" data-godta="${esc(inv.from)}">Godta</button>
+        <button type="button" class="knapp sekundaer liten" data-avvis="${esc(inv.from)}">Avvis</button>
+      </div>
+    </div>`).join('');
+
+  wrap.innerHTML = `
+    <hr class="program-del-skille">
+    <h3 class="program-del-under-tittel">Partner-deling</h3>
+    <p class="dus liten">Innlogget som <strong>@${esc(identity.username)}</strong>
+      · <a href="#/innboks">Programinnboks</a></p>
+    <button type="button" class="knapp sekundaer liten" id="relay-logg-ut">Logg ut brukernavn</button>
+
+    ${inviteRows ? `
+    <p class="felt-navn liten">Ventende invitasjoner</p>
+    <div class="relay-invite-liste">${inviteRows}</div>` : ''}
+
+    <p class="felt-navn liten">Partnere</p>
+    <ul class="relay-partner-liste">${partnerRows}</ul>
+
+    <label class="felt-navn" for="relay-invite-user">Inviter partner</label>
+    <div class="program-relay-rad">
+      <input type="text" class="inndata" id="relay-invite-user" autocapitalize="none" placeholder="@kari">
+      <button type="button" class="knapp sekundaer" id="relay-invite">Inviter</button>
+    </div>
+    <p class="dus liten">Partneren må også ha registrert brukernavn på samme relay.</p>`;
+
+  wrap.querySelector('#relay-logg-ut').addEventListener('click', () => {
+    if (!confirm('Logge ut relay-brukernavn på denne enheten?')) return;
+    relay.clearRelayIdentity();
+    renderRelayPartnerSection(wrap);
+  });
+
+  wrap.querySelector('#relay-invite').addEventListener('click', async () => {
+    const to = wrap.querySelector('#relay-invite-user').value.trim();
+    if (!to) {
+      toast('Skriv inn brukernavn', 'feil');
+      return;
+    }
+    try {
+      await relay.relayInvitePartner(to);
+      toast(`Invitasjon sendt til @${to.replace(/^@/, '')}`, 'suksess');
+      wrap.querySelector('#relay-invite-user').value = '';
+    } catch (err) {
+      toast(err.message || 'Invitasjon feilet', 'feil');
+    }
+  });
+
+  wrap.querySelectorAll('[data-godta]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await relay.relayAcceptPartner(btn.dataset.godta);
+        toast(`@${btn.dataset.godta} er nå partner`, 'suksess');
+        await renderRelayPartnerSection(wrap);
+      } catch (err) {
+        toast(err.message || 'Kunne ikke godta', 'feil');
+      }
+    });
+  });
+
+  wrap.querySelectorAll('[data-avvis]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await relay.relayRejectPartner(btn.dataset.avvis);
+        toast('Invitasjon avvist', 'info');
+        await renderRelayPartnerSection(wrap);
+      } catch (err) {
+        toast(err.message || 'Kunne ikke avvise', 'feil');
+      }
+    });
   });
 }

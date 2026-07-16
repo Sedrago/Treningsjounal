@@ -24,6 +24,8 @@ import * as sessionEdit from './views/session-edit.js';
 import * as calendar from './views/calendar.js';
 import * as settings from './views/settings.js';
 import * as programImport from './views/program-import.js';
+import * as inbox from './views/inbox.js';
+import { checkRelayInboxQuietly } from './relay-api.js';
 
 /** Rutetabell: sti → render-funksjon. */
 const routes = {
@@ -45,6 +47,7 @@ const routes = {
   bibliotek: exerciseLibrary.render,
   innstillinger: settings.render,
   program: programImport.render,
+  innboks: inbox.render,
 };
 
 /** Setter tema-attributt på <html> ut fra innstilling. */
@@ -110,6 +113,15 @@ function setupSyncBadge() {
   });
 }
 
+let lastInboxHintCount = -1;
+
+async function checkRelayInboxOnStart() {
+  const count = await checkRelayInboxQuietly();
+  if (count <= 0 || count === lastInboxHintCount) return;
+  lastInboxHintCount = count;
+  toast(`${count} ny${count === 1 ? '' : 'e'} program${count === 1 ? '' : 'mer'} i innboksen — se #/innboks`, 'info');
+}
+
 async function main() {
   await store.initSettings();
   await store.migratePlanModelOnce();
@@ -127,6 +139,7 @@ async function main() {
     if (document.visibilityState === 'visible') {
       checkContentUpdate();
       maybeShowMoodPrompt(parseHash().route);
+      checkRelayInboxOnStart();
     }
   });
 
@@ -134,6 +147,8 @@ async function main() {
   await initContentFromCache();
   await applyStarterPackIfNeeded();
   await renderRoute();
+
+  checkRelayInboxOnStart();
 
   sync.init();
   initContent({ force: false }).then(async (ok) => {

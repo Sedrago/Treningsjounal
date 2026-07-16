@@ -903,10 +903,21 @@ async function openTemplatesSheet(host, exMap, onSelect) {
   });
 }
 
-function openExportProgramSheet(host, template, exMap) {
+async function openExportProgramSheet(host, template, exMap) {
   const payload = programShare.buildProgramPayload(template.name, template.items, exMap);
   const code = programShare.programShareCode(payload);
   const canPublish = relay.canPublishToRelay();
+
+  let partners = [];
+  if (relay.canUseRelayInbox()) {
+    try {
+      const data = await relay.relayListPartners();
+      partners = data.partners || [];
+    } catch { /* partner-liste valgfri */ }
+  }
+
+  const partnerOptions = partners.map((p) =>
+    `<option value="${esc(p)}">@${esc(p)}</option>`).join('');
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -924,6 +935,18 @@ function openExportProgramSheet(host, template, exMap) {
       <label class="felt-navn" for="prog-kode">Delingskode</label>
       <textarea class="inndata program-kode-felt" id="prog-kode" rows="4" readonly>${esc(code)}</textarea>
       <p class="dus liten">Partner kan lime koden inn under «Importer program», eller åpne JSON-filen.</p>
+
+      ${partners.length ? `
+      <hr class="program-del-skille">
+      <h3 class="program-del-under-tittel">Send til partner</h3>
+      <label class="felt-navn" for="prog-partner">Partner</label>
+      <select class="inndata" id="prog-partner">${partnerOptions}</select>
+      <button type="button" class="knapp primaer bred" id="prog-send-partner">Send program</button>
+      ` : relay.hasRelayIdentity() ? `
+      <p class="dus liten program-relay-hint">Inviter partnere under Innstillinger for å sende program direkte.</p>
+      ` : relay.isRelayConfigured() ? `
+      <p class="dus liten program-relay-hint">Registrer brukernavn under Innstillinger for partner-deling.</p>
+      ` : ''}
 
       ${canPublish ? `
       <hr class="program-del-skille">
@@ -990,6 +1013,24 @@ function openExportProgramSheet(host, template, exMap) {
       openPublishedProgramSheet(host, result, template.name);
     } catch (err) {
       toast(err.message || 'Publisering feilet', 'feil');
+      btn.disabled = false;
+    }
+  });
+  host.querySelector('#prog-send-partner')?.addEventListener('click', async () => {
+    const btn = host.querySelector('#prog-send-partner');
+    const toUsername = host.querySelector('#prog-partner')?.value;
+    if (!toUsername) return;
+    btn.disabled = true;
+    try {
+      await relay.relaySendProgram({
+        toUsername,
+        program: payload,
+        title: template.name,
+      });
+      toast(`Program sendt til @${toUsername}`, 'suksess');
+      host.innerHTML = '';
+    } catch (err) {
+      toast(err.message || 'Sending feilet', 'feil');
       btn.disabled = false;
     }
   });

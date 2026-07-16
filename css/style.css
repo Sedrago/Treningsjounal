@@ -1088,6 +1088,51 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   margin: 8px 0 12px;
 }
 
+.relay-partner-wrap { margin-top: 12px; }
+
+.relay-partner-liste {
+  margin: 6px 0 12px;
+  padding-left: 1.1rem;
+  font-size: 0.95rem;
+}
+
+.relay-invite-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.relay-invite-rad {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.innboks-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.innboks-rad {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  background: var(--flate-2);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  text-decoration: none;
+  color: inherit;
+}
+
+.innboks-rad:hover { border-color: var(--accent); }
+
+.innboks-rad-tittel { font-weight: 600; }
+
 .oktt-overlay-tittel .plan-mal-hint {
   display: block;
   margin-top: 2px;

@@ -13,10 +13,16 @@
 
 var RELAY_SHEETS = {
   published: 'Published',
+  users: 'Users',
+  pairings: 'Pairings',
+  inbox: 'Inbox',
 };
 
 var RELAY_COLUMNS = {
   Published: ['code', 'title', 'programJson', 'publishedAt', 'expiresAt', 'pinHash', 'rev', 'active', 'fetchCount'],
+  Users: ['username', 'secretHash', 'createdAt'],
+  Pairings: ['id', 'userA', 'userB', 'status', 'invitedBy', 'createdAt', 'acceptedAt'],
+  Inbox: ['id', 'fromUser', 'toUser', 'title', 'programJson', 'sentAt', 'readAt', 'expiresAt'],
 };
 
 var PROGRAM_FORMAT = 'treningsjournal-program';
@@ -100,6 +106,35 @@ function routeRelay_(action, key, payload) {
     case 'unpublish':
       checkRelayPublishKey_(key);
       return unpublishProgram_(payload.code);
+    case 'register':
+      return registerUser_(payload.username);
+    case 'invitePartner':
+      verifyUserAuth_(payload);
+      return invitePartner_(payload.username, payload.toUsername);
+    case 'acceptPartner':
+      verifyUserAuth_(payload);
+      return acceptPartner_(payload.username, payload.fromUsername);
+    case 'rejectPartner':
+      verifyUserAuth_(payload);
+      return rejectPartner_(payload.username, payload.fromUsername);
+    case 'listPartners':
+      verifyUserAuth_(payload);
+      return listPartners_(payload.username);
+    case 'listPendingInvites':
+      verifyUserAuth_(payload);
+      return listPendingInvites_(payload.username);
+    case 'sendProgram':
+      verifyUserAuth_(payload);
+      return sendProgram_(payload);
+    case 'listInbox':
+      verifyUserAuth_(payload);
+      return listInbox_(payload.username);
+    case 'fetchInbox':
+      verifyUserAuth_(payload);
+      return fetchInboxItem_(payload.username, payload.id, payload.markRead !== false);
+    case 'dismissInbox':
+      verifyUserAuth_(payload);
+      return dismissInboxItem_(payload.username, payload.id);
     default:
       throw new Error('Ukjent handling: ' + action);
   }
@@ -257,6 +292,301 @@ function unpublishProgram_(code) {
 }
 
 // =============================================================================
+// Users, parring og innboks
+// =============================================================================
+
+function readSheetRows_(sheetKey, columnsKey) {
+  var sheet = getRelaySheet_(RELAY_SHEETS[sheetKey]);
+  var headers = RELAY_COLUMNS[columnsKey];
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  var values = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+  return values.map(function (row) {
+    var obj = {};
+    headers.forEach(function (h, i) { obj[h] = row[i]; });
+    return obj;
+  });
+}
+
+function appendSheetRow_(sheetKey, columnsKey, entry) {
+  var sheet = getRelaySheet_(RELAY_SHEETS[sheetKey]);
+  var headers = RELAY_COLUMNS[columnsKey];
+  var values = headers.map(function (h) { return entry[h] != null ? entry[h] : ''; });
+  sheet.appendRow(values);
+  return sheet.getLastRow();
+}
+
+function updateSheetRow_(sheetKey, columnsKey, rowIndex, entry) {
+  var sheet = getRelaySheet_(RELAY_SHEETS[sheetKey]);
+  var headers = RELAY_COLUMNS[columnsKey];
+  var values = headers.map(function (h) { return entry[h] != null ? entry[h] : ''; });
+  sheet.getRange(rowIndex, 1, rowIndex, headers.length).setValues([values]);
+}
+
+function normalizeUsername_(username) {
+  var u = String(username || '').trim().toLowerCase().replace(/^@/, '');
+  u = u.replace(/[^a-z0-9_]/g, '');
+  if (u.length < 3 || u.length > 20) throw new Error('Brukernavn må være 3–20 tegn (a-z, 0-9, _)');
+  return u;
+}
+
+function findUserRow_(username) {
+  var u = normalizeUsername_(username);
+  var rows = readSheetRows_('users', 'Users');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].username) === u) {
+      return { row: rows[i], rowIndex: i + 2 };
+    }
+  }
+  return null;
+}
+
+function verifyUserAuth_(payload) {
+  var username = normalizeUsername_(payload.username);
+  var secret = String(payload.deviceSecret || '');
+  if (!secret) throw new Error('Mangler enhetsnøkkel');
+  var found = findUserRow_(username);
+  if (!found) throw new Error('Ugyldig bruker');
+  if (hashPin_(secret) !== String(found.row.secretHash)) {
+    throw new Error('Ugyldig enhetsnøkkel');
+  }
+  payload.username = username;
+}
+
+function registerUser_(username) {
+  var u = normalizeUsername_(username);
+  if (findUserRow_(u)) throw new Error('Brukernavnet er opptatt');
+  var deviceSecret = genererRelayNokkel_();
+  appendSheetRow_('users', 'Users', {
+    username: u,
+    secretHash: hashPin_(deviceSecret),
+    createdAt: new Date().toISOString(),
+  });
+  return { username: u, deviceSecret: deviceSecret };
+}
+
+function findPairingBetween_(userA, userB) {
+  var a = normalizeUsername_(userA);
+  var b = normalizeUsername_(userB);
+  var rows = readSheetRows_('pairings', 'Pairings');
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var ra = String(row.userA);
+    var rb = String(row.userB);
+    if ((ra === a && rb === b) || (ra === b && rb === a)) {
+      return { row: row, rowIndex: i + 2 };
+    }
+  }
+  return null;
+}
+
+function invitePartner_(fromUser, toUsername) {
+  var from = normalizeUsername_(fromUser);
+  var to = normalizeUsername_(toUsername);
+  if (from === to) throw new Error('Du kan ikke invitere deg selv');
+  if (!findUserRow_(to)) throw new Error('Brukeren finnes ikke');
+  var existing = findPairingBetween_(from, to);
+  if (existing) {
+    if (existing.row.status === 'accepted') throw new Error('Dere er allerede partnere');
+    if (existing.row.status === 'pending') throw new Error('Invitasjon venter allerede');
+  }
+  appendSheetRow_('pairings', 'Pairings', {
+    id: generateRelayId_(),
+    userA: from,
+    userB: to,
+    status: 'pending',
+    invitedBy: from,
+    createdAt: new Date().toISOString(),
+    acceptedAt: '',
+  });
+  return { from: from, to: to, status: 'pending' };
+}
+
+function acceptPartner_(user, fromUsername) {
+  var u = normalizeUsername_(user);
+  var from = normalizeUsername_(fromUsername);
+  var found = findPairingBetween_(from, u);
+  if (!found || found.row.status !== 'pending') throw new Error('Fant ingen ventende invitasjon');
+  if (String(found.row.userB) !== u || String(found.row.invitedBy) !== from) {
+    throw new Error('Fant ingen ventende invitasjon');
+  }
+  var updated = {};
+  RELAY_COLUMNS.Pairings.forEach(function (h) { updated[h] = found.row[h]; });
+  updated.status = 'accepted';
+  updated.acceptedAt = new Date().toISOString();
+  updateSheetRow_('pairings', 'Pairings', found.rowIndex, updated);
+  return { partner: from, status: 'accepted' };
+}
+
+function rejectPartner_(user, fromUsername) {
+  var u = normalizeUsername_(user);
+  var from = normalizeUsername_(fromUsername);
+  var found = findPairingBetween_(from, u);
+  if (!found || found.row.status !== 'pending') throw new Error('Fant ingen ventende invitasjon');
+  var updated = {};
+  RELAY_COLUMNS.Pairings.forEach(function (h) { updated[h] = found.row[h]; });
+  updated.status = 'rejected';
+  updateSheetRow_('pairings', 'Pairings', found.rowIndex, updated);
+  return { from: from, status: 'rejected' };
+}
+
+function listPartners_(username) {
+  var u = normalizeUsername_(username);
+  var rows = readSheetRows_('pairings', 'Pairings');
+  var partners = [];
+  rows.forEach(function (row) {
+    if (row.status !== 'accepted') return;
+    if (String(row.userA) === u) partners.push(String(row.userB));
+    else if (String(row.userB) === u) partners.push(String(row.userA));
+  });
+  partners.sort();
+  return { partners: partners };
+}
+
+function listPendingInvites_(username) {
+  var u = normalizeUsername_(username);
+  var rows = readSheetRows_('pairings', 'Pairings');
+  var incoming = [];
+  rows.forEach(function (row) {
+    if (row.status !== 'pending') return;
+    if (String(row.userB) === u) {
+      incoming.push({
+        from: String(row.userA),
+        createdAt: isoOrNull_(row.createdAt),
+      });
+    }
+  });
+  return { incoming: incoming };
+}
+
+function assertPartners_(userA, userB) {
+  var found = findPairingBetween_(userA, userB);
+  if (!found || found.row.status !== 'accepted') {
+    throw new Error('Dere er ikke godkjente partnere');
+  }
+}
+
+function sendProgram_(payload) {
+  var from = normalizeUsername_(payload.username);
+  var to = normalizeUsername_(payload.toUsername);
+  assertPartners_(from, to);
+  var program = payload.program;
+  validateProgram_(program);
+  var programJson = JSON.stringify(program);
+  if (programJson.length > MAX_PROGRAM_JSON) {
+    throw new Error('Programmet er for stort');
+  }
+  var now = new Date();
+  var expiresInDays = Number(payload.expiresInDays);
+  if (!expiresInDays || expiresInDays < 1) expiresInDays = 30;
+  if (expiresInDays > 90) expiresInDays = 90;
+  var expiresAt = new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000);
+  var title = String(payload.title || program.name || 'Program').trim() || 'Program';
+  var id = generateRelayId_();
+  appendSheetRow_('inbox', 'Inbox', {
+    id: id,
+    fromUser: from,
+    toUser: to,
+    title: title,
+    programJson: programJson,
+    sentAt: now.toISOString(),
+    readAt: '',
+    expiresAt: expiresAt.toISOString(),
+  });
+  return { id: id, to: to, title: title, sentAt: now.toISOString() };
+}
+
+function listInbox_(username) {
+  var u = normalizeUsername_(username);
+  var rows = readSheetRows_('inbox', 'Inbox');
+  var items = [];
+  var now = Date.now();
+  rows.forEach(function (row) {
+    if (String(row.toUser) !== u) return;
+    if (row.readAt) return;
+    if (row.expiresAt) {
+      var exp = new Date(row.expiresAt).getTime();
+      if (!isNaN(exp) && exp < now) return;
+    }
+    var program;
+    try {
+      program = parseStoredProgram_(row.programJson);
+    } catch (e) {
+      return;
+    }
+    items.push({
+      id: String(row.id),
+      from: String(row.fromUser),
+      title: String(row.title || program.name || 'Program'),
+      exerciseCount: (program.exercises || []).length,
+      sentAt: isoOrNull_(row.sentAt),
+      expiresAt: isoOrNull_(row.expiresAt),
+    });
+  });
+  items.sort(function (a, b) {
+    return String(b.sentAt).localeCompare(String(a.sentAt));
+  });
+  return { items: items };
+}
+
+function findInboxRow_(username, id) {
+  var u = normalizeUsername_(username);
+  var rows = readSheetRows_('inbox', 'Inbox');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].id) === String(id) && String(rows[i].toUser) === u) {
+      return { row: rows[i], rowIndex: i + 2 };
+    }
+  }
+  return null;
+}
+
+function fetchInboxItem_(username, id, markRead) {
+  var found = findInboxRow_(username, id);
+  if (!found) throw new Error('Fant ikke programmet i innboksen');
+  var row = found.row;
+  if (row.expiresAt) {
+    var exp = new Date(row.expiresAt);
+    if (!isNaN(exp.getTime()) && exp.getTime() < Date.now()) {
+      throw new Error('Programmet er utløpt');
+    }
+  }
+  var program = parseStoredProgram_(row.programJson);
+  if (markRead && !row.readAt) {
+    var updated = {};
+    RELAY_COLUMNS.Inbox.forEach(function (h) { updated[h] = row[h]; });
+    updated.readAt = new Date().toISOString();
+    updateSheetRow_('inbox', 'Inbox', found.rowIndex, updated);
+  }
+  return {
+    id: String(row.id),
+    from: String(row.fromUser),
+    title: String(row.title || program.name || 'Program'),
+    sentAt: isoOrNull_(row.sentAt),
+    program: program,
+  };
+}
+
+function dismissInboxItem_(username, id) {
+  var found = findInboxRow_(username, id);
+  if (!found) throw new Error('Fant ikke programmet i innboksen');
+  if (!found.row.readAt) {
+    var updated = {};
+    RELAY_COLUMNS.Inbox.forEach(function (h) { updated[h] = found.row[h]; });
+    updated.readAt = new Date().toISOString();
+    updateSheetRow_('inbox', 'Inbox', found.rowIndex, updated);
+  }
+  return { id: String(id), dismissed: true };
+}
+
+function generateRelayId_() {
+  var id = '';
+  for (var i = 0; i < 8; i++) {
+    id += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length));
+  }
+  return id;
+}
+
+// =============================================================================
 // Helpers
 // =============================================================================
 
@@ -347,6 +677,9 @@ function genererRelayNokkel_() {
 
 function kjorRelayOppsett() {
   getRelaySheet_(RELAY_SHEETS.published);
+  getRelaySheet_(RELAY_SHEETS.users);
+  getRelaySheet_(RELAY_SHEETS.pairings);
+  getRelaySheet_(RELAY_SHEETS.inbox);
 
   var props = PropertiesService.getScriptProperties();
   var publishKey = props.getProperty('relayPublishKey');

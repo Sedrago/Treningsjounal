@@ -144,3 +144,12 @@ treningslogg deles **ikke** via relay — kun programstruktur.
 **Importere:** Skann QR eller åpne `#/program?k=KODE` i appen.
 
 **Publisere:** Styrke → Lagrede programmer → ↗ Eksporter → «Publiser og vis QR».
+
+### Partner-deling
+
+1. Begge registrerer **brukernavn** under Innstillinger → Programdeling.
+2. Inviter partner med brukernavn — partneren **godtar** invitasjonen.
+3. **Send program:** Styrke → Eksporter → «Send til partner».
+4. **Motta:** Appen viser varsel ved nye programmer — åpne **#/innboks**.
+
+Etter oppdatering av `Relay.gs`: kjør `kjorRelayOppsett` på nytt (oppretter Users/Pairings/Inbox-ark) og redeploy Web App.

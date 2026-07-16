@@ -1,12 +1,14 @@
 /**
- * relay-api.js – klient mot Treningsjournal Relay (programdeling / QR).
+ * relay-api.js – klient mot Treningsjournal Relay (programdeling / QR / innboks).
  *
  * Henting (meta/fetch) krever bare relay-URL.
- * Publisering krever i tillegg publiseringsnøkkel.
+ * Publisering krever publiseringsnøkkel.
+ * Partner-innboks krever registrert brukernavn + enhetsnøkkel.
  */
 
 const RELAY_URL_KEY = 'tj_relayUrl';
 const RELAY_PUBLISH_KEY = 'tj_relayPublishKey';
+const RELAY_IDENTITY_KEY = 'tj_relayIdentity';
 
 export function getRelayUrl() {
   return localStorage.getItem(RELAY_URL_KEY) || '';
@@ -24,12 +26,46 @@ export function setRelayPublishKey(key) {
   localStorage.setItem(RELAY_PUBLISH_KEY, String(key || '').trim());
 }
 
+export function getRelayIdentity() {
+  try {
+    const raw = localStorage.getItem(RELAY_IDENTITY_KEY);
+    if (!raw) return { username: '', deviceSecret: '' };
+    const data = JSON.parse(raw);
+    return {
+      username: String(data.username || ''),
+      deviceSecret: String(data.deviceSecret || ''),
+    };
+  } catch {
+    return { username: '', deviceSecret: '' };
+  }
+}
+
+export function setRelayIdentity({ username, deviceSecret }) {
+  localStorage.setItem(RELAY_IDENTITY_KEY, JSON.stringify({
+    username: String(username || '').trim().toLowerCase(),
+    deviceSecret: String(deviceSecret || '').trim(),
+  }));
+}
+
+export function clearRelayIdentity() {
+  localStorage.removeItem(RELAY_IDENTITY_KEY);
+}
+
+export function hasRelayIdentity() {
+  const { username, deviceSecret } = getRelayIdentity();
+  return Boolean(username && deviceSecret);
+}
+
 export function isRelayConfigured() {
   return Boolean(getRelayUrl().includes('script.google.com'));
 }
 
 export function canPublishToRelay() {
   return isRelayConfigured() && Boolean(getRelayPublishKey());
+}
+
+export function canUseRelayInbox() {
+  return isRelayConfigured() && hasRelayIdentity();
 }
 
 function normalizeRelayUrl(url) {
@@ -64,6 +100,14 @@ async function parseRelayResponse(res) {
   return json.data;
 }
 
+function authPayload(extra = {}) {
+  const { username, deviceSecret } = getRelayIdentity();
+  if (!username || !deviceSecret) {
+    throw new Error('Registrer brukernavn under Innstillinger → Programdeling');
+  }
+  return { username, deviceSecret, ...extra };
+}
+
 async function relayGet(action, payload = {}) {
   const url = getRelayUrl();
   if (!url) throw new Error('Relay-URL er ikke satt');
@@ -77,12 +121,15 @@ async function relayGet(action, payload = {}) {
   return parseRelayResponse(res);
 }
 
-async function relayPost(action, payload = {}) {
+async function relayPost(action, payload = {}, { usePublishKey = true } = {}) {
   const url = getRelayUrl();
-  const key = getRelayPublishKey();
   if (!url) throw new Error('Relay-URL er ikke satt');
-  if (!key) throw new Error('Publiseringsnøkkel mangler');
-  const envelope = { key, action, payload };
+  const envelope = { action, payload };
+  if (usePublishKey) {
+    const key = getRelayPublishKey();
+    if (!key) throw new Error('Publiseringsnøkkel mangler');
+    envelope.key = key;
+  }
   const res = await fetch(normalizeRelayUrl(url), {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -123,4 +170,60 @@ export function relayUpdate(opts) {
 
 export function relayUnpublish(code) {
   return relayPost('unpublish', { code: String(code || '').trim() });
+}
+
+export function relayRegister(username) {
+  return relayGet('register', { username: String(username || '').trim() });
+}
+
+export function relayInvitePartner(toUsername) {
+  return relayGet('invitePartner', authPayload({ toUsername: String(toUsername || '').trim() }));
+}
+
+export function relayAcceptPartner(fromUsername) {
+  return relayGet('acceptPartner', authPayload({ fromUsername: String(fromUsername || '').trim() }));
+}
+
+export function relayRejectPartner(fromUsername) {
+  return relayGet('rejectPartner', authPayload({ fromUsername: String(fromUsername || '').trim() }));
+}
+
+export function relayListPartners() {
+  return relayGet('listPartners', authPayload());
+}
+
+export function relayListPendingInvites() {
+  return relayGet('listPendingInvites', authPayload());
+}
+
+export function relayListInbox() {
+  return relayGet('listInbox', authPayload());
+}
+
+export function relayFetchInbox(id, { markRead = false } = {}) {
+  return relayGet('fetchInbox', authPayload({ id: String(id || ''), markRead }));
+}
+
+export function relayDismissInbox(id) {
+  return relayGet('dismissInbox', authPayload({ id: String(id || '') }));
+}
+
+export function relaySendProgram({ toUsername, program, title, expiresInDays = 30 }) {
+  return relayPost('sendProgram', authPayload({
+    toUsername: String(toUsername || '').trim(),
+    program,
+    title,
+    expiresInDays,
+  }), { usePublishKey: false });
+}
+
+/** Sjekker innboks ved oppstart; returnerer antall uleste. */
+export async function checkRelayInboxQuietly() {
+  if (!canUseRelayInbox()) return 0;
+  try {
+    const { items } = await relayListInbox();
+    return items?.length || 0;
+  } catch {
+    return 0;
+  }
 }
