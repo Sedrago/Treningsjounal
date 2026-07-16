@@ -10,6 +10,7 @@ import {
 import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { mountSetLogger, completedSetsHtml, bindCompletedSetsList } from '../session-log.js';
+import * as programShare from '../program-share.js';
 import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
 import {
@@ -269,6 +270,8 @@ export async function render(container, params, query = {}) {
     { action: 'kalender', label: 'Kalender' },
     { action: 'historikk', label: 'Hent fra tidligere økt' },
     { action: 'mal', label: 'Lagrede programmer' },
+    { action: 'importer', label: 'Importer program' },
+    ...(isToday && daySets.length ? [{ action: 'lagre-fra-logging', label: 'Lagre program fra dagens logging' }] : []),
     ...(items.length ? [{ action: 'lagre-mal', label: 'Lagre som program' }] : []),
     ...(items.length ? [{ action: 'tom', label: 'Tøm program', farlig: true }] : []),
     ...(sessionActive ? [{ action: 'pause', label: 'Pause økt' }] : []),
@@ -399,6 +402,28 @@ export async function render(container, params, query = {}) {
           await updateItems(merged);
         }
         toast(`«${tpl.name || 'Program'}» lastet inn`, 'suksess');
+        render(container, params, query);
+      });
+    } else if (action === 'importer') {
+      openImportProgramSheet(host, exMap, async () => {
+        render(container, params, query);
+      });
+    } else if (action === 'lagre-fra-logging') {
+      const saveItems = programShare.itemsFromLoggedSession(daySets, items);
+      if (!saveItems.length) {
+        toast('Ingen loggede sett å lagre fra', 'feil');
+        return;
+      }
+      openSaveTemplateSheet(host, saveItems, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems: outItems }) => {
+        await store.saveAsTemplate(name, outItems, { scheduleDate });
+        toast(scheduleDate
+          ? `«${name}» lagret fra dagens logging og lagt på ${formatDateShort(scheduleDate)}`
+          : `Programmet «${name}» er lagret fra dagens logging`, 'suksess');
+      }, {
+        title: 'Lagre program fra dagens logging',
+        intro: `${saveItems.length} øvelse${saveItems.length === 1 ? '' : 'r'} med mål hentet fra det du logget i dag.`,
+        defaultName: plan?.name ? `${plan.name} (logget)` : `Økt ${formatDateShort(viewDate)}`,
+        goalsChecked: true,
       });
     } else if (action === 'lagre-mal') {
       openSaveTemplateSheet(host, items, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems }) => {
@@ -842,6 +867,7 @@ async function openTemplatesSheet(host, exMap, onSelect) {
         <span class="styrke-mal-handlinger">
           <button type="button" class="plan-bib-bruk" data-id="${t.id}" data-modus="erstatt">Bruk →</button>
           <button type="button" class="plan-bib-bruk dus" data-id="${t.id}" data-modus="legg-til">+ Legg til</button>
+          <button type="button" class="plan-bib-bruk dus" data-id="${t.id}" data-handling="eksporter" aria-label="Eksporter program">↗</button>
         </span>
       </div>`;
   }).join('');
@@ -854,6 +880,7 @@ async function openTemplatesSheet(host, exMap, onSelect) {
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
       ${rows || '<p class="tomt">Ingen lagrede programmer ennå. Bygg et program og trykk «Lagre som program».</p>'}
+      <button type="button" class="knapp sekundaer bred" id="mal-importer">Importer program</button>
     </div>`;
 
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
@@ -863,9 +890,176 @@ async function openTemplatesSheet(host, exMap, onSelect) {
       onSelect(btn.dataset.id, btn.dataset.modus === 'erstatt');
     });
   });
+  host.querySelectorAll('[data-handling="eksporter"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tpl = templates.find((t) => t.id === btn.dataset.id);
+      if (!tpl) return;
+      openExportProgramSheet(host, tpl, exMap);
+    });
+  });
+  host.querySelector('#mal-importer')?.addEventListener('click', () => {
+    openImportProgramSheet(host, exMap, () => { host.innerHTML = ''; });
+  });
 }
 
-function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave) {
+function openExportProgramSheet(host, template, exMap) {
+  const payload = programShare.buildProgramPayload(template.name, template.items, exMap);
+  const code = programShare.programShareCode(payload);
+
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Eksporter program">
+      <div class="ark-hode">
+        <h2>Eksporter program</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus liten">«${esc(template.name || 'Program')}» — kun øvelser og foreslåtte mål, ingen treningslogger.</p>
+      <div class="program-del-knapper">
+        <button type="button" class="knapp primaer bred" id="prog-last-ned">Last ned JSON-fil</button>
+        <button type="button" class="knapp sekundaer bred" id="prog-kopier-kode">Kopier delingskode</button>
+        ${typeof navigator.share === 'function' ? '<button type="button" class="knapp sekundaer bred" id="prog-del">Del …</button>' : ''}
+      </div>
+      <label class="felt-navn" for="prog-kode">Delingskode</label>
+      <textarea class="inndata program-kode-felt" id="prog-kode" rows="4" readonly>${esc(code)}</textarea>
+      <p class="dus liten">Partner kan lime koden inn under «Importer program», eller åpne JSON-filen.</p>
+    </div>`;
+
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+  host.querySelector('#prog-last-ned').addEventListener('click', () => {
+    programShare.exportProgramFile(payload);
+    toast('Programfil lastet ned', 'suksess');
+  });
+  host.querySelector('#prog-kopier-kode').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast('Delingskode kopiert', 'suksess');
+    } catch {
+      host.querySelector('#prog-kode').select();
+      toast('Kunne ikke kopiere — merk teksten manuelt', 'feil');
+    }
+  });
+  host.querySelector('#prog-del')?.addEventListener('click', async () => {
+    try {
+      const file = new File([JSON.stringify(payload, null, 2)], programShare.defaultExportFilename(template.name), { type: 'application/json' });
+      await navigator.share({
+        title: template.name || 'Treningsprogram',
+        text: `Treningsprogram: ${template.name || 'Program'}`,
+        files: [file],
+      });
+    } catch {
+      try {
+        await navigator.share({
+          title: template.name || 'Treningsprogram',
+          text: code,
+        });
+      } catch {
+        toast('Deling avbrutt', 'info');
+      }
+    }
+  });
+}
+
+function openImportProgramSheet(host, exMap, onDone) {
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Importer program">
+      <div class="ark-hode">
+        <h2>Importer program</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus liten">Lim inn delingskode eller velg en JSON-fil fra treningspartner. Kun programstruktur importeres — ikke logger.</p>
+      <form id="prog-import-skjema">
+        <label class="felt-navn" for="prog-import-tekst">Delingskode eller JSON</label>
+        <textarea class="inndata" id="prog-import-tekst" rows="5" placeholder="Lim inn kode her …"></textarea>
+
+        <label class="felt-navn" for="prog-import-fil">Eller velg fil</label>
+        <input type="file" class="inndata" id="prog-import-fil" accept=".json,application/json">
+
+        <label class="bryter-rad">
+          <input type="checkbox" id="prog-import-auto" checked>
+          <span>Legg til manglende øvelser automatisk</span>
+        </label>
+
+        <div id="prog-import-forhåndsvis" class="program-import-preview skjult"></div>
+
+        <button type="submit" class="knapp primaer bred">Importer til lagrede programmer</button>
+      </form>
+    </div>`;
+
+  const textEl = host.querySelector('#prog-import-tekst');
+  const fileEl = host.querySelector('#prog-import-fil');
+  const previewEl = host.querySelector('#prog-import-forhåndsvis');
+  let pendingData = null;
+
+  async function refreshPreview() {
+    const fromFile = fileEl.files?.[0];
+    let text = textEl.value.trim();
+    if (fromFile) {
+      text = await fromFile.text();
+    }
+    if (!text) {
+      previewEl.classList.add('skjult');
+      previewEl.innerHTML = '';
+      pendingData = null;
+      return;
+    }
+    try {
+      const data = programShare.parseProgramImport(text);
+      pendingData = data;
+      const lines = (data.exercises || []).map((ref) => {
+        const parts = [ref.name || ref.catalogId || 'Ukjent'];
+        if (ref.suggestedSets && ref.suggestedReps) parts.push(`${ref.suggestedSets}×${ref.suggestedReps}`);
+        else if (ref.suggestedSets) parts.push(`${ref.suggestedSets} sett`);
+        if (ref.suggestedWeightKg) parts.push(`${ref.suggestedWeightKg} kg`);
+        return `<li>${esc(parts.join(' · '))}</li>`;
+      }).join('');
+      previewEl.innerHTML = `
+        <p class="felt-navn liten">${esc(data.name || 'Program')} · ${data.exercises?.length || 0} øvelse${data.exercises?.length === 1 ? '' : 'r'}</p>
+        <ul class="program-import-liste">${lines}</ul>`;
+      previewEl.classList.remove('skjult');
+    } catch (err) {
+      pendingData = null;
+      previewEl.innerHTML = `<p class="program-import-feil liten">${esc(err.message || 'Ugyldig program')}</p>`;
+      previewEl.classList.remove('skjult');
+    }
+  }
+
+  textEl.addEventListener('input', refreshPreview);
+  fileEl.addEventListener('change', () => {
+    if (fileEl.files?.[0]) textEl.value = '';
+    refreshPreview();
+  });
+
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+
+  host.querySelector('#prog-import-skjema').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await refreshPreview();
+    if (!pendingData) {
+      toast('Lim inn gyldig programkode eller velg fil først', 'feil');
+      return;
+    }
+    const autoAdd = host.querySelector('#prog-import-auto').checked;
+    try {
+      const { name, items, warnings } = await programShare.importProgramData(pendingData, { autoAddMissing: autoAdd });
+      await store.saveAsTemplate(name, items);
+      host.innerHTML = '';
+      const warn = warnings.length ? ` (${warnings.length} hoppet over)` : '';
+      toast(`«${name}» importert${warn}`, warnings.length ? 'info' : 'suksess');
+      onDone?.();
+    } catch (err) {
+      toast(err.message || 'Import feilet', 'feil');
+    }
+  });
+}
+
+function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave, opts = {}) {
+  const {
+    title = 'Lagre som program',
+    intro = `${items.length} øvelse${items.length === 1 ? '' : 'r'} lagres i biblioteket ditt som gjenbrukbar mal.`,
+    defaultName = '',
+    goalsChecked = false,
+  } = opts;
   const today = todayStr();
   const malRows = items.map((it) => {
     const ex = exMap.get(it.exerciseId);
@@ -899,22 +1093,22 @@ function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
-    <div class="ark" role="dialog" aria-label="Lagre program">
+    <div class="ark" role="dialog" aria-label="${esc(title)}">
       <div class="ark-hode">
-        <h2>Lagre som program</h2>
+        <h2>${esc(title)}</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      <p class="dus liten">${items.length} øvelse${items.length === 1 ? '' : 'r'} lagres i biblioteket ditt som gjenbrukbar mal.</p>
+      <p class="dus liten">${intro}</p>
       <form id="lagre-mal-skjema">
         <label class="felt-navn" for="mal-navn">Navn</label>
-        <input type="text" class="inndata" id="mal-navn" placeholder="F.eks. Uke A" required autofocus>
+        <input type="text" class="inndata" id="mal-navn" placeholder="F.eks. Uke A" value="${esc(defaultName)}" required autofocus>
 
         <label class="bryter-rad">
-          <input type="checkbox" id="mal-med-mal">
+          <input type="checkbox" id="mal-med-mal" ${goalsChecked ? 'checked' : ''}>
           <span>Inkluder mål per øvelse</span>
         </label>
 
-        <div id="mal-mal-wrap" class="skjult">
+        <div id="mal-mal-wrap" class="${goalsChecked ? '' : 'skjult'}">
           <div class="plan-mal-liste">${malRows}</div>
           <button type="button" class="knapp sekundaer liten" id="mal-fra-logging">Fyll inn fra dagens logging</button>
         </div>

@@ -759,6 +759,7 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 /* ---------- Økt-modus (Styrketrening) ---------- */
@@ -1006,6 +1007,39 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 
 #mal-mal-wrap .knapp.liten { margin-top: 4px; }
+
+.program-del-knapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.program-kode-felt {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.program-import-preview {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: var(--flate-2);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+}
+
+.program-import-liste {
+  margin: 6px 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.program-import-feil { color: var(--fare); margin: 0; }
+
+.program-import-feil { color: var(--fare); margin: 0; }
 
 .oktt-overlay-tittel .plan-mal-hint {
   display: block;
