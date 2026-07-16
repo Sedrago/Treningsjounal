@@ -739,7 +739,8 @@ export async function getScheduledPlan(date) {
   const matches = all
     .filter((p) => !p.deleted && p.status === 'planlagt' && p.date === date)
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-  return matches.length ? parsePlanItems(matches[0]) : null;
+  const plan = matches.length ? parsePlanItems(matches[0]) : null;
+  return plan?.items?.length ? plan : null;
 }
 
 /** Planlagte programmer i et datointervall (inklusive). */
@@ -749,6 +750,7 @@ export async function getScheduledPlans({ from, to }) {
   return all
     .filter((p) => !p.deleted && p.status === 'planlagt' && p.date >= from && p.date <= to)
     .map(parsePlanItems)
+    .filter((p) => p.items?.length)
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -761,7 +763,8 @@ export async function getWorkoutPlanForDate(date = todayStr()) {
   const legacy = all
     .filter((p) => !p.deleted && p.status === 'aktiv' && p.date === date)
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-  return legacy.length ? parsePlanItems(legacy[0]) : null;
+  const legacyPlan = legacy.length ? parsePlanItems(legacy[0]) : null;
+  return legacyPlan?.items?.length ? legacyPlan : null;
 }
 
 /** @deprecated – bruk getWorkoutPlanForDate(todayStr()). */

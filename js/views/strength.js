@@ -330,6 +330,11 @@ export async function render(container, params, query = {}) {
 
   function openMenu() {
     menuList.classList.remove('skjult');
+    const rect = menuBtn.getBoundingClientRect();
+    const width = menuList.offsetWidth || 220;
+    menuList.style.top = `${Math.round(rect.bottom + 4)}px`;
+    menuList.style.left = `${Math.round(Math.max(8, rect.right - width))}px`;
+    menuList.style.right = 'auto';
     menuBtn.setAttribute('aria-expanded', 'true');
   }
 
@@ -439,7 +444,7 @@ export async function render(container, params, query = {}) {
       sessionStorage.removeItem(FOCUS_KEY);
       sessionStorage.removeItem(TEKNIKK_KEY);
       sessionStorage.removeItem(EXPAND_KEY);
-      if (plan) await store.deletePlan(plan.id);
+      await store.savePlanForDate(viewDate, { id: plan?.id, items: [], name: '', sourceTemplateId: '' });
       render(container, params, query);
     } else if (action === 'pause') {
       sessionStorage.removeItem(SESSION_KEY);

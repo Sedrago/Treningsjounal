@@ -691,16 +691,17 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .styrke-meny { font-size: 1.1rem; line-height: 1; }
 
 .styrke-meny-popover {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 30;
+  position: fixed;
+  z-index: 120;
   min-width: 220px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: min(60vh, calc(100dvh - env(safe-area-inset-bottom) - 16px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--flate);
   border: 1px solid var(--kant);
   border-radius: var(--radius-liten, 8px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
 }
 
 .styrke-meny-valg {
@@ -1945,7 +1946,23 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 /* ---------- Historikk ---------- */
 
-.hist-linje { margin: 5px 0; display: flex; justify-content: space-between; gap: 8px; }
+.hist-linje {
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.hist-linje-navn {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.hist-linje-detalj {
+  line-height: 1.35;
+  word-break: break-word;
+}
 .hist-kort-topp {
   display: flex;
   align-items: flex-start;

@@ -231,7 +231,7 @@ export async function render(container, params, query = {}) {
     const hasLog = daySets.length > 0;
     const hasPlan = Boolean(plan?.items?.length);
     const status = dayStatus(date, today, hasLog, hasPlan);
-    const title = plan?.name || (hasLog ? 'Logget økt' : '');
+    const title = hasPlan ? (plan.name || '') : (hasLog ? 'Logget økt' : '');
     const canMovePlan = hasPlan && !hasLog && plan?.id;
 
     let body = '';
@@ -248,7 +248,8 @@ export async function render(container, params, query = {}) {
         : status === 'logget' ? '<span class="kalender-badge kalender-badge--logget">Logget</span>'
           : '';
 
-    const actionLabel = date === today ? 'Gå til økt'
+    const actionLabel = date === today && (hasLog || hasPlan) ? 'Gå til økt'
+      : date === today ? 'Planlegg'
       : hasLog ? 'Rediger økt'
         : hasPlan ? 'Rediger plan'
           : 'Planlegg';

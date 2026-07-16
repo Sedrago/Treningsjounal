@@ -73,8 +73,10 @@ export async function render(container, params, query = {}) {
         const mode = exSets[0].logMode || 'weight';
         const summary = exSets.sort((a, b) => a.setNumber - b.setNumber)
           .map((s) => summarizeSet(s, mode, units)).join(' · ');
-        return `<p class="hist-linje"><a href="#/ovelse/${exId}">${esc(exSets[0].exerciseName)}</a>
-          <span class="dus">${esc(summary)}</span></p>`;
+        return `<div class="hist-linje">
+          <a href="#/ovelse/${exId}" class="hist-linje-navn">${esc(exSets[0].exerciseName)}</a>
+          <span class="dus hist-linje-detalj">${esc(summary)}</span>
+        </div>`;
       }).join('');
       const comments = daySets.filter((s) => s.comment).map((s) => `<p class="dus liten">«${esc(s.comment)}»</p>`).join('');
       return `
