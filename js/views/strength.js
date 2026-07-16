@@ -43,26 +43,54 @@ function daysSince(dateStr) {
 
 function sessionProgress(items, todaySets) {
   const setsByEx = groupBy(todaySets, (s) => s.exerciseId);
-  let done = 0;
+  let started = 0;
   for (const item of items) {
-    const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
-    if (logged >= item.goalSets) done += 1;
+    if ((setsByEx.get(item.exerciseId) || []).length) started += 1;
   }
-  return { done, total: items.length };
+  return { started, total: items.length };
 }
 
 function statusLine(plan, items, todaySets) {
   if (!items.length) return 'Tomt program';
-  const { done, total } = sessionProgress(items, todaySets);
+  const { started, total } = sessionProgress(items, todaySets);
   if (!todaySets.length) return `${total} øvelse${total === 1 ? '' : 'r'} klar`;
-  if (done >= total) return `Fullført ${done}/${total} øvelser i dag`;
-  return `Pågår – ${done}/${total} øvelser fullført`;
+  if (started >= total) return `${total} øvelse${total === 1 ? '' : 'r'} logget i dag`;
+  return `Pågår – ${started}/${total} øvelser startet`;
 }
 
 const FOCUS_KEY = 'styrkeFocusEx';
 const SESSION_KEY = 'styrkeSessionActive';
 const TEKNIKK_KEY = 'styrkeTeknikkEx';
 const EXPAND_KEY = 'styrkeRadUtvid';
+
+function nextSetNumber(persisted) {
+  if (!persisted.length) return 1;
+  const nums = persisted.map((s) => s.setNumber);
+  const max = Math.max(...nums);
+  for (let n = 1; n <= max; n++) {
+    if (!nums.includes(n)) return n;
+  }
+  return max + 1;
+}
+
+function resolveActive(items, setsByEx, exMap) {
+  if (!items.length) return null;
+
+  const focusId = sessionStorage.getItem(FOCUS_KEY);
+  let exIndex = focusId ? items.findIndex((it) => it.exerciseId === focusId) : -1;
+
+  if (exIndex < 0) {
+    exIndex = items.findIndex((it) => !(setsByEx.get(it.exerciseId) || []).length);
+    if (exIndex < 0) exIndex = 0;
+  }
+
+  const item = items[exIndex];
+  const exercise = exMap.get(item.exerciseId);
+  const persisted = setsByEx.get(item.exerciseId) || [];
+  const setNum = nextSetNumber(persisted);
+
+  return { exIndex, item, exercise, setNum };
+}
 
 function exercisePickerDescription(exercise) {
   const description = getDescription(exercise);
@@ -87,71 +115,6 @@ function renderInlineTeknikk(exercise, category) {
     </div>`;
 }
 
-function resolveActive(items, setsByEx, exMap) {
-  if (!items.length) return null;
-
-  const focusId = sessionStorage.getItem(FOCUS_KEY);
-  let exIndex = focusId ? items.findIndex((it) => it.exerciseId === focusId) : -1;
-  const explicitFocus = exIndex >= 0;
-
-  if (exIndex < 0) {
-    exIndex = items.findIndex((it) => {
-      const logged = new Set((setsByEx.get(it.exerciseId) || []).map((s) => s.setNumber)).size;
-      return logged < it.goalSets;
-    });
-  }
-  if (exIndex < 0) exIndex = 0;
-
-  const item = items[exIndex];
-  const exercise = exMap.get(item.exerciseId);
-  const persisted = setsByEx.get(item.exerciseId) || [];
-  const loggedNums = new Set(persisted.map((s) => s.setNumber));
-
-  let setNum = 1;
-  for (let n = 1; n <= item.goalSets; n++) {
-    if (!loggedNums.has(n)) {
-      setNum = n;
-      break;
-    }
-    setNum = n;
-  }
-
-  const allDone = loggedNums.size >= item.goalSets;
-  if (allDone && explicitFocus) {
-    return { exIndex, item, exercise, setNum: item.goalSets, allComplete: false };
-  }
-
-  if (allDone && !explicitFocus) {
-    const nextIdx = items.findIndex((it, i) => {
-      if (i <= exIndex) return false;
-      const logged = new Set((setsByEx.get(it.exerciseId) || []).map((s) => s.setNumber)).size;
-      return logged < it.goalSets;
-    });
-    if (nextIdx >= 0) {
-      const nextItem = items[nextIdx];
-      const nextPersisted = setsByEx.get(nextItem.exerciseId) || [];
-      const nextLogged = new Set(nextPersisted.map((s) => s.setNumber));
-      let nextSet = 1;
-      for (let n = 1; n <= nextItem.goalSets; n++) {
-        if (!nextLogged.has(n)) {
-          nextSet = n;
-          break;
-        }
-      }
-      return {
-        exIndex: nextIdx,
-        item: nextItem,
-        exercise: exMap.get(nextItem.exerciseId),
-        setNum: nextSet,
-        allComplete: false,
-      };
-    }
-    return { exIndex, item, exercise, setNum, allComplete: true };
-  }
-
-  return { exIndex, item, exercise, setNum, allComplete: false };
-}
-
 /** Eksportert for hjemskjermen. */
 export async function homeStrengthLabel() {
   const enriched = await store.getEnrichedSets();
@@ -162,9 +125,9 @@ export async function homeStrengthLabel() {
   if (!items.length && !todaySets.length) {
     return { title: 'Styrketrening', sub: 'Bygg dagens program' };
   }
-  const { done, total } = sessionProgress(items, todaySets);
-  if (todaySets.length && done < total) {
-    return { title: 'Fortsett styrketrening', sub: `${done}/${total || items.length} øvelser fullført` };
+  const { started, total } = sessionProgress(items, todaySets);
+  if (todaySets.length && started < total) {
+    return { title: 'Fortsett styrketrening', sub: `${started}/${total || items.length} øvelser startet` };
   }
   if (items.length && !todaySets.length) {
     return { title: 'Styrketrening', sub: `${items.length} øvelse${items.length === 1 ? '' : 'r'} klar` };
@@ -188,14 +151,10 @@ export async function render(container, params, query = {}) {
   const dayWorkout = workouts.find((w) => w.date === viewDate) || null;
 
   const setsByEx = groupBy(daySets, (s) => s.exerciseId);
-  const { done: progDone, total: progTotal } = sessionProgress(items, daySets);
-  const allProgramDone = items.length > 0 && progDone >= progTotal && progTotal > 0;
-  const hasPartialLog = daySets.length > 0 && !allProgramDone;
+  const hasPartialLog = daySets.length > 0;
 
-  // Fortsett automatisk hvis økt pågår; ellers kreves «Start økt».
-  if (!isToday || allProgramDone || !items.length) {
+  if (!isToday || !items.length) {
     if (!isToday) sessionStorage.removeItem(SESSION_KEY);
-    else if (allProgramDone || !items.length) sessionStorage.removeItem(SESSION_KEY);
   } else if (hasPartialLog) {
     sessionStorage.setItem(SESSION_KEY, '1');
   }
@@ -210,28 +169,20 @@ export async function render(container, params, query = {}) {
     const ex = exMap.get(item.exerciseId);
     const name = ex ? ex.name : 'Ukjent øvelse';
     const cat = ex ? store.categoryById(ex.category) : null;
-    const logged = new Set((setsByEx.get(item.exerciseId) || []).map((s) => s.setNumber)).size;
-    const done = logged >= item.goalSets;
-    const isActive = sessionActive && active && active.exIndex === i && !allProgramDone;
+    const logged = (setsByEx.get(item.exerciseId) || []).length;
+    const isActive = sessionActive && active && active.exIndex === i;
     const isExpanded = expandedId === item.exerciseId;
     const showDetails = isExpanded;
     const compact = !isExpanded;
     const showTeknikk = isExpanded && teknikkOpenId === item.exerciseId;
     const hasTeknikk = ex && (getDescription(ex) || ex.notes?.trim() || ex.video?.trim());
 
-    const progress = sessionActive ? `
-      <span class="styrke-rad-fremdrift dus liten">${logged}/${item.goalSets}</span>` : '';
+    const progress = sessionActive && logged
+      ? `<span class="styrke-rad-fremdrift dus liten">${logged} sett</span>` : '';
 
     const expandBtn = `
         <button type="button" class="ikon-knapp styrke-rad-utvid" data-handling="utvid"
           aria-label="${isExpanded ? 'Skjul valg' : 'Vis valg'}" aria-expanded="${isExpanded ? 'true' : 'false'}">⌄</button>`;
-
-    const setVelger = showDetails ? `
-        <span class="plan-sett-velger">
-          <button type="button" class="plan-sett-knapp" data-handling="sett-minus" aria-label="Færre sett">−</button>
-          <span class="plan-sett-antall">${item.goalSets} sett</span>
-          <button type="button" class="plan-sett-knapp" data-handling="sett-pluss" aria-label="Flere sett">+</button>
-        </span>` : '';
 
     const rowActions = showDetails ? `
         <span class="plan-rad-handlinger">
@@ -247,10 +198,10 @@ export async function render(container, params, query = {}) {
       : '';
 
     return `
-      <div class="plan-rad styrke-rad styrke-rad--liste ${sessionActive ? 'styrke-rad--oktt' : ''} ${done ? 'ferdig' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : 'styrke-rad--utvidet'}"
+      <div class="plan-rad styrke-rad styrke-rad--liste ${sessionActive ? 'styrke-rad--oktt' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : 'styrke-rad--utvidet'}"
         data-idx="${i}" data-ex-id="${item.exerciseId}">
         <div class="styrke-lenke">
-          <span class="plan-rekkefolge">${done ? '✓' : i + 1}</span>
+          <span class="plan-rekkefolge">${i + 1}</span>
           ${cat ? `<span class="styrke-rad-kat">${categoryIconHtml(cat, 'kategori-ikon styrke-kat-ikon')}</span>` : ''}
           <span class="plan-okt-info">
             <span class="plan-navn">${esc(name)}</span>
@@ -258,7 +209,6 @@ export async function render(container, params, query = {}) {
         </div>
         ${progress}
         ${expandBtn}
-        ${setVelger}
         ${rowActions}
         ${completedSetsBlock ? `<div class="styrke-fullforte">${completedSetsBlock}</div>` : ''}
         ${showTeknikk ? renderInlineTeknikk(ex, cat) : ''}
@@ -356,10 +306,7 @@ export async function render(container, params, query = {}) {
   }, 600));
 
   function addExercise(exercise) {
-    const next = [...items.map((it) => ({ ...it })), {
-      exerciseId: exercise.id,
-      goalSets: Number(exercise.goalSets),
-    }];
+    const next = [...items.map((it) => ({ ...it })), { exerciseId: exercise.id }];
     return updateItems(next);
   }
 
@@ -490,8 +437,6 @@ export async function render(container, params, query = {}) {
         if (action === 'fjern') next.splice(idx, 1);
         else if (action === 'opp' && idx > 0) [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
         else if (action === 'ned' && idx < next.length - 1) [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
-        else if (action === 'sett-minus') next[idx].goalSets = Math.max(1, next[idx].goalSets - 1);
-        else if (action === 'sett-pluss') next[idx].goalSets = Math.min(10, next[idx].goalSets + 1);
         await updateItems(next);
       });
     });
@@ -521,42 +466,29 @@ export async function render(container, params, query = {}) {
     }
   }
 
-  if (sessionActive && allProgramDone) {
-    sessionHost.innerHTML = `
-      <div class="oktt-panel oktt-panel--overlay oktt-ferdig">
-        <p class="oktt-overlay-tittel"><strong>Program fullført</strong></p>
-        <button type="button" class="knapp primaer oktt-lagre" id="oktt-ferdig">Ferdig</button>
-      </div>`;
-    sessionHost.querySelector('#oktt-ferdig').addEventListener('click', () => {
-      sessionStorage.removeItem(SESSION_KEY);
-      sessionStorage.removeItem(FOCUS_KEY);
-      sessionStorage.removeItem(TEKNIKK_KEY);
-      sessionStorage.removeItem(EXPAND_KEY);
-      render(container, params, query);
-    });
-  } else if (sessionActive && active?.exercise) {
+  if (sessionActive && active?.exercise) {
     const exSets = setsByEx.get(active.item.exerciseId) || [];
     const persistedSet = exSets.find((s) => s.setNumber === active.setNum) || null;
     const prevSet = exSets.find((s) => s.setNumber === active.setNum - 1)
-      || (await store.getLastSessionForExercise(active.item.exerciseId, today))?.sets?.[active.setNum - 1]
+      || exSets.slice().sort((a, b) => b.setNumber - a.setNumber)[0]
       || (await store.getLastSessionForExercise(active.item.exerciseId, today))?.sets?.slice(-1)[0]
       || null;
 
     await mountSetLogger(sessionHost, {
       exercise: active.exercise,
       setNumber: active.setNum,
-      goalSets: active.item.goalSets,
       persistedSet,
       templateSet: prevSet,
-      completedSets: exSets,
+      completedSets: exSets.filter((s) => s.setNumber !== active.setNum),
       compact: true,
       onSaved: () => {
-        sessionStorage.removeItem(FOCUS_KEY);
         toast('Sett lagret', 'suksess');
         render(container, params, query);
       },
       onDeleted: () => render(container, params, query),
     });
+  } else if (sessionActive) {
+    sessionHost.innerHTML = '';
   }
 
   if (sessionActive) {
@@ -811,10 +743,9 @@ function openCopySheet(host, enriched, exMap, onCopy) {
       const date = btn.dataset.dato;
       const sets = enriched.filter((s) => s.date === date);
       const byEx = groupBy(sets, (s) => s.exerciseId);
-      const dayItems = [...byEx.entries()].map(([exerciseId, exSets]) => ({
-        exerciseId,
-        goalSets: new Set(exSets.map((s) => s.setNumber)).size || exSets.length,
-      })).filter((it) => exMap.has(it.exerciseId));
+      const dayItems = [...byEx.keys()]
+        .filter((exerciseId) => exMap.has(exerciseId))
+        .map((exerciseId) => ({ exerciseId }));
       host.innerHTML = '';
       onCopy(dayItems);
     });

@@ -40,10 +40,9 @@ export const DEFAULT_SETTINGS = {
   theme: 'dark',            // 'dark' | 'light' | 'auto'
   units: 'metric',          // 'metric' | 'imperial'
   restTimes: '90,120,180',  // sekunder, kommaseparert
-  defaultRir: 2,
-  defaultSets: 3,
-  defaultRepsMin: 8,
-  defaultRepsMax: 10,
+  defaultWeightKg: 50,
+  defaultReps: 8,
+  defaultEffort: 3,         // effortPillOptions: 0 Fail, 1 1–2, 3 Mod, 5 Lett
   startPage: 'hjem',        // 'hjem' | 'styrke'
   streakMode: 'rolling7',   // 'rolling7' | 'calendar'
   workingSetRirMax: 4,      // sett med RIR ≤ dette telles som arbeidssett
@@ -109,12 +108,17 @@ export function logModeOf(exercise) {
   return LOG_MODES.some((m) => m.id === mode) ? mode : 'weight';
 }
 
-/** Standardmål fra innstillinger – brukes kun ved første gangs tillegg til «mine øvelser». */
+/** Standardmål ved opprettelse av øvelse – tomme (ingen forhåndsdefinerte sett/reps). */
 export function defaultGoals() {
+  return { goalSets: null, goalRepsMin: null, goalRepsMax: null };
+}
+
+/** Utgangspunkter for logging fra innstillinger. */
+export function logDefaults() {
   return {
-    goalSets: Number(getSetting('defaultSets')),
-    goalRepsMin: Number(getSetting('defaultRepsMin')),
-    goalRepsMax: Number(getSetting('defaultRepsMax')),
+    weightKg: Number(getSetting('defaultWeightKg')) || 50,
+    reps: Number(getSetting('defaultReps')) || 8,
+    effort: Number(getSetting('defaultEffort')) ?? 3,
   };
 }
 
@@ -158,14 +162,14 @@ export function goalTextFor(exercise) {
   return `${sets} × ${min}–${max}`;
 }
 
-/** Midtpunkt av reps-mål, eller null hvis mål ikke er satt. */
+/** Midtpunkt av reps-mål, ellers utgangspunkt fra innstillinger. */
 export function repMidpoint(exercise) {
   const min = goalNumber(exercise?.goalRepsMin);
   const max = goalNumber(exercise?.goalRepsMax);
   if (min && max) return Math.round((min + max) / 2);
   if (min) return min;
   if (max) return max;
-  return null;
+  return logDefaults().reps;
 }
 
 /* ---------- Innstillinger ---------- */

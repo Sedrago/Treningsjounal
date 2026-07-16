@@ -16,10 +16,6 @@ export function isSetComplete(set, logMode, showWeight) {
   return set.weight != null && set.reps != null;
 }
 
-function defaultReps(exercise) {
-  return store.repMidpoint(exercise) ?? 8;
-}
-
 function setSummaryText(set, exercise, units) {
   const logMode = store.logModeOf(exercise);
   const showWeight = logMode === 'weight' || (logMode === 'bodyweight' && set.weight != null);
@@ -67,13 +63,15 @@ export function bindCompletedSetsList(container, { onDelete }) {
 }
 
 function buildDraft(exercise, setNumber, persisted, template) {
+  const defs = store.logDefaults();
+  const logMode = store.logModeOf(exercise);
   const draft = {
     exerciseId: exercise.id,
     setNumber,
     weight: null,
     reps: null,
     durationSec: null,
-    rir: rirToEffort(Number(store.getSetting('defaultRir'))),
+    rir: rirToEffort(defs.effort),
     comment: '',
     id: persisted?.id,
     workoutId: persisted?.workoutId,
@@ -86,7 +84,8 @@ function buildDraft(exercise, setNumber, persisted, template) {
     draft.rir = src.rir ?? draft.rir;
     draft.comment = src.comment || '';
   }
-  if (draft.reps == null) draft.reps = defaultReps(exercise);
+  if (draft.reps == null) draft.reps = store.repMidpoint(exercise);
+  if (draft.weight == null && logMode === 'weight') draft.weight = defs.weightKg;
   draft.rir = rirToEffort(draft.rir);
   return draft;
 }
@@ -108,7 +107,6 @@ function syncOverlayHeight(host) {
 export async function mountSetLogger(host, {
   exercise,
   setNumber,
-  goalSets,
   persistedSet,
   templateSet,
   completedSets = [],
@@ -119,7 +117,8 @@ export async function mountSetLogger(host, {
   host.innerHTML = '';
   const logMode = store.logModeOf(exercise);
   const units = store.getSetting('units');
-  const defaultRir = rirToEffort(Number(store.getSetting('defaultRir')));
+  const defs = store.logDefaults();
+  const defaultEffort = rirToEffort(defs.effort);
   const restTimes = String(store.getSetting('restTimes')).split(',')
     .map((t) => parseInt(t.trim(), 10)).filter((t) => t > 0);
 
@@ -127,7 +126,7 @@ export async function mountSetLogger(host, {
     || (logMode === 'bodyweight' && persistedSet?.weight != null);
 
   const draft = buildDraft(exercise, setNumber, persistedSet, templateSet);
-  if (draft.rir == null) draft.rir = defaultRir;
+  if (draft.rir == null) draft.rir = defaultEffort;
 
   const wrap = document.createElement('div');
   wrap.className = compact ? 'oktt-panel oktt-panel--overlay' : 'kort oktt-panel';
@@ -137,7 +136,7 @@ export async function mountSetLogger(host, {
       <div class="oktt-overlay-hode">
         <div class="oktt-overlay-tittel">
           <strong>${esc(exercise.name)}</strong>
-          <span class="dus">· sett ${setNumber}/${goalSets}</span>
+          <span class="dus">· sett ${setNumber}</span>
         </div>
         ${restTimes.length ? `
         <div class="oktt-overlay-hvile">
@@ -156,7 +155,7 @@ export async function mountSetLogger(host, {
       <div class="oktt-panel-hode">
         <div>
           <h2 class="oktt-tittel">${esc(exercise.name)}</h2>
-          <p class="dus liten oktt-sett-info">Sett ${setNumber} / ${goalSets}</p>
+          <p class="dus liten oktt-sett-info">Sett ${setNumber}</p>
         </div>
       </div>
       <div class="oktt-velgere"></div>
@@ -223,7 +222,7 @@ export async function mountSetLogger(host, {
       pickerHost.appendChild(repsHost);
       pickers.reps = mountRepStrip(repsHost, {
         value: draft.reps,
-        centerHint: defaultReps(exercise),
+        centerHint: store.repMidpoint(exercise),
         compact,
         onChange: (v) => { draft.reps = v; },
       });
@@ -234,7 +233,7 @@ export async function mountSetLogger(host, {
     pickers.effort = mountPillRow(effortHost, {
       label: compact ? '' : 'Innsats',
       options: effortPillOptions(),
-      value: draft.rir ?? defaultRir,
+      value: draft.rir ?? defaultEffort,
       onChange: (v) => { draft.rir = v; },
     });
     if (compact) {

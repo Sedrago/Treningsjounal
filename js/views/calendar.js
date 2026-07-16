@@ -28,7 +28,7 @@ function renderPlanItems(items, exMap) {
     const ex = exMap.get(it.exerciseId);
     const name = ex?.name || 'Ukjent øvelse';
     return `<li class="kalender-ovelse"><span class="kalender-ovelse-navn">${esc(name)}</span>
-      <span class="dus liten">${it.goalSets} sett</span></li>`;
+      <span class="dus liten">${it.goalSets ? `${it.goalSets} sett` : ''}</span></li>`;
   }).join('');
 }
 

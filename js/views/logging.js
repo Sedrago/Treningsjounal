@@ -73,7 +73,8 @@ export async function render(container, params, query = {}) {
     ? query.date
     : today;
   const isPastSession = sessionDate !== today;
-  const defaultRir = Number(store.getSetting('defaultRir'));
+  const defaultEffort = rirToEffort(Number(store.getSetting('defaultEffort')) ?? store.logDefaults().effort);
+  const defs = store.logDefaults();
 
   const lastSession = await store.getLastSessionForExercise(exerciseId, sessionDate);
   const sessionWorkout = await store.getWorkoutByDate(sessionDate);
@@ -247,7 +248,7 @@ export async function render(container, params, query = {}) {
     row.pickers.rir = mountPillRow(rirHost, {
       label: 'Innsats',
       options: effortPillOptions(),
-      value: rirToEffort(row.set.rir ?? defaultRir),
+      value: rirToEffort(row.set.rir ?? defaultEffort),
       onChange: (v) => {
         row.touched = true;
         row.set.rir = v;
@@ -360,19 +361,18 @@ export async function render(container, params, query = {}) {
   if (persisted.length) {
     persisted.forEach((s) => addSet({ ...s, exerciseId }));
   } else {
-    const n = Number(exercise.goalSets);
     const prev = lastSession?.sets;
-    for (let i = 1; i <= n; i++) {
-      const prevSet = prev?.[i - 1] || prev?.[prev.length - 1];
-      const set = emptySet(exerciseId, i);
-      if (prevSet) {
-        copySetValues(prevSet, set, logMode);
-        if (set.rir == null) set.rir = rirToEffort(defaultRir);
-      } else {
-        set.rir = rirToEffort(defaultRir);
-      }
-      addSet(set);
+    const set = emptySet(exerciseId, 1);
+    const prevSet = prev?.[0] || prev?.[prev.length - 1];
+    if (prevSet) {
+      copySetValues(prevSet, set, logMode);
+      if (set.rir == null) set.rir = rirToEffort(defaultEffort);
+    } else {
+      set.rir = rirToEffort(defaultEffort);
+      set.reps = store.repMidpoint(exercise);
+      if (logMode === 'weight') set.weight = defs.weightKg;
     }
+    addSet(set);
   }
 
   const firstIncomplete = rows.findIndex((r) => !isComplete(r.set, logMode, showWeight));

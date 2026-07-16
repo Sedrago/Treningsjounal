@@ -6,6 +6,7 @@ import * as store from '../store.js';
 import * as api from '../api.js';
 import * as sync from '../sync.js';
 import * as ie from '../importexport.js';
+import { effortPillOptions } from '../pickers.js';
 import { esc, toast } from '../utils.js';
 import { applyTheme } from '../app.js';
 
@@ -54,24 +55,23 @@ export async function render(container) {
 
       <div class="skjema-rad">
         <div class="felt">
-          <label class="felt-navn" for="s-rir">Standard RIR</label>
-          <input type="number" class="inndata" id="s-rir" value="${s('defaultRir')}" min="0" max="10">
+          <label class="felt-navn" for="s-vekt">Utgangspunkt vekt (kg)</label>
+          <input type="number" class="inndata" id="s-vekt" value="${s('defaultWeightKg')}" min="0" max="500" step="0.5">
         </div>
         <div class="felt">
-          <label class="felt-navn" for="s-sett">Standard sett <span class="dus">(ny øvelse)</span></label>
-          <input type="number" class="inndata" id="s-sett" value="${s('defaultSets')}" min="1" max="10">
+          <label class="felt-navn" for="s-reps">Utgangspunkt reps</label>
+          <input type="number" class="inndata" id="s-reps" value="${s('defaultReps')}" min="1" max="100">
         </div>
       </div>
-      <div class="skjema-rad">
-        <div class="felt">
-          <label class="felt-navn" for="s-repsmin">Reps nedre <span class="dus">(ny øvelse)</span></label>
-          <input type="number" class="inndata" id="s-repsmin" value="${s('defaultRepsMin')}" min="1" max="50">
-        </div>
-        <div class="felt">
-          <label class="felt-navn" for="s-repsmaks">Reps øvre <span class="dus">(ny øvelse)</span></label>
-          <input type="number" class="inndata" id="s-repsmaks" value="${s('defaultRepsMax')}" min="1" max="50">
-        </div>
-      </div>
+
+      <label class="felt-navn" for="s-innsats">Utgangspunkt innsats</label>
+      <select class="inndata" id="s-innsats">
+        ${effortPillOptions().map((o) => {
+          const labels = { 0: 'Fail', 1: '1–2', 3: 'Moderat', 5: 'Lett' };
+          const label = labels[o.value] ?? o.label;
+          return `<option value="${o.value}" ${Number(s('defaultEffort')) === o.value ? 'selected' : ''}>${label}</option>`;
+        }).join('')}
+      </select>
 
       <label class="felt-navn" for="s-start">Startside</label>
       <select class="inndata" id="s-start">
@@ -158,10 +158,9 @@ export async function render(container) {
   bind('#s-tema', 'theme', applyTheme);
   bind('#s-enheter', 'units');
   bind('#s-hvile', 'restTimes');
-  bind('#s-rir', 'defaultRir');
-  bind('#s-sett', 'defaultSets');
-  bind('#s-repsmin', 'defaultRepsMin');
-  bind('#s-repsmaks', 'defaultRepsMax');
+  bind('#s-vekt', 'defaultWeightKg');
+  bind('#s-reps', 'defaultReps');
+  bind('#s-innsats', 'defaultEffort');
   bind('#s-start', 'startPage');
   bind('#s-streak', 'streakMode');
   bind('#s-arbeidssett', 'workingSetRirMax');
