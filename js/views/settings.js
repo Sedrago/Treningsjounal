@@ -4,6 +4,7 @@
 
 import * as store from '../store.js';
 import * as api from '../api.js';
+import * as relay from '../relay-api.js';
 import * as sync from '../sync.js';
 import * as ie from '../importexport.js';
 import { effortPillOptions } from '../pickers.js';
@@ -32,6 +33,18 @@ export async function render(container) {
         <button type="button" class="knapp sekundaer" id="synk-naa">Synkroniser nå</button>
       </div>
       <p class="dus liten" id="synk-status"></p>
+    </section>
+
+    <section class="kort" aria-label="Programdeling">
+      <h2 class="kort-tittel">Programdeling (relay)</h2>
+      <p class="dus liten">For QR-import og publisering til grupper. Personlig treningslogg deles aldri via relay.</p>
+      <label class="felt-navn" for="relay-url">Relay Web App-URL</label>
+      <input type="url" class="inndata" id="relay-url" value="${esc(relay.getRelayUrl())}"
+        placeholder="https://script.google.com/macros/s/…/exec">
+      <label class="felt-navn" for="relay-key">Publiseringsnøkkel (valgfri – kun for trenere)</label>
+      <input type="text" class="inndata" id="relay-key" value="${esc(relay.getRelayPublishKey())}"
+        placeholder="Fra kjorRelayOppsett()" autocomplete="off">
+      <button type="button" class="knapp sekundaer" id="test-relay">Test relay</button>
     </section>
 
     <section class="kort" aria-label="Preferanser">
@@ -136,6 +149,22 @@ export async function render(container) {
       e.target.disabled = false;
     }
   });
+  container.querySelector('#relay-url').addEventListener('change', (e) => relay.setRelayUrl(e.target.value));
+  container.querySelector('#relay-key').addEventListener('change', (e) => relay.setRelayPublishKey(e.target.value));
+  container.querySelector('#test-relay').addEventListener('click', async (e) => {
+    relay.setRelayUrl(container.querySelector('#relay-url').value);
+    relay.setRelayPublishKey(container.querySelector('#relay-key').value);
+    e.target.disabled = true;
+    try {
+      await relay.relayPing();
+      toast('Relay fungerer!', 'suksess');
+    } catch (err) {
+      toast(`Feil: ${err.message}`, 'feil');
+    } finally {
+      e.target.disabled = false;
+    }
+  });
+
   container.querySelector('#synk-naa').addEventListener('click', async (e) => {
     e.target.disabled = true;
     const ok = await sync.fullSync();

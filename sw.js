@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'treningsjournal-v73';
+const CACHE = 'treningsjournal-v74';
 
 const ASSETS = [
   './',
@@ -27,6 +27,7 @@ const ASSETS = [
   'js/timer.js',
   'js/importexport.js',
   'js/program-share.js',
+  'js/relay-api.js',
   'js/mood-prompt.js',
   'js/views/home.js',
   'js/views/strength.js',
@@ -42,6 +43,7 @@ const ASSETS = [
   'js/views/exercises.js',
   'js/views/exercise-library.js',
   'js/views/settings.js',
+  'js/views/program-import.js',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',

@@ -126,3 +126,21 @@ Kjør dette etter endringer i `exercises.json`. Filen må være lagret på disk
   distribusjonen har tilgang «Alle».
 - **Endringer synkroniseres ikke** – åpne Innstillinger og se synk-status.
   Endringer lagres alltid lokalt først og sendes automatisk når appen har nett.
+
+## Del 3: Programdeling (relay, valgfritt)
+
+For QR-import og publisering til grupper (f.eks. plakat på veggen). Personlig
+treningslogg deles **ikke** via relay — kun programstruktur.
+
+1. Opprett et **nytt** regneark (f.eks. «Treningsjournal Relay») — ikke det
+   personlige treningsarket.
+2. Lim inn **`apps-script/Relay.gs`** i Apps Script (erstatt standardkoden).
+3. Kjør **`kjorRelayOppsett`** én gang. Noter **publiseringsnøkkelen**.
+4. Deploy som Web App: **Alle**, Kjør som **Meg**, URL slutter på **`/exec`**.
+5. I appen under **Innstillinger → Programdeling**:
+   - Lim inn **Relay Web App-URL** (alle som skal importere).
+   - Lim inn **publiseringsnøkkel** (kun trenere som skal publisere).
+
+**Importere:** Skann QR eller åpne `#/program?k=KODE` i appen.
+
+**Publisere:** Styrke → Lagrede programmer → ↗ Eksporter → «Publiser og vis QR».

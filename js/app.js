@@ -23,6 +23,7 @@ import * as exerciseLibrary from './views/exercise-library.js';
 import * as sessionEdit from './views/session-edit.js';
 import * as calendar from './views/calendar.js';
 import * as settings from './views/settings.js';
+import * as programImport from './views/program-import.js';
 
 /** Rutetabell: sti → render-funksjon. */
 const routes = {
@@ -43,6 +44,7 @@ const routes = {
   ovelser: exercises.render,
   bibliotek: exerciseLibrary.render,
   innstillinger: settings.render,
+  program: programImport.render,
 };
 
 /** Setter tema-attributt på <html> ut fra innstilling. */

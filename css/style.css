@@ -1039,7 +1039,54 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 .program-import-feil { color: var(--fare); margin: 0; }
 
-.program-import-feil { color: var(--fare); margin: 0; }
+.program-del-skille {
+  border: none;
+  border-top: 1px solid var(--kant);
+  margin: 16px 0;
+}
+
+.program-del-under-tittel {
+  font-size: 1rem;
+  margin: 0 0 6px;
+}
+
+.program-relay-hint { margin-top: 12px; }
+
+.program-relay-rad {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+
+.program-relay-rad .inndata { flex: 1; margin-bottom: 0; }
+
+.program-relay-meta { margin-bottom: 12px; }
+
+.program-relay-knapper {
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.program-qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+  padding: 12px;
+  background: #fff;
+  border-radius: var(--radius-liten);
+}
+
+.program-qr-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.program-relay-kode {
+  text-align: center;
+  margin: 8px 0 12px;
+}
 
 .oktt-overlay-tittel .plan-mal-hint {
   display: block;

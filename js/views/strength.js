@@ -11,6 +11,7 @@ import { openForm } from './exercises.js';
 import { descriptionBlock, bindDescriptionToggles } from './exercise-library.js';
 import { mountSetLogger, completedSetsHtml, bindCompletedSetsList } from '../session-log.js';
 import * as programShare from '../program-share.js';
+import * as relay from '../relay-api.js';
 import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
 import {
@@ -905,6 +906,7 @@ async function openTemplatesSheet(host, exMap, onSelect) {
 function openExportProgramSheet(host, template, exMap) {
   const payload = programShare.buildProgramPayload(template.name, template.items, exMap);
   const code = programShare.programShareCode(payload);
+  const canPublish = relay.canPublishToRelay();
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -922,6 +924,23 @@ function openExportProgramSheet(host, template, exMap) {
       <label class="felt-navn" for="prog-kode">Delingskode</label>
       <textarea class="inndata program-kode-felt" id="prog-kode" rows="4" readonly>${esc(code)}</textarea>
       <p class="dus liten">Partner kan lime koden inn under «Importer program», eller åpne JSON-filen.</p>
+
+      ${canPublish ? `
+      <hr class="program-del-skille">
+      <h3 class="program-del-under-tittel">Publiser til gruppe</h3>
+      <p class="dus liten">Lag en QR-kode som flere kan skanne (f.eks. plakat på veggen).</p>
+      <label class="felt-navn" for="prog-publiser-dager">Gyldig i (dager)</label>
+      <input type="number" class="inndata" id="prog-publiser-dager" value="30" min="1" max="365" inputmode="numeric">
+      <label class="felt-navn" for="prog-publiser-pin">PIN (valgfri)</label>
+      <input type="text" class="inndata" id="prog-publiser-pin" inputmode="numeric" autocomplete="off" placeholder="F.eks. 4829">
+      <label class="felt-navn" for="prog-publiser-kode">Egen kode (valgfri)</label>
+      <input type="text" class="inndata" id="prog-publiser-kode" autocapitalize="characters" autocomplete="off" placeholder="Auto-genereres">
+      <button type="button" class="knapp primaer bred" id="prog-publiser">Publiser og vis QR</button>
+      ` : relay.isRelayConfigured() ? `
+      <p class="dus liten program-relay-hint">Legg inn publiseringsnøkkel under Innstillinger for å publisere til gruppe.</p>
+      ` : `
+      <p class="dus liten program-relay-hint">Sett Relay-URL under Innstillinger for QR-import fra gruppe.</p>
+      `}
     </div>`;
 
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
@@ -957,6 +976,82 @@ function openExportProgramSheet(host, template, exMap) {
       }
     }
   });
+  host.querySelector('#prog-publiser')?.addEventListener('click', async () => {
+    const btn = host.querySelector('#prog-publiser');
+    btn.disabled = true;
+    try {
+      const result = await relay.relayPublish({
+        program: payload,
+        title: template.name,
+        code: host.querySelector('#prog-publiser-kode')?.value,
+        expiresInDays: Number(host.querySelector('#prog-publiser-dager')?.value) || 30,
+        pin: host.querySelector('#prog-publiser-pin')?.value,
+      });
+      openPublishedProgramSheet(host, result, template.name);
+    } catch (err) {
+      toast(err.message || 'Publisering feilet', 'feil');
+      btn.disabled = false;
+    }
+  });
+}
+
+function openPublishedProgramSheet(host, result, fallbackTitle) {
+  const importUrl = relay.programImportUrl(result.code);
+  const qrUrl = relay.qrImageUrl(importUrl);
+  const title = result.title || fallbackTitle || 'Program';
+
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Publisert program">
+      <div class="ark-hode">
+        <h2>Publisert</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus liten">«${esc(title)}» er tilgjengelig for import til ${formatDateShort(result.expiresAt?.slice(0, 10))}.</p>
+      <div class="program-qr-wrap">
+        <img class="program-qr-img" src="${esc(qrUrl)}" width="280" height="280" alt="QR-kode for programimport">
+      </div>
+      <p class="felt-navn liten program-relay-kode">Kode: <strong>${esc(result.code)}</strong></p>
+      <label class="felt-navn" for="prog-import-lenke">Importlenke</label>
+      <input type="text" class="inndata" id="prog-import-lenke" readonly value="${esc(importUrl)}">
+      <div class="program-del-knapper">
+        <button type="button" class="knapp sekundaer bred" id="prog-kopier-lenke">Kopier lenke</button>
+        <button type="button" class="knapp sekundaer bred" id="prog-skriv-ut">Skriv ut plakat</button>
+      </div>
+    </div>`;
+
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+  host.querySelector('#prog-kopier-lenke').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(importUrl);
+      toast('Lenke kopiert', 'suksess');
+    } catch {
+      host.querySelector('#prog-import-lenke').select();
+    }
+  });
+  host.querySelector('#prog-skriv-ut').addEventListener('click', () => {
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!w) {
+      toast('Kunne ikke åpne utskrift — tillat popups', 'feil');
+      return;
+    }
+    w.document.write(`<!DOCTYPE html><html lang="nb"><head><meta charset="utf-8"><title>${esc(title)}</title>
+      <style>
+        body { font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
+        h1 { font-size: 1.5rem; margin-bottom: 8px; }
+        p { color: #444; }
+        img { margin: 16px auto; display: block; }
+        .kode { font-size: 1.25rem; letter-spacing: 0.15em; margin-top: 12px; }
+      </style></head><body>
+      <h1>${esc(title)}</h1>
+      <p>Skann for å importere programmet i Treningsjournal</p>
+      <img src="${esc(qrUrl)}" width="320" height="320" alt="">
+      <p class="kode">${esc(result.code)}</p>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+  });
 }
 
 function openImportProgramSheet(host, exMap, onDone) {
@@ -967,8 +1062,15 @@ function openImportProgramSheet(host, exMap, onDone) {
         <h2>Importer program</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      <p class="dus liten">Lim inn delingskode eller velg en JSON-fil fra treningspartner. Kun programstruktur importeres — ikke logger.</p>
+      <p class="dus liten">Lim inn delingskode, relay-kode (f.eks. K7M2XP), eller velg en JSON-fil. Kun programstruktur importeres — ikke logger.</p>
       <form id="prog-import-skjema">
+        ${relay.isRelayConfigured() ? `
+        <label class="felt-navn" for="prog-import-relay">Relay-kode</label>
+        <div class="program-relay-rad">
+          <input type="text" class="inndata" id="prog-import-relay" autocapitalize="characters" placeholder="F.eks. K7M2XP">
+          <button type="button" class="knapp sekundaer" id="prog-import-relay-apne">Hent</button>
+        </div>
+        ` : ''}
         <label class="felt-navn" for="prog-import-tekst">Delingskode eller JSON</label>
         <textarea class="inndata" id="prog-import-tekst" rows="5" placeholder="Lim inn kode her …"></textarea>
 
@@ -1031,6 +1133,15 @@ function openImportProgramSheet(host, exMap, onDone) {
   });
 
   host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+
+  host.querySelector('#prog-import-relay-apne')?.addEventListener('click', () => {
+    const k = host.querySelector('#prog-import-relay')?.value.trim();
+    if (!k) {
+      toast('Skriv inn relay-kode', 'feil');
+      return;
+    }
+    location.hash = `#/program?k=${encodeURIComponent(k.toUpperCase())}`;
+  });
 
   host.querySelector('#prog-import-skjema').addEventListener('submit', async (e) => {
     e.preventDefault();
