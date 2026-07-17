@@ -15,9 +15,15 @@ import * as relay from '../relay-api.js';
 import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
 import {
-  esc, formatDateShort, formatDateLong, relativeDays, todayStr,
+  esc, formatDateShort, formatDateLong, relativeDays, todayStr, addDaysStr,
   toast, windowStartStr, categoryIconHtml, debounce,
 } from '../utils.js';
+
+function defaultProgramName(items, date) {
+  const d = date ? formatDateShort(date) : formatDateShort(todayStr());
+  const n = items?.length || 0;
+  return `${d} · ${n} øvelse${n === 1 ? '' : 'r'}`;
+}
 
 function categoryStats(enriched) {
   const since14 = windowStartStr(14);
@@ -268,10 +274,13 @@ export async function render(container, params, query = {}) {
   }).join('');
 
   const menuItems = [
-    { action: 'kalender', label: 'Kalender' },
+    { action: 'hent-kalender', label: 'Hent fra kalender' },
+    { action: 'legg-kalender', label: 'Legg på kalender' },
+    { sep: true },
+    { action: 'hent-lagret', label: 'Hent fra lagrede programmer' },
+    { action: 'importer', label: 'Importer program (fil/kode)' },
     { action: 'historikk', label: 'Hent fra tidligere økt' },
-    { action: 'mal', label: 'Lagrede programmer' },
-    { action: 'importer', label: 'Importer program' },
+    { sep: true },
     ...(isToday && daySets.length ? [{ action: 'lagre-fra-logging', label: 'Lagre program fra dagens logging' }] : []),
     ...(items.length ? [{ action: 'lagre-mal', label: 'Lagre som program' }] : []),
     ...(items.length ? [{ action: 'tom', label: 'Tøm program', farlig: true }] : []),
@@ -293,8 +302,9 @@ export async function render(container, params, query = {}) {
         <div class="styrke-meny-wrap">
           <button type="button" class="ikon-knapp styrke-meny" id="program-meny" aria-label="Programmeny" aria-haspopup="menu" aria-expanded="false">☰</button>
           <div class="styrke-meny-popover skjult" id="program-meny-liste" role="menu">
-            ${menuItems.map((m) => `
-              <button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
+            ${menuItems.map((m) => m.sep
+    ? '<div class="styrke-meny-skille" role="separator"></div>'
+    : `<button type="button" class="styrke-meny-valg ${m.farlig ? 'farlig' : ''}" role="menuitem" data-program-handling="${m.action}">${esc(m.label)}</button>`).join('')}
           </div>
         </div>
       </div>
@@ -371,8 +381,32 @@ export async function render(container, params, query = {}) {
 
   async function handleProgramAction(action) {
     closeMenu();
-    if (action === 'kalender') {
-      location.hash = '#/kalender';
+    if (action === 'hent-kalender') {
+      openPickCalendarPlanSheet(host, exMap, viewDate, async (plan) => {
+        if (items.length && !confirm(`Erstatt programmet for ${formatDateShort(viewDate)} med planen fra ${formatDateShort(plan.date)}?`)) return;
+        await store.savePlanForDate(viewDate, {
+          items: plan.items.map((it) => ({ ...it })),
+          name: plan.name || '',
+          sourceTemplateId: plan.sourceTemplateId || '',
+        });
+        toast(`Program hentet fra ${formatDateShort(plan.date)}`, 'suksess');
+        render(container, params, query);
+      });
+    } else if (action === 'legg-kalender') {
+      if (!items.length) {
+        toast('Programmet er tomt', 'feil');
+        return;
+      }
+      openScheduleCalendarSheet(host, items, viewDate, async (scheduleDate) => {
+        const name = defaultProgramName(items, scheduleDate);
+        await store.schedulePlanFromItems(scheduleDate, items, { name });
+        toast(`Program lagt på ${formatDateShort(scheduleDate)}`, 'suksess');
+        if (scheduleDate !== viewDate) {
+          location.hash = `#/styrke?dato=${scheduleDate}`;
+        } else {
+          render(container, params, query);
+        }
+      });
     } else if (action === 'legg-til') {
       openCategoryPicker(host, stats, (catId) => {
         openExercisePicker(host, catId, items, (ex) => {
@@ -391,7 +425,7 @@ export async function render(container, params, query = {}) {
         await updateItems(merged);
         toast('Øvelser hentet fra tidligere økt', 'suksess');
       });
-    } else if (action === 'mal') {
+    } else if (action === 'hent-lagret') {
       openTemplatesSheet(host, exMap, async (templateId, replace) => {
         const templates = await store.getSavedTemplates();
         const tpl = templates.find((t) => t.id === templateId);
@@ -421,10 +455,11 @@ export async function render(container, params, query = {}) {
         return;
       }
       openSaveTemplateSheet(host, saveItems, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems: outItems }) => {
-        await store.saveAsTemplate(name, outItems, { scheduleDate });
+        const finalName = name || defaultProgramName(outItems, scheduleDate || viewDate);
+        await store.saveAsTemplate(finalName, outItems, { scheduleDate });
         toast(scheduleDate
-          ? `«${name}» lagret fra dagens logging og lagt på ${formatDateShort(scheduleDate)}`
-          : `Programmet «${name}» er lagret fra dagens logging`, 'suksess');
+          ? `«${finalName}» lagret fra dagens logging og lagt på ${formatDateShort(scheduleDate)}`
+          : `Programmet «${finalName}» er lagret fra dagens logging`, 'suksess');
       }, {
         title: 'Lagre program fra dagens logging',
         intro: `${saveItems.length} øvelse${saveItems.length === 1 ? '' : 'r'} med mål hentet fra det du logget i dag.`,
@@ -433,10 +468,11 @@ export async function render(container, params, query = {}) {
       });
     } else if (action === 'lagre-mal') {
       openSaveTemplateSheet(host, items, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems }) => {
-        await store.saveAsTemplate(name, saveItems, { scheduleDate });
+        const finalName = name || defaultProgramName(saveItems, scheduleDate || viewDate);
+        await store.saveAsTemplate(finalName, saveItems, { scheduleDate });
         toast(scheduleDate
-          ? `«${name}» lagret og lagt på ${formatDateShort(scheduleDate)}`
-          : `Programmet «${name}» er lagret`, 'suksess');
+          ? `«${finalName}» lagret og lagt på ${formatDateShort(scheduleDate)}`
+          : `Programmet «${finalName}» er lagret`, 'suksess');
       });
     } else if (action === 'tom') {
       if (!confirm('Tømme hele programmet? Loggede sett beholdes.')) return;
@@ -874,6 +910,7 @@ async function openTemplatesSheet(host, exMap, onSelect) {
           <button type="button" class="plan-bib-bruk" data-id="${t.id}" data-modus="erstatt">Bruk →</button>
           <button type="button" class="plan-bib-bruk dus" data-id="${t.id}" data-modus="legg-til">+ Legg til</button>
           <button type="button" class="plan-bib-bruk dus" data-id="${t.id}" data-handling="eksporter" aria-label="Eksporter program">↗</button>
+          <button type="button" class="ikon-knapp styrke-mal-slett" data-id="${t.id}" aria-label="Slett program">✕</button>
         </span>
       </div>`;
   }).join('');
@@ -901,6 +938,16 @@ async function openTemplatesSheet(host, exMap, onSelect) {
       const tpl = templates.find((t) => t.id === btn.dataset.id);
       if (!tpl) return;
       openExportProgramSheet(host, tpl, exMap);
+    });
+  });
+  host.querySelectorAll('.styrke-mal-slett').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const tpl = templates.find((t) => t.id === btn.dataset.id);
+      if (!tpl) return;
+      if (!confirm(`Slette «${tpl.name || 'programmet'}» fra biblioteket?`)) return;
+      await store.deletePlan(tpl.id);
+      toast('Program slettet', 'suksess');
+      openTemplatesSheet(host, exMap, onSelect);
     });
   });
   host.querySelector('#mal-importer')?.addEventListener('click', () => {
@@ -1257,8 +1304,8 @@ function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave
       </div>
       <p class="dus liten">${intro}</p>
       <form id="lagre-mal-skjema">
-        <label class="felt-navn" for="mal-navn">Navn</label>
-        <input type="text" class="inndata" id="mal-navn" placeholder="F.eks. Uke A" value="${esc(defaultName)}" required autofocus>
+        <label class="felt-navn" for="mal-navn">Navn <span class="dus">(valgfritt)</span></label>
+        <input type="text" class="inndata" id="mal-navn" placeholder="Auto-navn ved tomt felt" value="${esc(defaultName)}" autofocus>
 
         <label class="bryter-rad">
           <input type="checkbox" id="mal-med-mal" ${goalsChecked ? 'checked' : ''}>
@@ -1313,7 +1360,6 @@ function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave
   host.querySelector('#lagre-mal-skjema').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = host.querySelector('#mal-navn').value.trim();
-    if (!name) return;
     const scheduleDate = planleggCb.checked ? host.querySelector('#mal-dato').value : null;
     let saveItems;
     if (malCb.checked) {
@@ -1331,5 +1377,75 @@ function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate, onSave
     }
     host.innerHTML = '';
     onSave({ name, scheduleDate, saveItems });
+  });
+}
+
+function openScheduleCalendarSheet(host, items, defaultDate, onSchedule) {
+  const today = todayStr();
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Legg på kalender">
+      <div class="ark-hode">
+        <h2>Legg på kalender</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus liten">${items.length} øvelse${items.length === 1 ? '' : 'r'} planlegges på valgt dag. Navn settes automatisk.</p>
+      <form id="legg-kalender-skjema">
+        <label class="felt-navn" for="legg-kalender-dato">Dato</label>
+        <input type="date" class="inndata" id="legg-kalender-dato" value="${defaultDate}" min="${today}" required>
+        <button type="submit" class="knapp primaer bred">Legg på kalender</button>
+        <a href="#/kalender" class="knapp sekundaer bred">Åpne ukekalender</a>
+      </form>
+    </div>`;
+
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+  host.querySelector('#legg-kalender-skjema').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const date = host.querySelector('#legg-kalender-dato').value;
+    if (!date) return;
+    host.innerHTML = '';
+    onSchedule(date);
+  });
+}
+
+async function openPickCalendarPlanSheet(host, exMap, viewDate, onPick) {
+  const from = addDaysStr(viewDate, -90);
+  const to = addDaysStr(viewDate, 90);
+  const plans = await store.getScheduledPlans({ from, to });
+
+  const rows = plans.map((p) => {
+    const names = p.items
+      .map((it) => exMap.get(it.exerciseId)?.name)
+      .filter(Boolean)
+      .slice(0, 3);
+    const extra = p.items.length > 3 ? ` +${p.items.length - 3}` : '';
+    const label = p.name || defaultProgramName(p.items, p.date);
+    return `
+      <button type="button" class="velger-rad plan-kopi-rad" data-plan-id="${p.id}">
+        <span class="velger-navn">${formatDateShort(p.date)} <span class="dus">(${relativeDays(p.date)})</span></span>
+        <span class="velger-info dus">${esc(label)} · ${esc(names.join(', '))}${extra}</span>
+      </button>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Hent fra kalender">
+      <div class="ark-hode">
+        <h2>Hent fra kalender</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus liten">Velg en planlagt dag. Programmet lastes inn på ${formatDateShort(viewDate)}.</p>
+      ${rows || '<p class="tomt">Ingen planlagte programmer i perioden. Planlegg under «Legg på kalender» eller i ukekalenderen.</p>'}
+      <a href="#/kalender" class="knapp sekundaer bred">Åpne ukekalender</a>
+    </div>`;
+
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+  host.querySelectorAll('[data-plan-id]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const plan = plans.find((p) => p.id === btn.dataset.planId);
+      if (!plan) return;
+      host.innerHTML = '';
+      onPick(plan);
+    });
   });
 }

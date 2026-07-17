@@ -720,6 +720,17 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .styrke-meny-valg:active { background: var(--flate-2); }
 .styrke-meny-valg.farlig { color: var(--farlig, #c0392b); }
 
+.styrke-meny-skille {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--kant);
+}
+
+.styrke-mal-slett {
+  margin-left: 4px;
+  color: var(--tekst-dus);
+}
+
 #legg-til-ovelse { margin-bottom: 12px; }
 
 .styrke-rad {
