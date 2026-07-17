@@ -52,6 +52,7 @@ function renderConfirm(container, data) {
         <div><dt>Web App</dt><dd>${esc(setupShare.shortenUrl(data.apiUrl))}</dd></div>
         <div><dt>API-nøkkel</dt><dd>${esc(setupShare.maskApiKey(data.apiKey))}</dd></div>
         ${data.relayUrl ? `<div><dt>Relay</dt><dd>${esc(setupShare.shortenUrl(data.relayUrl))}</dd></div>` : ''}
+        ${data.relayUsername ? `<div><dt>Relay-bruker</dt><dd>@${esc(data.relayUsername)}</dd></div>` : ''}
       </dl>
       <div class="knapp-rad program-relay-knapper">
         <button type="button" class="knapp primaer bred" id="setup-import-bekreft">Koble til og test</button>

@@ -10,6 +10,10 @@ const RELAY_URL_KEY = 'tj_relayUrl';
 const RELAY_PUBLISH_KEY = 'tj_relayPublishKey';
 const RELAY_IDENTITY_KEY = 'tj_relayIdentity';
 
+/** Synkroniseres via Settings-arket (samme regneark som journalen). */
+export const RELAY_SETTING_USERNAME = 'relayUsername';
+export const RELAY_SETTING_DEVICE_SECRET = 'relayDeviceSecret';
+
 export function getRelayUrl() {
   return localStorage.getItem(RELAY_URL_KEY) || '';
 }
@@ -40,15 +44,53 @@ export function getRelayIdentity() {
   }
 }
 
-export function setRelayIdentity({ username, deviceSecret }) {
-  localStorage.setItem(RELAY_IDENTITY_KEY, JSON.stringify({
+export async function setRelayIdentity({ username, deviceSecret }, { sync = true } = {}) {
+  const next = {
     username: String(username || '').trim().toLowerCase(),
     deviceSecret: String(deviceSecret || '').trim(),
-  }));
+  };
+  const current = getRelayIdentity();
+  if (current.username === next.username && current.deviceSecret === next.deviceSecret) return;
+
+  localStorage.setItem(RELAY_IDENTITY_KEY, JSON.stringify(next));
+  if (sync) {
+    const { setSetting } = await import('./store.js');
+    await setSetting(RELAY_SETTING_USERNAME, next.username);
+    await setSetting(RELAY_SETTING_DEVICE_SECRET, next.deviceSecret);
+  }
 }
 
-export function clearRelayIdentity() {
+export async function clearRelayIdentity({ sync = true } = {}) {
   localStorage.removeItem(RELAY_IDENTITY_KEY);
+  if (sync) {
+    const { setSetting } = await import('./store.js');
+    await setSetting(RELAY_SETTING_USERNAME, '');
+    await setSetting(RELAY_SETTING_DEVICE_SECRET, '');
+  }
+}
+
+/** Brukes ved synk / oppstart – Settings-arket er kilden. */
+export async function applyIdentityFromSettings(username, deviceSecret, { sync = false } = {}) {
+  const u = String(username ?? '').trim().toLowerCase();
+  const s = String(deviceSecret ?? '').trim();
+  if (u && s) {
+    await setRelayIdentity({ username: u, deviceSecret: s }, { sync });
+    return;
+  }
+  if (username !== undefined && deviceSecret !== undefined && !u && !s) {
+    await clearRelayIdentity({ sync });
+  }
+}
+
+/** Eksisterende brukere: push lokalt relay-brukernavn til Settings-arket én gang. */
+export async function migrateRelayIdentityToSettings() {
+  const local = getRelayIdentity();
+  if (!local.username || !local.deviceSecret) return;
+  const { getSetting } = await import('./store.js');
+  const sheetUser = String(getSetting(RELAY_SETTING_USERNAME) ?? '').trim();
+  const sheetSecret = String(getSetting(RELAY_SETTING_DEVICE_SECRET) ?? '').trim();
+  if (sheetUser && sheetSecret) return;
+  await setRelayIdentity(local, { sync: true });
 }
 
 export function hasRelayIdentity() {

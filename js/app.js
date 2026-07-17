@@ -26,7 +26,7 @@ import * as settings from './views/settings.js';
 import * as programImport from './views/program-import.js';
 import * as inbox from './views/inbox.js';
 import * as setupImport from './views/setup-import.js';
-import { checkRelayInboxQuietly } from './relay-api.js';
+import * as relay from './relay-api.js';
 
 /** Rutetabell: sti → render-funksjon. */
 const routes = {
@@ -118,7 +118,7 @@ function setupSyncBadge() {
 let lastInboxHintCount = -1;
 
 async function checkRelayInboxOnStart() {
-  const count = await checkRelayInboxQuietly();
+  const count = await relay.checkRelayInboxQuietly();
   if (count <= 0 || count === lastInboxHintCount) return;
   lastInboxHintCount = count;
   toast(`${count} ny${count === 1 ? '' : 'e'} program${count === 1 ? '' : 'mer'} i innboksen — se #/innboks`, 'info');
@@ -126,6 +126,12 @@ async function checkRelayInboxOnStart() {
 
 async function main() {
   await store.initSettings();
+  await relay.migrateRelayIdentityToSettings();
+  await relay.applyIdentityFromSettings(
+    store.getSetting('relayUsername'),
+    store.getSetting('relayDeviceSecret'),
+    { sync: false },
+  );
   await store.migratePlanModelOnce();
   applyTheme();
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {

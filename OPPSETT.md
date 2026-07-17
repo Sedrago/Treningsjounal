@@ -78,6 +78,7 @@ Hvis flere skal koble seg til **samme** regneark (bevisst delt journal):
 3. Mottaker skanner QR eller åpner lenken → bekrefter → appen er koblet til.
 
 > Personlig oppsett — send ikke QR på offentlig plakat. Hver person med eget ark lager egen QR etter eget `kjorOppsett`.
+> Relay-brukernavn synkroniseres via Settings-arket og følger med i oppsetts-QR når det er registrert.
 
 ## Del 4: Legg appen på Hjem-skjermen (iPhone)
 
@@ -161,5 +162,7 @@ treningslogg deles **ikke** via relay — kun programstruktur.
 2. Inviter partner med brukernavn — partneren **godtar** invitasjonen.
 3. **Send program:** Styrke → Eksporter → «Send til partner».
 4. **Motta:** Appen viser varsel ved nye programmer — åpne **#/innboks**.
+
+Relay-brukernavn lagres i **Settings-arket** (`relayUsername`, `relayDeviceSecret`) og synkroniseres til andre enheter med samme regneark. Oppsetts-QR inkluderer brukernavnet når det finnes.
 
 Etter oppdatering av `Relay.gs`: kjør `kjorRelayOppsett` på nytt (oppretter Users/Pairings/Inbox-ark) og redeploy Web App.

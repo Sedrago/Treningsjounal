@@ -41,6 +41,12 @@ export function buildSetupPayload({ includeRelay = true } = {}) {
     payload.relayUrl = relay.getRelayUrl();
   }
 
+  if (includeRelay && relay.hasRelayIdentity()) {
+    const { username, deviceSecret } = relay.getRelayIdentity();
+    payload.relayUsername = username;
+    payload.relayDeviceSecret = deviceSecret;
+  }
+
   return payload;
 }
 
@@ -97,6 +103,12 @@ export async function applySetupPayload(data) {
   api.setApiUrl(payload.apiUrl);
   api.setApiKey(payload.apiKey);
   if (payload.relayUrl) relay.setRelayUrl(payload.relayUrl);
+  if (payload.relayUsername && payload.relayDeviceSecret) {
+    await relay.setRelayIdentity({
+      username: payload.relayUsername,
+      deviceSecret: payload.relayDeviceSecret,
+    });
+  }
   await api.ping();
   return payload;
 }

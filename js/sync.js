@@ -11,6 +11,7 @@
 
 import * as db from './db.js';
 import * as api from './api.js';
+import * as relay from './relay-api.js';
 
 const listeners = new Set();
 let syncing = false;
@@ -82,6 +83,11 @@ export async function pull() {
     }
     const { initSettings } = await import('./store.js');
     await initSettings();
+    await relay.applyIdentityFromSettings(
+      settings.relayUsername,
+      settings.relayDeviceSecret,
+      { sync: false },
+    );
 
     state.lastError = null;
     state.lastSync = new Date().toISOString();

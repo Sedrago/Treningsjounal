@@ -304,7 +304,7 @@ async function renderRelayPartnerSection(wrap) {
       regBtn.disabled = true;
       try {
         const data = await relay.relayRegister(username);
-        relay.setRelayIdentity(data);
+        await relay.setRelayIdentity(data);
         toast(`Registrert som @${data.username}`, 'suksess');
         await renderRelayPartnerSection(wrap);
       } catch (err) {
@@ -338,8 +338,9 @@ async function renderRelayPartnerSection(wrap) {
       <hr class="program-del-skille">
       <p class="program-import-feil liten">@${esc(identity.username)} — ${esc(err.message)}</p>
       <button type="button" class="knapp sekundaer liten" id="relay-logg-ut">Logg ut brukernavn</button>`;
-    wrap.querySelector('#relay-logg-ut').addEventListener('click', () => {
-      relay.clearRelayIdentity();
+    wrap.querySelector('#relay-logg-ut').addEventListener('click', async () => {
+      if (!confirm('Logge ut relay-brukernavn på denne enheten?')) return;
+      await relay.clearRelayIdentity();
       renderRelayPartnerSection(wrap);
     });
     return;
@@ -361,6 +362,7 @@ async function renderRelayPartnerSection(wrap) {
     <h3 class="program-del-under-tittel">Partner-deling</h3>
     <p class="dus liten">Innlogget som <strong>@${esc(identity.username)}</strong>
       · <a href="#/innboks">Programinnboks</a></p>
+    <p class="dus liten">Brukernavnet synkroniseres via Settings-arket til andre enheter med samme regneark.</p>
     <button type="button" class="knapp sekundaer liten" id="relay-logg-ut">Logg ut brukernavn</button>
 
     ${inviteRows ? `
@@ -377,9 +379,9 @@ async function renderRelayPartnerSection(wrap) {
     </div>
     <p class="dus liten">Partneren må også ha registrert brukernavn på samme relay.</p>`;
 
-  wrap.querySelector('#relay-logg-ut').addEventListener('click', () => {
+  wrap.querySelector('#relay-logg-ut').addEventListener('click', async () => {
     if (!confirm('Logge ut relay-brukernavn på denne enheten?')) return;
-    relay.clearRelayIdentity();
+    await relay.clearRelayIdentity();
     renderRelayPartnerSection(wrap);
   });
 
@@ -428,6 +430,7 @@ function openSetupShareSheet(host, opts = {}) {
   const code = setupShare.setupShareCode(payload);
   const importUrl = setupShare.setupImportUrl(code);
   const qrUrl = setupShare.qrImageUrl(importUrl);
+  const hasRelayUser = Boolean(payload.relayUsername);
 
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
@@ -436,7 +439,8 @@ function openSetupShareSheet(host, opts = {}) {
         <h2>Personlig oppsetts-QR</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      <p class="dus liten">Send QR, lenke eller kode til <strong>én</strong> ny bruker (e-post). De får tilgang til samme regneark som deg.</p>
+      <p class="dus liten">Send QR, lenke eller kode til <strong>én</strong> ny bruker (e-post).
+        ${hasRelayUser ? `Inkluderer relay-brukernavn <strong>@${esc(payload.relayUsername)}</strong>.` : 'Relay-brukernavn følger med hvis du er registrert under Partner-deling.'}</p>
       <div class="program-qr-wrap">
         <img class="program-qr-img" src="${esc(qrUrl)}" width="280" height="280" alt="QR-kode for oppsett">
       </div>
