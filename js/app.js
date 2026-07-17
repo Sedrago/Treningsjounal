@@ -25,6 +25,7 @@ import * as calendar from './views/calendar.js';
 import * as settings from './views/settings.js';
 import * as programImport from './views/program-import.js';
 import * as inbox from './views/inbox.js';
+import * as setupImport from './views/setup-import.js';
 import { checkRelayInboxQuietly } from './relay-api.js';
 
 /** Rutetabell: sti → render-funksjon. */
@@ -48,6 +49,7 @@ const routes = {
   innstillinger: settings.render,
   program: programImport.render,
   innboks: inbox.render,
+  oppsett: setupImport.render,
 };
 
 /** Setter tema-attributt på <html> ut fra innstilling. */

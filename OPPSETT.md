@@ -69,6 +69,16 @@ Du skal få JSON tilbake: `{"ok":true,"data":{"pong":true,…}}`
 4. Trykk **Test tilkobling** – du skal få «Tilkoblingen fungerer!».
 5. Trykk **Synkroniser nå**.
 
+### Inviter ny bruker (personlig oppsetts-QR)
+
+Hvis flere skal koble seg til **samme** regneark (bevisst delt journal):
+
+1. Den som har satt opp ark og appen: **Innstillinger → Generer oppsetts-QR**.
+2. Send **QR-bildet**, **oppsettslenken** eller **oppsettskoden** til den nye brukeren (e-post).
+3. Mottaker skanner QR eller åpner lenken → bekrefter → appen er koblet til.
+
+> Personlig oppsett — send ikke QR på offentlig plakat. Hver person med eget ark lager egen QR etter eget `kjorOppsett`.
+
 ## Del 4: Legg appen på Hjem-skjermen (iPhone)
 
 1. Åpne appen i **Safari**.

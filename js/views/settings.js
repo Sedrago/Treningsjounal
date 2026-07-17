@@ -5,6 +5,7 @@
 import * as store from '../store.js';
 import * as api from '../api.js';
 import * as relay from '../relay-api.js';
+import * as setupShare from '../setup-share.js';
 import * as sync from '../sync.js';
 import * as ie from '../importexport.js';
 import { effortPillOptions } from '../pickers.js';
@@ -33,6 +34,17 @@ export async function render(container) {
         <button type="button" class="knapp sekundaer" id="synk-naa">Synkroniser nå</button>
       </div>
       <p class="dus liten" id="synk-status"></p>
+
+      <hr class="program-del-skille">
+      <h3 class="program-del-under-tittel">Del oppsett med ny bruker</h3>
+      <p class="dus liten">Personlig QR eller oppsettskode gir tilgang til <strong>dette</strong> regnearket. Send kun til den det gjelder — ikke på offentlig plakat.</p>
+      <button type="button" class="knapp sekundaer bred" id="setup-generer-qr">Generer oppsetts-QR</button>
+
+      <h3 class="program-del-under-tittel">Mottatt oppsett</h3>
+      <p class="dus liten">Lim inn kode fra e-post, eller <a href="#/oppsett">åpne oppsettsiden</a>.</p>
+      <label class="felt-navn" for="setup-import-kode">Oppsettskode</label>
+      <textarea class="inndata program-kode-felt" id="setup-import-kode" rows="3" placeholder="Lim inn mottatt kode …"></textarea>
+      <button type="button" class="knapp sekundaer bred" id="setup-import-btn">Importer oppsett</button>
     </section>
 
     <section class="kort" aria-label="Programdeling">
@@ -118,6 +130,7 @@ export async function render(container) {
       <p class="dus liten">Sletter kun data på denne enheten. Google Sheets påvirkes ikke,
         og dataene hentes tilbake ved neste synkronisering.</p>
     </section>
+    <div id="innstillinger-ark-vert"></div>
   `;
 
   const statusEl = container.querySelector('#synk-status');
@@ -172,6 +185,41 @@ export async function render(container) {
     toast(ok ? 'Synkronisert' : `Synkronisering feilet: ${sync.state.lastError}`, ok ? 'suksess' : 'feil');
     e.target.disabled = false;
     updateStatus();
+  });
+
+  const arkHost = container.querySelector('#innstillinger-ark-vert');
+
+  container.querySelector('#setup-generer-qr')?.addEventListener('click', () => {
+    api.setApiUrl(container.querySelector('#api-url').value);
+    api.setApiKey(container.querySelector('#api-key').value);
+    relay.setRelayUrl(container.querySelector('#relay-url').value);
+    try {
+      openSetupShareSheet(arkHost, { includeRelay: relay.isRelayConfigured() });
+    } catch (err) {
+      toast(err.message || 'Kunne ikke lage oppsett', 'feil');
+    }
+  });
+
+  container.querySelector('#setup-import-btn')?.addEventListener('click', async () => {
+    const text = container.querySelector('#setup-import-kode').value.trim();
+    if (!text) {
+      toast('Lim inn oppsettskode først', 'feil');
+      return;
+    }
+    try {
+      const data = setupShare.parseSetupShareCode(text);
+      if (!confirm('Koble appen til det mottatte regnearket? Eksisterende tilkobling erstattes.')) return;
+      await setupShare.applySetupPayload(data);
+      container.querySelector('#api-url').value = api.getApiUrl();
+      container.querySelector('#api-key').value = api.getApiKey();
+      if (data.relayUrl) container.querySelector('#relay-url').value = relay.getRelayUrl();
+      toast('Oppsett importert og tilkobling OK', 'suksess');
+      updateStatus();
+      await sync.fullSync();
+      updateStatus();
+    } catch (err) {
+      toast(err.message || 'Import feilet', 'feil');
+    }
   });
 
   // Preferanser – lagres umiddelbart.
@@ -241,12 +289,19 @@ async function renderRelayPartnerSection(wrap) {
       <input type="text" class="inndata" id="relay-reg-user" autocapitalize="none" autocomplete="username"
         placeholder="f.eks. ola" pattern="[a-z0-9_]{3,20}">
       <button type="button" class="knapp sekundaer" id="relay-registrer">Registrer brukernavn</button>`;
-    wrap.querySelector('#relay-registrer').addEventListener('click', async () => {
-      const username = wrap.querySelector('#relay-reg-user').value.trim();
+    const regUserInput = wrap.querySelector('#relay-reg-user');
+    const regBtn = wrap.querySelector('#relay-registrer');
+    let registering = false;
+
+    const doRegister = async () => {
+      if (registering) return;
+      const username = regUserInput.value.trim();
       if (!username) {
         toast('Skriv inn brukernavn', 'feil');
         return;
       }
+      registering = true;
+      regBtn.disabled = true;
       try {
         const data = await relay.relayRegister(username);
         relay.setRelayIdentity(data);
@@ -254,6 +309,16 @@ async function renderRelayPartnerSection(wrap) {
         await renderRelayPartnerSection(wrap);
       } catch (err) {
         toast(err.message || 'Registrering feilet', 'feil');
+        registering = false;
+        regBtn.disabled = false;
+      }
+    };
+
+    regBtn.addEventListener('click', doRegister);
+    regUserInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doRegister();
       }
     });
     return;
@@ -355,5 +420,74 @@ async function renderRelayPartnerSection(wrap) {
         toast(err.message || 'Kunne ikke avvise', 'feil');
       }
     });
+  });
+}
+
+function openSetupShareSheet(host, opts = {}) {
+  const payload = setupShare.buildSetupPayload(opts);
+  const code = setupShare.setupShareCode(payload);
+  const importUrl = setupShare.setupImportUrl(code);
+  const qrUrl = setupShare.qrImageUrl(importUrl);
+
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Personlig oppsetts-QR">
+      <div class="ark-hode">
+        <h2>Personlig oppsetts-QR</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus liten">Send QR, lenke eller kode til <strong>én</strong> ny bruker (e-post). De får tilgang til samme regneark som deg.</p>
+      <div class="program-qr-wrap">
+        <img class="program-qr-img" src="${esc(qrUrl)}" width="280" height="280" alt="QR-kode for oppsett">
+      </div>
+      <label class="felt-navn" for="setup-del-lenke">Oppsettslenke</label>
+      <input type="text" class="inndata" id="setup-del-lenke" readonly value="${esc(importUrl)}">
+      <label class="felt-navn" for="setup-del-kode">Oppsettskode (alternativ til QR)</label>
+      <textarea class="inndata program-kode-felt" id="setup-del-kode" rows="3" readonly>${esc(code)}</textarea>
+      <div class="program-del-knapper">
+        <button type="button" class="knapp sekundaer bred" id="setup-kopier-lenke">Kopier lenke</button>
+        <button type="button" class="knapp sekundaer bred" id="setup-kopier-kode">Kopier oppsettskode</button>
+        <button type="button" class="knapp sekundaer bred" id="setup-skriv-ut">Skriv ut QR</button>
+      </div>
+    </div>`;
+
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', () => { host.innerHTML = ''; }));
+  host.querySelector('#setup-kopier-lenke').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(importUrl);
+      toast('Lenke kopiert', 'suksess');
+    } catch {
+      host.querySelector('#setup-del-lenke').select();
+    }
+  });
+  host.querySelector('#setup-kopier-kode').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast('Oppsettskode kopiert', 'suksess');
+    } catch {
+      host.querySelector('#setup-del-kode').select();
+    }
+  });
+  host.querySelector('#setup-skriv-ut').addEventListener('click', () => {
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!w) {
+      toast('Kunne ikke åpne utskrift — tillat popups', 'feil');
+      return;
+    }
+    w.document.write(`<!DOCTYPE html><html lang="nb"><head><meta charset="utf-8"><title>Treningsjournal – oppsett</title>
+      <style>
+        body { font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
+        h1 { font-size: 1.35rem; margin-bottom: 8px; }
+        p { color: #444; max-width: 360px; margin: 0 auto 16px; }
+        img { margin: 0 auto 16px; display: block; }
+      </style></head><body>
+      <h1>Koble til Treningsjournal</h1>
+      <p>Skann QR-koden med mobilen for å koble appen til Google Sheets.</p>
+      <img src="${esc(qrUrl)}" width="320" height="320" alt="">
+      <p class="dus">Personlig invitasjon — ikke heng opp offentlig.</p>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
   });
 }

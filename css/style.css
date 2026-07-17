@@ -1112,6 +1112,32 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   flex-wrap: wrap;
 }
 
+.setup-preview-liste {
+  margin: 12px 0;
+  font-size: 0.9rem;
+}
+
+.setup-preview-liste div {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--kant);
+}
+
+.setup-preview-liste div:last-child { border-bottom: none; }
+
+.setup-preview-liste dt {
+  margin: 0;
+  color: var(--tekst-dus);
+  font-weight: 500;
+}
+
+.setup-preview-liste dd {
+  margin: 0;
+  word-break: break-all;
+}
+
 .innboks-liste {
   display: flex;
   flex-direction: column;
