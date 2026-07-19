@@ -100,6 +100,11 @@ export function datesForWeek(dateStr) {
   });
 }
 
+/** Datoer fra `daysBack` dager før til `daysForward` dager etter `dateStr` (inklusive). */
+export function datesAround(dateStr, daysBack = 7, daysForward = 7) {
+  return Array.from({ length: daysBack + daysForward + 1 }, (_, i) => addDaysStr(dateStr, i - daysBack));
+}
+
 /** Legg til / trekk fra dager på en datostreng. */
 export function addDaysStr(dateStr, days) {
   const d = parseDate(dateStr);

@@ -280,10 +280,7 @@ export function openImportProgramSheet(host, exMap, onDone) {
         <label class="felt-navn" for="prog-import-fil">Eller velg fil</label>
         <input type="file" class="inndata" id="prog-import-fil" accept=".json,application/json">
 
-        <label class="bryter-rad">
-          <input type="checkbox" id="prog-import-auto" checked>
-          <span>Legg til manglende øvelser automatisk</span>
-        </label>
+        <div id="prog-import-nye"></div>
 
         <div id="prog-import-forhåndsvis" class="program-import-preview skjult"></div>
 
@@ -294,6 +291,7 @@ export function openImportProgramSheet(host, exMap, onDone) {
   const textEl = host.querySelector('#prog-import-tekst');
   const fileEl = host.querySelector('#prog-import-fil');
   const previewEl = host.querySelector('#prog-import-forhåndsvis');
+  const missingEl = host.querySelector('#prog-import-nye');
   let pendingData = null;
 
   async function refreshPreview() {
@@ -305,12 +303,15 @@ export function openImportProgramSheet(host, exMap, onDone) {
     if (!text) {
       previewEl.classList.add('skjult');
       previewEl.innerHTML = '';
+      missingEl.innerHTML = '';
       pendingData = null;
       return;
     }
     try {
       const data = programShare.parseProgramImport(text);
       pendingData = data;
+      const { missing } = await programShare.analyzeImportProgram(data);
+      missingEl.innerHTML = programShare.renderMissingExercisesPicker(missing, { inputName: 'prog-import-add' });
       const lines = (data.exercises || []).map((ref) => {
         const parts = [ref.name || ref.catalogId || 'Ukjent'];
         if (ref.suggestedSets && ref.suggestedReps) parts.push(`${ref.suggestedSets}×${ref.suggestedReps}`);
@@ -324,6 +325,7 @@ export function openImportProgramSheet(host, exMap, onDone) {
       previewEl.classList.remove('skjult');
     } catch (err) {
       pendingData = null;
+      missingEl.innerHTML = '';
       previewEl.innerHTML = `<p class="program-import-feil liten">${esc(err.message || 'Ugyldig program')}</p>`;
       previewEl.classList.remove('skjult');
     }
@@ -353,9 +355,9 @@ export function openImportProgramSheet(host, exMap, onDone) {
       toast('Lim inn gyldig programkode eller velg fil først', 'feil');
       return;
     }
-    const autoAdd = host.querySelector('#prog-import-auto').checked;
+    const addRefKeys = programShare.readAddRefKeysFromForm(host, 'prog-import-add');
     try {
-      const { name, items, warnings } = await programShare.importProgramData(pendingData, { autoAddMissing: autoAdd });
+      const { name, items, warnings } = await programShare.importProgramData(pendingData, { addRefKeys });
       await store.saveAsTemplate(name, items);
       host.innerHTML = '';
       const warn = warnings.length ? ` (${warnings.length} hoppet over)` : '';

@@ -45,6 +45,9 @@ async function renderDetail(container, id) {
     return;
   }
 
+  const { missing } = await programShare.analyzeImportProgram(fetched.program);
+  const missingHtml = programShare.renderMissingExercisesPicker(missing, { inputName: 'innboks-import-add' });
+
   card.innerHTML = `
     <h2 class="kort-tittel">${esc(fetched.title)}</h2>
     <p class="dus liten program-relay-meta">
@@ -52,10 +55,7 @@ async function renderDetail(container, id) {
       · mottatt ${formatDate(fetched.sentAt)}
     </p>
 
-    <label class="bryter-rad">
-      <input type="checkbox" id="innboks-import-auto" checked>
-      <span>Legg til manglende øvelser automatisk</span>
-    </label>
+    ${missingHtml}
 
     <div class="program-import-preview">
       <ul class="program-import-liste">${exercisePreviewLines(fetched.program.exercises)}</ul>
@@ -67,11 +67,9 @@ async function renderDetail(container, id) {
     </div>`;
 
   card.querySelector('#innboks-importer').addEventListener('click', async () => {
-    const autoAdd = card.querySelector('#innboks-import-auto').checked;
+    const addRefKeys = programShare.readAddRefKeysFromForm(card, 'innboks-import-add');
     try {
-      const { name, items, warnings } = await programShare.importProgramData(fetched.program, {
-        autoAddMissing: autoAdd,
-      });
+      const { name, items, warnings } = await programShare.importProgramData(fetched.program, { addRefKeys });
       await store.saveAsTemplate(name, items);
       await relay.relayFetchInbox(id, { markRead: true });
       const warn = warnings.length ? ` (${warnings.length} hoppet over)` : '';

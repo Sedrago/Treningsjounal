@@ -1140,6 +1140,16 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   border-radius: var(--radius-liten);
 }
 
+.program-import-nye {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: var(--flate-2);
+  border-radius: var(--radius-liten);
+  border: 1px solid var(--kant);
+}
+.program-import-nye .felt-navn { margin-top: 0; }
+.program-import-ny-ovelse { margin: 6px 0 0; }
+
 .program-import-liste {
   margin: 6px 0 0;
   padding-left: 1.1rem;

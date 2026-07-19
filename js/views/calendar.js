@@ -1,22 +1,26 @@
 /**
- * views/calendar.js – ukekalender for planlagte og loggede økter.
+ * views/calendar.js – rullerende kalender for planlagte og loggede økter.
  */
 
 import * as store from '../store.js';
 import { groupBy } from '../stats.js';
 import {
-  esc, formatDateShort, datesForWeek, addDaysStr, weekdayShort,
+  esc, formatDateShort, datesAround, addDaysStr, weekdayShort,
   todayStr, summarizeSet, toast,
 } from '../utils.js';
 
-function weekLabel(weekDates) {
-  const a = formatDateShort(weekDates[0]);
-  const b = formatDateShort(weekDates[6]);
+const DAYS_BACK = 7;
+const DAYS_FORWARD = 7;
+const PERIOD_DAYS = DAYS_BACK + DAYS_FORWARD + 1;
+
+function rangeLabel(dates) {
+  const a = formatDateShort(dates[0]);
+  const b = formatDateShort(dates[dates.length - 1]);
   return a === b ? a : `${a} – ${b}`;
 }
 
-function buildWeekHash(fra) {
-  return `#/kalender?fra=${fra}`;
+function buildCalendarHash(anchor) {
+  return `#/kalender?fra=${anchor}`;
 }
 
 function renderPlanItems(items, exMap) {
@@ -149,7 +153,22 @@ function openDayActionSheet(host, { date, hasLog, hasPlan, plan, templates, toda
   });
 }
 
-function bindPlanner(container, { templates, weekStart, planByDate, query, rerender }) {
+async function copyPreviousPeriod(rangeDates) {
+  let copied = 0;
+  for (const date of rangeDates) {
+    const srcDate = addDaysStr(date, -PERIOD_DAYS);
+    const plan = await store.getScheduledPlan(srcDate);
+    if (!plan?.items?.length) continue;
+    await store.schedulePlanFromItems(date, plan.items, {
+      name: plan.name,
+      sourceTemplateId: plan.sourceTemplateId,
+    });
+    copied += 1;
+  }
+  return copied;
+}
+
+function bindPlanner(container, { templates, planByDate, rangeDates, rerender }) {
   const host = container.querySelector('#kalender-skjema-vert');
   const today = todayStr();
 
@@ -172,10 +191,12 @@ function bindPlanner(container, { templates, weekStart, planByDate, query, reren
     });
   });
 
-  container.querySelector('#kopier-forrige-uke')?.addEventListener('click', async () => {
-    const sourceMonday = addDaysStr(weekStart, -7);
-    const n = await store.copyWeekPlans(sourceMonday, weekStart);
-    toast(n ? `${n} planlagte dager kopiert fra forrige uke` : 'Ingen planer å kopiere fra forrige uke', n ? 'suksess' : 'info');
+  container.querySelector('#kopier-forrige-periode')?.addEventListener('click', async () => {
+    const n = await copyPreviousPeriod(rangeDates);
+    toast(
+      n ? `${n} planlagte dager kopiert fra forrige periode` : 'Ingen planer å kopiere fra forrige periode',
+      n ? 'suksess' : 'info',
+    );
     rerender();
   });
 }
@@ -183,12 +204,13 @@ function bindPlanner(container, { templates, weekStart, planByDate, query, reren
 export async function render(container, params, query = {}) {
   const today = todayStr();
   const anchor = query.fra && /^\d{4}-\d{2}-\d{2}$/.test(query.fra) ? query.fra : today;
-  const weekDates = datesForWeek(anchor);
-  const weekStart = weekDates[0];
-  const weekEnd = weekDates[6];
+  const rangeDates = datesAround(anchor, DAYS_BACK, DAYS_FORWARD);
+  const rangeStart = rangeDates[0];
+  const rangeEnd = rangeDates[rangeDates.length - 1];
+  const onToday = anchor === today;
 
   const [scheduled, enriched, exercises, templates] = await Promise.all([
-    store.getScheduledPlans({ from: weekStart, to: weekEnd }),
+    store.getScheduledPlans({ from: rangeStart, to: rangeEnd }),
     store.getEnrichedSets(),
     store.getExercises({ includeInactive: true }),
     store.getSavedTemplates(),
@@ -198,7 +220,7 @@ export async function render(container, params, query = {}) {
   const planByDate = new Map(scheduled.map((p) => [p.date, p]));
   const setsByDate = groupBy(enriched, (s) => s.date);
 
-  const columns = weekDates.map((date) => {
+  const columns = rangeDates.map((date) => {
     const plan = planByDate.get(date);
     const daySets = setsByDate.get(date) || [];
     const byEx = groupBy(daySets, (s) => s.exerciseId);
@@ -248,19 +270,19 @@ export async function render(container, params, query = {}) {
       <h1>Kalender</h1>
     </header>
 
-    <p class="dus liten kalender-intro">Trykk på en dag for å legge til eller endre program. <a href="#/programmer">Administrer programmer</a></p>
+    <p class="dus liten kalender-intro">7 dager tilbake og 7 frem. Trykk på en dag for å legge til eller endre program. <a href="#/programmer">Administrer programmer</a></p>
 
     <div class="kalender-uke-nav">
-      <a href="${buildWeekHash(addDaysStr(weekStart, -7))}" class="ikon-knapp kalender-pil" aria-label="Forrige uke">‹</a>
-      <span class="kalender-uke-label">${weekLabel(weekDates)}</span>
-      <a href="${buildWeekHash(addDaysStr(weekStart, 7))}" class="ikon-knapp kalender-pil" aria-label="Neste uke">›</a>
+      <a href="${buildCalendarHash(addDaysStr(anchor, -PERIOD_DAYS))}" class="ikon-knapp kalender-pil" aria-label="Forrige periode">‹</a>
+      <span class="kalender-uke-label">${rangeLabel(rangeDates)}</span>
+      <a href="${buildCalendarHash(addDaysStr(anchor, PERIOD_DAYS))}" class="ikon-knapp kalender-pil" aria-label="Neste periode">›</a>
     </div>
     <div class="kalender-uke-handlinger">
-      <a href="${buildWeekHash(today)}" class="knapp sekundaer liten">Denne uken</a>
-      <button type="button" class="knapp sekundaer liten" id="kopier-forrige-uke">Kopier forrige uke</button>
+      ${onToday ? '' : `<a href="${buildCalendarHash(today)}" class="knapp sekundaer liten">I dag</a>`}
+      <button type="button" class="knapp sekundaer liten" id="kopier-forrige-periode">Kopier forrige periode</button>
     </div>
 
-    <div class="kalender-scroll" tabindex="0" aria-label="Ukevisning">
+    <div class="kalender-scroll" tabindex="0" aria-label="Kalendervisning">
       <div class="kalender-rad">${columns}</div>
     </div>
     <div id="kalender-skjema-vert"></div>
@@ -268,9 +290,10 @@ export async function render(container, params, query = {}) {
 
   bindPlanner(container, {
     templates,
-    weekStart,
     planByDate,
-    query,
+    rangeDates,
     rerender: () => render(container, params, query),
   });
+
+  container.querySelector('.kalender-kolonne--i-dag')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
 }

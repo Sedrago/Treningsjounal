@@ -78,6 +78,16 @@ export async function render(container, _params, query) {
   let fetched = null;
   let pinRequired = meta.requiresPin;
 
+  async function renderMissingSection() {
+    const wrap = card.querySelector('#relay-import-nye');
+    if (!wrap || !fetched?.program) {
+      if (wrap) wrap.innerHTML = '';
+      return;
+    }
+    const { missing } = await programShare.analyzeImportProgram(fetched.program);
+    wrap.innerHTML = programShare.renderMissingExercisesPicker(missing, { inputName: 'relay-import-add' });
+  }
+
   function renderForm() {
     card.innerHTML = `
       <h2 class="kort-tittel">${esc(meta.title)}</h2>
@@ -93,10 +103,7 @@ export async function render(container, _params, query) {
         <input type="text" class="inndata" id="relay-pin" inputmode="numeric" autocomplete="one-time-code" placeholder="PIN fra trener">
       ` : ''}
 
-      <label class="bryter-rad">
-        <input type="checkbox" id="relay-import-auto" checked>
-        <span>Legg til manglende øvelser automatisk</span>
-      </label>
+      <div id="relay-import-nye"></div>
 
       <div id="relay-import-preview" class="program-import-preview ${fetched ? '' : 'skjult'}">
         ${fetched ? `
@@ -118,6 +125,7 @@ export async function render(container, _params, query) {
         fetched = await relay.relayFetch(code, pin);
         pinRequired = false;
         renderForm();
+        await renderMissingSection();
       } catch (err) {
         toast(err.message || 'Kunne ikke hente program', 'feil');
       }
@@ -133,11 +141,9 @@ export async function render(container, _params, query) {
           return;
         }
       }
-      const autoAdd = card.querySelector('#relay-import-auto').checked;
+      const addRefKeys = programShare.readAddRefKeysFromForm(card, 'relay-import-add');
       try {
-        const { name, items, warnings } = await programShare.importProgramData(fetched.program, {
-          autoAddMissing: autoAdd,
-        });
+        const { name, items, warnings } = await programShare.importProgramData(fetched.program, { addRefKeys });
         await store.saveAsTemplate(name, items);
         const warn = warnings.length ? ` (${warnings.length} hoppet over)` : '';
         toast(`«${name}» importert${warn}`, warnings.length ? 'info' : 'suksess');
@@ -146,6 +152,8 @@ export async function render(container, _params, query) {
         toast(err.message || 'Import feilet', 'feil');
       }
     });
+
+    renderMissingSection();
   }
 
   if (!pinRequired) {
