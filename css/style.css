@@ -833,6 +833,104 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   box-shadow: 0 -8px 32px rgb(0 0 0 / 0.22);
   padding: 10px 14px 12px;
 }
+.oktt-panel--overlay.oktt-panel--minimert {
+  padding: 8px 14px 10px;
+}
+
+.oktt-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.oktt-panel-bar-main {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.oktt-bar-tittel {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oktt-bar-preview {
+  display: block;
+  font-size: 0.82rem;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.oktt-panel-bar-handlinger {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.oktt-panel-toggle {
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 6px 8px;
+}
+.oktt-panel-min-bar { margin-top: 8px; }
+.oktt-lagre-mini { width: 100%; }
+.oktt-plan-hint { margin: 0 0 6px; }
+.oktt-overlay-hvile--body {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.oktt-kommentar-wrap { margin: 8px 0 4px; }
+.oktt-kommentar {
+  margin-top: 6px;
+  width: 100%;
+}
+.oktt-fullfort-innhold {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.oktt-fullfort-kommentar { font-style: italic; }
+.oktt-forrige-meta { margin: 0 0 10px; }
+.oktt-forrige-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.oktt-forrige-rad {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  background: var(--flate-2);
+  border-radius: var(--radius-liten);
+  font-size: 0.9rem;
+}
+#oktt-sheet-vert {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+#oktt-sheet-vert > * { pointer-events: auto; }
+#oktt-sheet-vert .ark {
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+}
 
 .oktt-overlay-hode {
   display: flex;

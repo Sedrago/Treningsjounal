@@ -4,7 +4,7 @@
 
 import * as store from '../store.js';
 import { initContent, getDescription } from '../content.js';
-import { mountSetLogger, completedSetsHtml, bindCompletedSetsList } from '../session-log.js';
+import { mountSetLogger, completedSetsHtml, bindCompletedSetsList, PANEL_EXPANDED_KEY } from '../session-log.js';
 import * as programShare from '../program-share.js';
 import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
@@ -208,7 +208,7 @@ export async function render(container, params, query = {}) {
     const malBlock = showDetails
       ? planMalFieldsHtml(item, ex, { editable: !sessionActive })
       : '';
-    const completedSetsBlock = sessionActive && showDetails && ex
+    const completedSetsBlock = !sessionActive && showDetails && ex
       ? completedSetsHtml(ex, exSetsToday, store.getSetting('units'))
       : '';
 
@@ -395,6 +395,7 @@ export async function render(container, params, query = {}) {
   container.querySelector('#start-okt')?.addEventListener('click', () => {
     if (!items.length) return;
     sessionStorage.setItem(SESSION_KEY, '1');
+    sessionStorage.setItem(PANEL_EXPANDED_KEY, '1');
     render(container, params, query);
   });
 
@@ -413,6 +414,7 @@ export async function render(container, params, query = {}) {
       row.addEventListener('click', (e) => {
         if (e.target.closest('[data-handling]')) return;
         sessionStorage.setItem(FOCUS_KEY, row.dataset.exId);
+        sessionStorage.setItem(PANEL_EXPANDED_KEY, '1');
         if (sessionStorage.getItem(TEKNIKK_KEY) && sessionStorage.getItem(TEKNIKK_KEY) !== row.dataset.exId) {
           sessionStorage.removeItem(TEKNIKK_KEY);
         }
@@ -521,6 +523,7 @@ export async function render(container, params, query = {}) {
       planItem: active.item,
       completedSets: exSets.filter((s) => s.setNumber !== active.setNum),
       compact: true,
+      beforeDate: today,
       onSaved: () => {
         toast('Sett lagret', 'suksess');
         render(container, params, query);
