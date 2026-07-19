@@ -144,12 +144,36 @@ function routeRelay_(action, key, payload) {
 // Database
 // =============================================================================
 
+/** Kolonnenummer (1-basert) → bokstav (A, B, …). */
+function colLetter_(column) {
+  var n = column;
+  var s = '';
+  while (n > 0) {
+    var m = (n - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+/** A1-område – unngår at getRange(row,col,row,cols) tolkes som antall rader. */
+function rangeA1_(startRow, startCol, endRow, endCol) {
+  return colLetter_(startCol) + startRow + ':' + colLetter_(endCol) + endRow;
+}
+
 function getRelaySheet_(name) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var headers = RELAY_COLUMNS[name];
+  if (!headers) throw new Error('Ukjent relay-ark: ' + name);
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.getRange(1, 1, 1, RELAY_COLUMNS[name].length).setValues([RELAY_COLUMNS[name]]);
+    sheet.getRange(rangeA1_(1, 1, 1, headers.length)).setValues([headers]);
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+  if (String(sheet.getRange(1, 1).getValue() || '') !== headers[0]) {
+    sheet.getRange(rangeA1_(1, 1, 1, headers.length)).setValues([headers]);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -160,7 +184,7 @@ function readPublishedRows_() {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
   var headers = RELAY_COLUMNS.Published;
-  var values = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+  var values = sheet.getRange(rangeA1_(2, 1, lastRow, headers.length)).getValues();
   return values.map(function (row) {
     var obj = {};
     headers.forEach(function (h, i) { obj[h] = row[i]; });
@@ -186,7 +210,7 @@ function upsertPublished_(entry) {
   var found = findPublishedByCode_(entry.code);
   var values = headers.map(function (h) { return entry[h] != null ? entry[h] : ''; });
   if (found) {
-    sheet.getRange(found.rowIndex, 1, found.rowIndex, headers.length).setValues([values]);
+    sheet.getRange(rangeA1_(found.rowIndex, 1, found.rowIndex, headers.length)).setValues([values]);
     return found.rowIndex;
   }
   sheet.appendRow(values);
@@ -300,7 +324,7 @@ function readSheetRows_(sheetKey, columnsKey) {
   var headers = RELAY_COLUMNS[columnsKey];
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
-  var values = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+  var values = sheet.getRange(rangeA1_(2, 1, lastRow, headers.length)).getValues();
   return values.map(function (row) {
     var obj = {};
     headers.forEach(function (h, i) { obj[h] = row[i]; });
@@ -320,7 +344,7 @@ function updateSheetRow_(sheetKey, columnsKey, rowIndex, entry) {
   var sheet = getRelaySheet_(RELAY_SHEETS[sheetKey]);
   var headers = RELAY_COLUMNS[columnsKey];
   var values = headers.map(function (h) { return entry[h] != null ? entry[h] : ''; });
-  sheet.getRange(rowIndex, 1, rowIndex, headers.length).setValues([values]);
+  sheet.getRange(rangeA1_(rowIndex, 1, rowIndex, headers.length)).setValues([values]);
 }
 
 function normalizeUsername_(username) {

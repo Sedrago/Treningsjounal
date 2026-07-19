@@ -1,5 +1,5 @@
 /**
- * views/calendar.js – ukekalender med maler, dra-og-slipp og planlagte økter.
+ * views/calendar.js – ukekalender for planlagte og loggede økter.
  */
 
 import * as store from '../store.js';
@@ -8,9 +8,6 @@ import {
   esc, formatDateShort, datesForWeek, addDaysStr, weekdayShort,
   todayStr, summarizeSet, toast,
 } from '../utils.js';
-
-const DRAG_TEMPLATE = 'text/tj-template';
-const DRAG_PLAN = 'text/tj-plan';
 
 function weekLabel(weekDates) {
   const a = formatDateShort(weekDates[0]);
@@ -60,27 +57,6 @@ function dayStatus(date, today, hasLog, hasPlan) {
   return 'tom';
 }
 
-function renderTemplateCards(templates, exMap, selectedId) {
-  if (!templates.length) {
-    return `<p class="dus liten mal-strip-tom">Ingen lagrede programmer ennå. Lagre et program under Styrketrening → ☰ → Lagre som program.</p>`;
-  }
-  return templates.map((t) => {
-    const names = t.items
-      .map((it) => exMap.get(it.exerciseId)?.name)
-      .filter(Boolean)
-      .slice(0, 3);
-    const extra = t.items.length > 3 ? ` +${t.items.length - 3}` : '';
-    return `
-      <button type="button" class="mal-kort ${selectedId === t.id ? 'mal-kort--valgt' : ''}"
-        draggable="true" data-template-id="${t.id}" aria-label="Program ${esc(t.name || 'Uten navn')}">
-        <span class="mal-kort-navn">${esc(t.name || 'Uten navn')}</span>
-        <span class="dus liten">${t.items.length} øvelse${t.items.length === 1 ? '' : 'r'}</span>
-        <span class="dus liten mal-kort-preview">${esc(names.join(' · '))}${extra}</span>
-        <span class="mal-kort-hint dus liten">Dra til dag · trykk for å velge</span>
-      </button>`;
-  }).join('');
-}
-
 function openPickTemplateSheet(host, templates, onPick) {
   const rows = templates.map((t) => `
     <button type="button" class="velger-rad" data-id="${t.id}">
@@ -95,7 +71,8 @@ function openPickTemplateSheet(host, templates, onPick) {
         <h2>Legg program på dag</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
-      ${rows || '<p class="tomt">Ingen lagrede programmer.</p>'}
+      ${rows || '<p class="tomt">Ingen lagrede programmer. <a href="#/programmer">Opprett program</a></p>'}
+      <a href="#/programmer" class="knapp sekundaer bred">Gå til programmer</a>
     </div>`;
 
   const close = () => { host.innerHTML = ''; };
@@ -108,92 +85,89 @@ function openPickTemplateSheet(host, templates, onPick) {
   });
 }
 
-function bindPlanner(container, { templates, weekStart, query, rerender }) {
-  let selectedTemplateId = null;
-  const host = container.querySelector('#kalender-skjema-vert');
+function openDayActionSheet(host, { date, hasLog, hasPlan, plan, templates, today, rerender }) {
+  const dateLabel = formatDateShort(date);
+  let body = '';
 
-  function setSelected(id) {
-    selectedTemplateId = selectedTemplateId === id ? null : id;
-    container.querySelectorAll('.mal-kort').forEach((el) => {
-      el.classList.toggle('mal-kort--valgt', el.dataset.templateId === selectedTemplateId);
-    });
+  if (hasLog) {
+    body = `
+      <a href="#/rediger-okt/${date}" class="knapp sekundaer bred">Rediger logget økt</a>
+      ${date === today ? '<a href="#/styrke" class="knapp sekundaer bred">Gå til styrke</a>' : ''}`;
+  } else if (hasPlan) {
+    body = `
+      <a href="${dayLink(date, today, hasLog, hasPlan)}" class="knapp primaer bred">${date === today ? 'Start økt' : 'Se plan'}</a>
+      <button type="button" class="knapp sekundaer bred" data-handling="bytt">Bytt program</button>
+      <button type="button" class="knapp sekundaer bred farlig" data-handling="fjern">Fjern plan</button>`;
+  } else {
+    body = `
+      <button type="button" class="knapp primaer bred" data-handling="velg">Velg program</button>
+      <a href="#/programmer" class="knapp sekundaer bred">Gå til programmer</a>`;
   }
 
-  container.querySelectorAll('.mal-kort').forEach((card) => {
-    card.addEventListener('click', () => setSelected(card.dataset.templateId));
-    card.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData(DRAG_TEMPLATE, card.dataset.templateId);
-      e.dataTransfer.effectAllowed = 'copy';
-      card.classList.add('mal-kort--drar');
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Dag ${dateLabel}">
+      <div class="ark-hode">
+        <h2>${dateLabel}</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      ${plan?.name ? `<p class="dus">${esc(plan.name)}</p>` : ''}
+      <div class="kalender-dag-handlinger">${body}</div>
+    </div>`;
+
+  const close = () => { host.innerHTML = ''; };
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', close));
+
+  host.querySelector('[data-handling="velg"]')?.addEventListener('click', () => {
+    close();
+    if (!templates.length) {
+      location.hash = '#/programmer';
+      return;
+    }
+    openPickTemplateSheet(host, templates, async (templateId) => {
+      await store.scheduleTemplate(templateId, date);
+      toast('Program lagt på kalenderen', 'suksess');
+      rerender();
     });
-    card.addEventListener('dragend', () => card.classList.remove('mal-kort--drar'));
   });
 
-  container.querySelectorAll('.kalender-dra').forEach((handle) => {
-    handle.addEventListener('dragstart', (e) => {
-      e.stopPropagation();
-      e.dataTransfer.setData(DRAG_PLAN, handle.dataset.planId);
-      e.dataTransfer.effectAllowed = 'move';
-      handle.closest('.kalender-kolonne')?.classList.add('kalender-kolonne--drar');
-    });
-    handle.addEventListener('dragend', () => {
-      container.querySelectorAll('.kalender-kolonne--drar').forEach((el) => el.classList.remove('kalender-kolonne--drar'));
+  host.querySelector('[data-handling="bytt"]')?.addEventListener('click', () => {
+    close();
+    openPickTemplateSheet(host, templates, async (templateId) => {
+      await store.scheduleTemplate(templateId, date);
+      toast('Program oppdatert', 'suksess');
+      rerender();
     });
   });
 
-  container.querySelectorAll('.kalender-kolonne[data-drop="1"]').forEach((col) => {
-    col.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = e.dataTransfer.types.includes(DRAG_PLAN) ? 'move' : 'copy';
-      col.classList.add('kalender-kolonne--over');
-    });
-    col.addEventListener('dragleave', (e) => {
-      if (!col.contains(e.relatedTarget)) col.classList.remove('kalender-kolonne--over');
-    });
-    col.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      col.classList.remove('kalender-kolonne--over');
-      if (col.classList.contains('kalender-kolonne--logget')) {
-        toast('Dagen har allerede logget økt', 'info');
-        return;
-      }
-      const date = col.dataset.dato;
-      const templateId = e.dataTransfer.getData(DRAG_TEMPLATE);
-      const planId = e.dataTransfer.getData(DRAG_PLAN);
-      try {
-        if (templateId) {
-          await store.scheduleTemplate(templateId, date);
-          toast('Program lagt på kalenderen', 'suksess');
-        } else if (planId) {
-          await store.reschedulePlan(planId, date);
-          toast('Plan flyttet', 'suksess');
-        }
-        rerender();
-      } catch (err) {
-        toast(err.message || 'Kunne ikke oppdatere kalenderen');
-      }
-    });
+  host.querySelector('[data-handling="fjern"]')?.addEventListener('click', async () => {
+    if (!confirm(`Fjerne planen for ${dateLabel}?`)) return;
+    close();
+    if (plan?.id) await store.deletePlan(plan.id);
+    toast('Plan fjernet', 'suksess');
+    rerender();
+  });
+}
 
-    col.addEventListener('click', async (e) => {
-      if (e.target.closest('a, button, .kalender-dra')) return;
+function bindPlanner(container, { templates, weekStart, planByDate, query, rerender }) {
+  const host = container.querySelector('#kalender-skjema-vert');
+  const today = todayStr();
+
+  container.querySelectorAll('.kalender-kolonne[data-dag="1"]').forEach((col) => {
+    col.addEventListener('click', (e) => {
+      if (e.target.closest('a, button')) return;
       const date = col.dataset.dato;
-      if (col.classList.contains('kalender-kolonne--logget')) return;
-      if (selectedTemplateId) {
-        await store.scheduleTemplate(selectedTemplateId, date);
-        toast('Program lagt på kalenderen', 'suksess');
-        selectedTemplateId = null;
-        rerender();
-        return;
-      }
-      if (col.dataset.planId || col.classList.contains('kalender-kolonne--logget')) return;
-      if (!templates.length) {
-        location.hash = '#/styrke';
-        return;
-      }
-      openPickTemplateSheet(host, templates, async (templateId) => {
-        await store.scheduleTemplate(templateId, date);
-        toast('Program lagt på kalenderen', 'suksess');
-        rerender();
+      const plan = planByDate.get(date) || null;
+      const hasLog = col.classList.contains('kalender-kolonne--logget');
+      const hasPlan = Boolean(plan?.items?.length);
+      openDayActionSheet(host, {
+        date,
+        hasLog,
+        hasPlan,
+        plan,
+        templates,
+        today,
+        rerender,
       });
     });
   });
@@ -232,7 +206,6 @@ export async function render(container, params, query = {}) {
     const hasPlan = Boolean(plan?.items?.length);
     const status = dayStatus(date, today, hasLog, hasPlan);
     const title = hasPlan ? (plan.name || '') : (hasLog ? 'Logget økt' : '');
-    const canMovePlan = hasPlan && !hasLog && plan?.id;
 
     let body = '';
     if (hasLog) {
@@ -240,7 +213,7 @@ export async function render(container, params, query = {}) {
     } else if (hasPlan) {
       body = `<ul class="kalender-ovelse-liste">${renderPlanItems(plan.items, exMap)}</ul>`;
     } else {
-      body = '<p class="dus liten kalender-tom">Slipp program her eller trykk for å velge</p>';
+      body = '<p class="dus liten kalender-tom">Trykk for å legge til program</p>';
     }
 
     const badge = status === 'bommet' ? '<span class="kalender-badge kalender-badge--bommet">Ikke gjennomført</span>'
@@ -251,17 +224,16 @@ export async function render(container, params, query = {}) {
     const actionLabel = date === today && (hasLog || hasPlan) ? 'Gå til økt'
       : date === today ? 'Planlegg'
       : hasLog ? 'Rediger økt'
-        : hasPlan ? 'Rediger plan'
+        : hasPlan ? 'Se plan'
           : 'Planlegg';
 
     return `
       <article class="kalender-kolonne kalender-kolonne--${status}"
-        data-dato="${date}" data-drop="1" ${plan?.id ? `data-plan-id="${plan.id}"` : ''}>
+        data-dato="${date}" data-dag="1" ${plan?.id ? `data-plan-id="${plan.id}" data-plan-navn="${esc(plan.name || '')}"` : ''}>
         <header class="kalender-kolonne-hode">
           <span class="kalender-ukedag">${weekdayShort(date)}</span>
           <span class="kalender-dato">${formatDateShort(date).replace(/ \d{4}$/, '')}</span>
           ${date === today ? '<span class="kalender-i-dag">I dag</span>' : ''}
-          ${canMovePlan ? `<button type="button" class="kalender-dra" draggable="true" data-plan-id="${plan.id}" aria-label="Flytt plan">⠿</button>` : ''}
         </header>
         ${title ? `<p class="kalender-program-tittel">${esc(title)}</p>` : ''}
         ${badge}
@@ -276,13 +248,7 @@ export async function render(container, params, query = {}) {
       <h1>Kalender</h1>
     </header>
 
-    <section class="mal-strip" aria-label="Lagrede programmer">
-      <div class="mal-strip-hode">
-        <h2 class="kort-tittel">Lagrede programmer</h2>
-        <p class="dus liten">Dra til en dag, eller trykk program → trykk dag</p>
-      </div>
-      <div class="mal-strip-scroll">${renderTemplateCards(templates, exMap, null)}</div>
-    </section>
+    <p class="dus liten kalender-intro">Trykk på en dag for å legge til eller endre program. <a href="#/programmer">Administrer programmer</a></p>
 
     <div class="kalender-uke-nav">
       <a href="${buildWeekHash(addDaysStr(weekStart, -7))}" class="ikon-knapp kalender-pil" aria-label="Forrige uke">‹</a>
@@ -303,6 +269,7 @@ export async function render(container, params, query = {}) {
   bindPlanner(container, {
     templates,
     weekStart,
+    planByDate,
     query,
     rerender: () => render(container, params, query),
   });

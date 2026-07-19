@@ -30,12 +30,12 @@ export async function render(container, _params, query) {
   if (!code) {
     container.innerHTML = `
       <header class="side-topp">
-        <a href="#/styrke" class="tilbake" aria-label="Tilbake">‹</a>
+        <a href="#/programmer" class="tilbake" aria-label="Tilbake">‹</a>
         <h1>Importer program</h1>
       </header>
       <section class="kort">
         <p class="tomt">Mangler programkode. Skann QR-koden eller åpne lenken du fikk.</p>
-        <a href="#/styrke" class="knapp sekundaer bred">Gå til styrketrening</a>
+        <a href="#/programmer" class="knapp sekundaer bred">Gå til programmer</a>
       </section>`;
     return;
   }
@@ -47,7 +47,7 @@ export async function render(container, _params, query) {
         <h1>Importer program</h1>
       </header>
       <section class="kort">
-        <p class="tomt">Relay er ikke konfigurert. Sett Relay-URL under Innstillinger, eller lim inn delingskode under Styrke → Importer program.</p>
+        <p class="tomt">Relay er ikke konfigurert. Sett Relay-URL under Innstillinger, eller lim inn delingskode under Programmer → Importer.</p>
         <a href="#/innstillinger" class="knapp sekundaer bred">Innstillinger</a>
       </section>`;
     return;
@@ -55,7 +55,7 @@ export async function render(container, _params, query) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/styrke" class="tilbake" aria-label="Tilbake">‹</a>
+      <a href="#/programmer" class="tilbake" aria-label="Tilbake">‹</a>
       <h1>Importer program</h1>
     </header>
     <section class="kort program-relay-import" aria-live="polite">
@@ -71,7 +71,7 @@ export async function render(container, _params, query) {
       <h2 class="kort-tittel">Kunne ikke hente program</h2>
       <p class="program-import-feil">${esc(err.message || 'Ukjent feil')}</p>
       <p class="dus liten">Kode: ${esc(code)}</p>
-      <a href="#/styrke" class="knapp sekundaer bred">Tilbake</a>`;
+      <a href="#/programmer" class="knapp sekundaer bred">Tilbake</a>`;
     return;
   }
 
@@ -109,7 +109,7 @@ export async function render(container, _params, query) {
         ${pinRequired && !fetched
     ? '<button type="button" class="knapp primaer bred" id="relay-vis-program">Vis program</button>'
     : '<button type="button" class="knapp primaer bred" id="relay-importer">Importer til lagrede programmer</button>'}
-        <a href="#/styrke" class="knapp sekundaer bred">Avbryt</a>
+        <a href="#/programmer" class="knapp sekundaer bred">Avbryt</a>
       </div>`;
 
     card.querySelector('#relay-vis-program')?.addEventListener('click', async () => {
@@ -141,7 +141,7 @@ export async function render(container, _params, query) {
         await store.saveAsTemplate(name, items);
         const warn = warnings.length ? ` (${warnings.length} hoppet over)` : '';
         toast(`«${name}» importert${warn}`, warnings.length ? 'info' : 'suksess');
-        location.hash = '#/styrke';
+        location.hash = '#/programmer';
       } catch (err) {
         toast(err.message || 'Import feilet', 'feil');
       }
@@ -155,7 +155,7 @@ export async function render(container, _params, query) {
       card.innerHTML = `
         <h2 class="kort-tittel">${esc(meta.title)}</h2>
         <p class="program-import-feil">${esc(err.message || 'Kunne ikke hente program')}</p>
-        <a href="#/styrke" class="knapp sekundaer bred">Tilbake</a>`;
+        <a href="#/programmer" class="knapp sekundaer bred">Tilbake</a>`;
       return;
     }
   }

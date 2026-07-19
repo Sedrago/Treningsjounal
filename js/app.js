@@ -22,6 +22,8 @@ import { maybeShowMoodPrompt } from './mood-prompt.js';
 import * as exerciseLibrary from './views/exercise-library.js';
 import * as sessionEdit from './views/session-edit.js';
 import * as calendar from './views/calendar.js';
+import * as programs from './views/programs.js';
+import * as programEdit from './views/program-edit.js';
 import * as settings from './views/settings.js';
 import * as programImport from './views/program-import.js';
 import * as inbox from './views/inbox.js';
@@ -37,6 +39,10 @@ const routes = {
   logg: logging.render,
   historikk: history.render,
   kalender: calendar.render,
+  programmer: (container, params, query) => {
+    if (params[0] === 'rediger' && params[1]) return programEdit.render(container, params.slice(1), query);
+    return programs.render(container, params, query);
+  },
   'rediger-okt': sessionEdit.render,
   ovelse: history.renderExercise,
   statistikk: statistics.render,

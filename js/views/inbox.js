@@ -76,7 +76,7 @@ async function renderDetail(container, id) {
       await relay.relayFetchInbox(id, { markRead: true });
       const warn = warnings.length ? ` (${warnings.length} hoppet over)` : '';
       toast(`«${name}» importert${warn}`, warnings.length ? 'info' : 'suksess');
-      location.hash = '#/styrke';
+      location.hash = '#/programmer';
     } catch (err) {
       toast(err.message || 'Import feilet', 'feil');
     }
@@ -141,7 +141,7 @@ async function renderList(container) {
 
   if (!items.length) {
     card.innerHTML = `
-      <p class="tomt">Ingen nye programmer. Partnere kan sende deg maler under Styrke → Eksporter.</p>
+      <p class="tomt">Ingen nye programmer. Partnere kan sende deg maler under Programmer → Eksporter.</p>
       <a href="#/innstillinger" class="knapp sekundaer">Administrer partnere</a>`;
     return;
   }
