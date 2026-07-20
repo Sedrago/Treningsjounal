@@ -28,7 +28,7 @@ export async function render(container, params, query = {}) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
+      <a href="#/styrketrening" class="tilbake" aria-label="Tilbake til styrketrening">‹</a>
       <h1>Historikk</h1>
     </header>
     <input type="search" class="inndata sok" id="sok" placeholder="Søk i øvelser og kommentarer …"

@@ -21,7 +21,7 @@ export async function render(container, params, query) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
+      <a href="#/logging" class="tilbake" aria-label="Tilbake til logging">‹</a>
       <h1>Inntak</h1>
     </header>
 

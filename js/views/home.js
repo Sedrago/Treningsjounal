@@ -55,12 +55,25 @@ export async function render(container) {
 
     <a href="#/styrke" class="knapp primaer stor" id="start-styrke">${esc(styrke.title)}</a>
     <p class="dus liten hjem-styrke-sub">${esc(styrke.sub)}</p>
-    <div class="knapp-rad hjem-ekstra">
-      <a href="#/inntak" class="knapp sekundaer">🍳 Inntak</a>
-      <a href="#/aerob" class="knapp sekundaer"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> Aerob</a>
-      <a href="#/sovn" class="knapp sekundaer">😴 Søvn</a>
-      <a href="#/folelse" class="knapp sekundaer">🙂 Dagsform</a>
-    </div>
+
+    <nav class="hjem-hovednav" aria-label="Hovednavigasjon">
+      <a href="#/styrketrening" class="hjem-hovednav-kort">
+        <span class="hjem-hovednav-ikon" aria-hidden="true">💪</span>
+        <span class="hjem-hovednav-navn">Styrketrening</span>
+      </a>
+      <a href="#/logging" class="hjem-hovednav-kort">
+        <span class="hjem-hovednav-ikon" aria-hidden="true">📝</span>
+        <span class="hjem-hovednav-navn">Logging</span>
+      </a>
+      <a href="#/innsikt" class="hjem-hovednav-kort">
+        <span class="hjem-hovednav-ikon" aria-hidden="true">📊</span>
+        <span class="hjem-hovednav-navn">Innsikt</span>
+      </a>
+      <a href="#/innstillinger" class="hjem-hovednav-kort">
+        <span class="hjem-hovednav-ikon" aria-hidden="true">⚙️</span>
+        <span class="hjem-hovednav-navn">Innstillinger</span>
+      </a>
+    </nav>
 
     <section class="kort kost-hjem" id="kost-hjem" aria-label="Kost i dag">
       <div id="kost-hjem-innhold"><p class="dus liten">Laster …</p></div>
@@ -87,17 +100,6 @@ export async function render(container) {
       ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${fmtSleepHours(sleepSum.avgHours)} søvn (${sleepSum.nights} netter)</p>` : ''}
       ${moodSum ? `<p class="dus liten mood-oppsummert">🙂 Snitt ${moodSum.avgValue}/100 dagsform (${moodSum.count} registrering${moodSum.count === 1 ? '' : 'er'})</p>` : ''}
     </section>
-
-    <nav class="hjem-meny" aria-label="Hovedmeny">
-      <a href="#/programmer" class="meny-knapp"><span aria-hidden="true">📋</span>Programmer</a>
-      <a href="#/kalender" class="meny-knapp"><span aria-hidden="true">📅</span>Kalender</a>
-      <a href="#/historikk" class="meny-knapp"><span aria-hidden="true">📖</span>Historikk</a>
-      <a href="#/statistikk" class="meny-knapp"><span aria-hidden="true">📊</span>Statistikk</a>
-      <a href="#/ovelser" class="meny-knapp"><span aria-hidden="true">🏷️</span>Øvelser</a>
-      <a href="#/kroppsvekt" class="meny-knapp"><span aria-hidden="true">⚖️</span>Kroppsvekt</a>
-      <a href="#/inntak" class="meny-knapp"><span aria-hidden="true">🍳</span>Inntak</a>
-      <a href="#/innstillinger" class="meny-knapp"><span aria-hidden="true">⚙️</span>Innstillinger</a>
-    </nav>
   `;
 
   await mountHomeNutrition(container);

@@ -377,6 +377,63 @@ select.inndata { appearance: none; }
 .meny-knapp:hover { text-decoration: none; background: var(--flate-2); }
 .meny-knapp span { font-size: 1.5rem; }
 
+.hjem-hovednav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 16px 0 8px;
+}
+.hjem-hovednav-kort {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 88px;
+  padding: 14px 10px;
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius);
+  color: var(--tekst);
+  font-weight: 600;
+  text-decoration: none;
+}
+.hjem-hovednav-kort:hover { background: var(--flate-2); text-decoration: none; }
+.hjem-hovednav-ikon { font-size: 1.6rem; line-height: 1; }
+.hjem-hovednav-navn { font-size: 0.92rem; text-align: center; line-height: 1.2; }
+
+.hub-primaer { margin-top: 4px; }
+.hub-primaer-sub { text-align: center; margin: 4px 0 16px; }
+
+.hub-meny {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hub-lenke {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px;
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  color: var(--tekst);
+  text-decoration: none;
+}
+.hub-lenke:hover { background: var(--flate-2); text-decoration: none; }
+.hub-lenke-ikon {
+  font-size: 1.4rem;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.hub-lenke-ikon--bilde img { width: 28px; height: 28px; object-fit: cover; border-radius: 4px; }
+.hub-lenke-tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hub-lenke-tekst strong { font-size: 1rem; }
+.hub-lenke-pil { color: var(--tekst-dus); font-size: 1.2rem; }
+
 /* ---------- Ukentlig balanse ---------- */
 
 .balanse-rad { display: flex; align-items: center; gap: 8px; margin: 7px 0; }

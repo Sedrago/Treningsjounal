@@ -29,6 +29,9 @@ import * as programImport from './views/program-import.js';
 import * as inbox from './views/inbox.js';
 import * as setupImport from './views/setup-import.js';
 import * as nutrition from './views/nutrition.js';
+import * as strengthHub from './views/strength-hub.js';
+import * as logHub from './views/log-hub.js';
+import * as insightHub from './views/insight-hub.js';
 import * as relay from './relay-api.js';
 
 /** Rutetabell: sti → render-funksjon. */
@@ -58,6 +61,9 @@ const routes = {
   program: programImport.render,
   innboks: inbox.render,
   oppsett: setupImport.render,
+  styrketrening: strengthHub.render,
+  logging: logHub.render,
+  innsikt: insightHub.render,
 };
 
 /** Setter tema-attributt på <html> ut fra innstilling. */

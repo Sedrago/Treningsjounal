@@ -241,7 +241,7 @@ export async function render(container, params, query = {}) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
+      <a href="#/styrketrening" class="tilbake" aria-label="Tilbake til styrketrening">‹</a>
       <div>
         <h1>Styrketrening</h1>
         <p class="dus">${formatDateLong(viewDate)}${plan?.name ? ` · ${esc(plan.name)}` : ''}${isToday ? ` · ${esc(statusLine(plan, items, daySets))}` : viewDate > today ? ' · Planlagt' : ''}</p>
