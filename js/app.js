@@ -31,7 +31,6 @@ import * as setupImport from './views/setup-import.js';
 import * as nutrition from './views/nutrition.js';
 import * as strengthHub from './views/strength-hub.js';
 import * as logHub from './views/log-hub.js';
-import * as insightHub from './views/insight-hub.js';
 import * as relay from './relay-api.js';
 
 /** Rutetabell: sti → render-funksjon. */
@@ -63,7 +62,7 @@ const routes = {
   oppsett: setupImport.render,
   styrketrening: strengthHub.render,
   logging: logHub.render,
-  innsikt: insightHub.render,
+  innsikt: statistics.render,
 };
 
 /** Setter tema-attributt på <html> ut fra innstilling. */

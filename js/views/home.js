@@ -6,7 +6,6 @@ import * as store from '../store.js';
 import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
 import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, moodSummarySince } from '../stats.js';
 import { balanceBars } from '../charts.js';
-import { homeStrengthLabel } from './strength.js';
 import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml, fmtSleepHours } from '../utils.js';
 import { mountHomeNutrition } from '../nutrition-ui.js';
 
@@ -27,7 +26,6 @@ export async function render(container) {
   const aerobMin = aerobicMinutesSince(aerobic, since7);
   const sleepSum = sleepSummarySince(sleepRows, since7);
   const moodSum = moodSummarySince(moodRows, since7);
-  const styrke = await homeStrengthLabel();
 
   const streakLabel = streakMode === 'calendar'
     ? (streak === 1 ? 'uke' : 'uker')
@@ -52,9 +50,6 @@ export async function render(container) {
         </div>
       </div>
     </header>
-
-    <a href="#/styrke" class="knapp primaer stor" id="start-styrke">${esc(styrke.title)}</a>
-    <p class="dus liten hjem-styrke-sub">${esc(styrke.sub)}</p>
 
     <nav class="hjem-hovednav" aria-label="Hovednavigasjon">
       <a href="#/styrketrening" class="hjem-hovednav-kort">
