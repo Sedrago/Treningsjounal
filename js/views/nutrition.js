@@ -3,7 +3,7 @@
  */
 
 import * as store from '../store.js';
-import { renderNutritionSummaryHtml, bindNutritionSummary } from '../nutrition-ui.js';
+import { renderNutritionSummaryHtml } from '../nutrition-ui.js';
 import { esc, fmtNum, todayStr, toast } from '../utils.js';
 
 function presetLabel(p) {
@@ -149,10 +149,7 @@ export async function render(container, params, query) {
     const d = container.querySelector('#inntak-dato').value;
     const s = await store.getDailyNutritionSummary(d);
     container.querySelector('#inntak-oppsummering').innerHTML = renderNutritionSummaryHtml(s);
-    bindNutritionSummary(container.querySelector('#inntak-oppsummering'), d, { onChange: refreshSummaryOnly });
   };
-
-  bindNutritionSummary(container.querySelector('#inntak-oppsummering'), date, { onChange: refreshSummaryOnly });
 
   container.querySelector('#inntak-dato').addEventListener('change', refresh);
 

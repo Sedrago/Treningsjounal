@@ -1158,7 +1158,6 @@ export async function clearLactateForDate(date) {
 
 export async function getDailyNutritionSummary(date = todayStr()) {
   const intakes = await getFoodIntakesForDate(date);
-  const lactate = await getLactateForDate(date);
   const proteinG = intakes.reduce((sum, i) => sum + (i.proteinG || 0), 0);
   const carbsG = intakes.reduce((sum, i) => sum + (i.carbsG || 0), 0);
   return {
@@ -1166,7 +1165,6 @@ export async function getDailyNutritionSummary(date = todayStr()) {
     proteinG,
     carbsG,
     intakeCount: intakes.length,
-    lactate: lactate ? lactate.produced : null,
     intakes,
   };
 }

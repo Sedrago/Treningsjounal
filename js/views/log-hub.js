@@ -19,7 +19,7 @@ export async function render(container) {
         <span class="hub-lenke-ikon" aria-hidden="true">🍳</span>
         <span class="hub-lenke-tekst">
           <strong>Inntak</strong>
-          <span class="dus liten">Protein, karbo og laktat</span>
+          <span class="dus liten">Protein og karbohydrater</span>
         </span>
         <span class="hub-lenke-pil" aria-hidden="true">›</span>
       </a>
@@ -38,6 +38,14 @@ export async function render(container) {
         <span class="hub-lenke-tekst">
           <strong>Aerob</strong>
           <span class="dus liten">Varighet og intensitet</span>
+        </span>
+        <span class="hub-lenke-pil" aria-hidden="true">›</span>
+      </a>
+      <a href="#/anaerob" class="hub-lenke">
+        <span class="hub-lenke-ikon" aria-hidden="true">⚡</span>
+        <span class="hub-lenke-tekst">
+          <strong>Anaerob</strong>
+          <span class="dus liten">Melkesyre / laktat</span>
         </span>
         <span class="hub-lenke-pil" aria-hidden="true">›</span>
       </a>

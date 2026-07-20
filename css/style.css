@@ -2616,6 +2616,18 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .preset-handlinger { display: flex; gap: 4px; flex-shrink: 0; }
 .kost-preset-skjema { margin-bottom: 12px; }
 
+.anaerob-intro { margin: 0 0 12px; }
+.anaerob-dato-laktat { margin-top: 12px; }
+.anaerob-laktat { margin-top: 0; border-top: none; padding-top: 0; }
+.anaerob-rad {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.anaerob-rad:last-child { margin-bottom: 0; }
+
 /* ---------- Redusert bevegelse ---------- */
 
 @media (prefers-reduced-motion: reduce) {

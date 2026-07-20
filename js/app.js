@@ -15,6 +15,7 @@ import * as history from './views/history.js';
 import * as statistics from './views/statistics.js';
 import * as bodyweight from './views/bodyweight.js';
 import * as aerobic from './views/aerobic.js';
+import * as anaerob from './views/anaerob.js';
 import * as sleep from './views/sleep.js';
 import * as mood from './views/mood.js';
 import * as exercises from './views/exercises.js';
@@ -52,6 +53,7 @@ const routes = {
   kroppsvekt: bodyweight.render,
   inntak: nutrition.render,
   aerob: aerobic.render,
+  anaerob: anaerob.render,
   sovn: sleep.render,
   folelse: mood.render,
   ovelser: exercises.render,

@@ -29,19 +29,10 @@ function progressBar(label, current, goal, { warnOver = false, unit = 'g' } = {}
 export function renderNutritionSummaryHtml(summary) {
   const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
   const carbMax = store.nutritionCarbMaxG();
-  const lactate = summary.lactate;
 
   return `
     ${progressBar('Protein', summary.proteinG, proteinGoal)}
-    ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { warnOver: true }) : ''}
-    <div class="kost-laktat">
-      <span class="kost-laktat-etikett">Laktat i dag</span>
-      <div class="kost-laktat-valg" role="group" aria-label="Laktat i dag">
-        <button type="button" class="kost-laktat-knapp${lactate === true ? ' aktiv' : ''}" data-laktat="ja">Ja</button>
-        <button type="button" class="kost-laktat-knapp${lactate === false ? ' aktiv' : ''}" data-laktat="nei">Nei</button>
-        ${lactate != null ? '' : '<span class="dus liten kost-laktat-uav">Ikke registrert</span>'}
-      </div>
-    </div>`;
+    ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { warnOver: true }) : ''}`;
 }
 
 export function renderHomeNutritionHtml(summary) {
@@ -53,23 +44,10 @@ export function renderHomeNutritionHtml(summary) {
     </div>`;
 }
 
-export function bindNutritionSummary(container, date, { onChange } = {}) {
-  container.querySelectorAll('[data-laktat]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const produced = btn.dataset.laktat === 'ja';
-      await store.saveLactateForDate(date, produced);
-      onChange?.();
-    });
-  });
-}
-
-export async function mountHomeNutrition(container, { onChange } = {}) {
+export async function mountHomeNutrition(container) {
   const date = todayStr();
   const summary = await store.getDailyNutritionSummary(date);
   const host = container.querySelector('#kost-hjem-innhold');
   if (!host) return;
   host.innerHTML = renderHomeNutritionHtml(summary);
-  bindNutritionSummary(host, date, {
-    onChange: () => mountHomeNutrition(container, { onChange }),
-  });
 }
