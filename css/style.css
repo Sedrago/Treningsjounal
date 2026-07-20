@@ -2451,6 +2451,114 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   .kategori-liste { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
+/* ---------- Kost / inntak ---------- */
+
+.kost-fremdrift { margin-bottom: 12px; }
+.kost-fremdrift:last-child { margin-bottom: 0; }
+.kost-fremdrift-hode {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.kost-fremdrift-etikett { font-size: 0.85rem; font-weight: 600; }
+.kost-fremdrift-status { font-size: 0.78rem; color: var(--dus); text-align: right; }
+.kost-fremdrift-spor {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--kort-kant, rgba(255,255,255,0.08));
+  overflow: hidden;
+}
+.kost-fremdrift-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--aksent);
+  transition: width 0.25s ease;
+}
+.kost-fremdrift--advarsel .kost-fremdrift-bar { background: var(--advarsel, #e6a817); }
+.kost-fremdrift--advarsel .kost-fremdrift-status { color: var(--advarsel-tekst, #e6a817); }
+
+.kost-laktat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kort-kant, rgba(255,255,255,0.08));
+}
+.kost-laktat-etikett { font-size: 0.85rem; font-weight: 600; }
+.kost-laktat-valg { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kost-laktat-knapp {
+  border: 1px solid var(--kort-kant, rgba(255,255,255,0.15));
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.kost-laktat-knapp.aktiv {
+  background: var(--aksent);
+  border-color: var(--aksent);
+  color: var(--aksent-tekst);
+}
+.kost-hjem-handlinger { margin-top: 12px; }
+
+.kost-qty-rad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kost-qty-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.kost-qty-pill {
+  min-width: 40px;
+  border: 1px solid var(--kort-kant, rgba(255,255,255,0.15));
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.kost-qty-pill.aktiv {
+  background: var(--aksent);
+  border-color: var(--aksent);
+  color: var(--aksent-tekst);
+}
+.kost-qty-input { width: 72px; margin: 0; flex-shrink: 0; }
+
+.kost-manuell { margin-top: 12px; }
+.kost-manuell summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--dus);
+  user-select: none;
+}
+.kost-manuell-innhold { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.kost-lagre-favoritt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.inntak-rad,
+.preset-rad {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.inntak-rad:last-child,
+.preset-rad:last-child { margin-bottom: 0; }
+.preset-handlinger { display: flex; gap: 4px; flex-shrink: 0; }
+.kost-preset-skjema { margin-bottom: 12px; }
+
 /* ---------- Redusert bevegelse ---------- */
 
 @media (prefers-reduced-motion: reduce) {

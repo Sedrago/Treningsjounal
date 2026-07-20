@@ -110,6 +110,20 @@ export async function render(container) {
         <option value="rolling7" ${s('streakMode') === 'rolling7' ? 'selected' : ''}>Rullerende 7 dager (minst 1 dag per periode)</option>
         <option value="calendar" ${s('streakMode') === 'calendar' ? 'selected' : ''}>Kalenderuke (mandag–søndag)</option>
       </select>
+
+      <hr class="program-del-skille">
+      <h3 class="program-del-under-tittel">Kost</h3>
+      <div class="skjema-rad">
+        <div class="felt">
+          <label class="felt-navn" for="s-protein-mal">Daglig proteinmål (g)</label>
+          <input type="number" class="inndata" id="s-protein-mal" value="${esc(s('proteinDailyGoalG'))}" min="1" max="1000" step="1" inputmode="numeric">
+        </div>
+        <div class="felt">
+          <label class="felt-navn" for="s-karbo-tak">Karbo-tak (g) <span class="dus">(tom = skjult)</span></label>
+          <input type="number" class="inndata" id="s-karbo-tak" value="${esc(s('carbsDailyMaxG'))}" min="0" max="2000" step="1" inputmode="numeric" placeholder="–">
+        </div>
+      </div>
+      <p class="dus liten"><a href="#/inntak?favoritter=1">Administrer inntaksfavoritter</a></p>
     </section>
 
     <section class="kort" aria-label="Eksport og import">
@@ -237,6 +251,11 @@ export async function render(container) {
   bind('#s-innsats', 'defaultEffort');
   bind('#s-start', 'startPage');
   bind('#s-streak', 'streakMode');
+  bind('#s-protein-mal', 'proteinDailyGoalG');
+  container.querySelector('#s-karbo-tak').addEventListener('change', async (e) => {
+    const v = e.target.value.trim();
+    await store.setSetting('carbsDailyMaxG', v === '' ? '' : v);
+  });
 
   // Eksport.
   container.querySelector('#eksport-json').addEventListener('click', () => ie.exportJson());

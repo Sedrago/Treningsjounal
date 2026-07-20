@@ -47,6 +47,8 @@ export const DEFAULT_SETTINGS = {
   defaultEffort: 3,         // effortPillOptions: 0 Fail, 1 1–2, 3 Mod, 5 Lett
   startPage: 'hjem',        // 'hjem' | 'styrke'
   streakMode: 'rolling7',   // 'rolling7' | 'calendar'
+  proteinDailyGoalG: '150',
+  carbsDailyMaxG: '',       // tom = ingen karbo-tak på hjem
 };
 
 /** Typer aerob aktivitet. */
@@ -1004,9 +1006,177 @@ export async function getLastSessionForExercise(exerciseId, beforeDate = null) {
   return { date: lastDate, sets: daySets };
 }
 
+/* ---------- Kost ---------- */
+
+function nowTimeStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function roundMacroG(n) {
+  return Math.round(Number(n) || 0);
+}
+
+export function nutritionGoalG(key, fallback = 0) {
+  const raw = getSetting(key);
+  if (raw === '' || raw == null) return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+export function nutritionCarbMaxG() {
+  const raw = getSetting('carbsDailyMaxG');
+  if (raw === '' || raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+export async function getFoodPresets() {
+  const all = await db.getAll('foodPresets');
+  return all
+    .filter((p) => !p.deleted)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name, 'nb'));
+}
+
+export async function saveFoodPreset(preset) {
+  const record = {
+    id: preset.id || uuid(),
+    name: String(preset.name || '').trim(),
+    proteinG: roundMacroG(preset.proteinG),
+    carbsG: roundMacroG(preset.carbsG),
+    unitLabel: String(preset.unitLabel || '').trim(),
+    sortOrder: preset.sortOrder ?? 0,
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  if (!record.name) throw new Error('Navn mangler');
+  await db.put('foodPresets', record);
+  await queueOp('foodPreset', 'upsert', record);
+  return record;
+}
+
+export async function deleteFoodPreset(id) {
+  const row = await db.get('foodPresets', id);
+  if (!row) return;
+  row.deleted = true;
+  row.updatedAt = nowIso();
+  await db.put('foodPresets', row);
+  await queueOp('foodPreset', 'upsert', row);
+}
+
+export async function getFoodIntakesForDate(date) {
+  const rows = await db.getByIndex('foodIntakes', 'date', date);
+  return rows
+    .filter((i) => !i.deleted)
+    .sort((a, b) => (a.time || '').localeCompare(b.time || '') || (a.updatedAt || '').localeCompare(b.updatedAt || ''));
+}
+
+export async function getAllFoodIntakes() {
+  const all = await db.getAll('foodIntakes');
+  return all.filter((i) => !i.deleted).sort((a, b) => b.date.localeCompare(a.date) || (a.time || '').localeCompare(b.time || ''));
+}
+
+export async function getLactateEntries() {
+  const all = await db.getAll('lactate');
+  return all.filter((l) => !l.deleted).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function intakeFromPreset(preset, qty, opts = {}) {
+  const q = Math.max(0.25, Number(qty) || 1);
+  const unit = preset.unitLabel ? ` ${preset.unitLabel}` : '';
+  return {
+    date: opts.date || todayStr(),
+    time: opts.time || nowTimeStr(),
+    proteinG: roundMacroG(preset.proteinG * q),
+    carbsG: roundMacroG((preset.carbsG ?? 0) * q),
+    qty: q,
+    presetId: preset.id,
+    note: opts.note || `${preset.name} ×${q}${unit}`.trim(),
+  };
+}
+
+export async function saveFoodIntake(entry) {
+  const record = {
+    id: entry.id || uuid(),
+    date: entry.date || todayStr(),
+    time: entry.time || nowTimeStr(),
+    proteinG: roundMacroG(entry.proteinG),
+    carbsG: roundMacroG(entry.carbsG),
+    qty: entry.qty == null ? null : Number(entry.qty),
+    presetId: entry.presetId || null,
+    note: String(entry.note || '').trim(),
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  await db.put('foodIntakes', record);
+  await queueOp('foodIntake', 'upsert', record);
+  return record;
+}
+
+export async function deleteFoodIntake(id) {
+  const row = await db.get('foodIntakes', id);
+  if (!row) return;
+  row.deleted = true;
+  row.updatedAt = nowIso();
+  await db.put('foodIntakes', row);
+  await queueOp('foodIntake', 'upsert', row);
+}
+
+export async function getLactateForDate(date) {
+  const rows = await db.getByIndex('lactate', 'date', date);
+  const active = rows.filter((r) => !r.deleted);
+  if (!active.length) return null;
+  return active.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))[0];
+}
+
+export async function saveLactateForDate(date, produced) {
+  const existing = await getLactateForDate(date);
+  return saveLactateEntry({ id: existing?.id, date, produced });
+}
+
+export async function saveLactateEntry(entry) {
+  const record = {
+    id: entry.id || uuid(),
+    date: entry.date || todayStr(),
+    produced: !!entry.produced,
+    deleted: false,
+    updatedAt: nowIso(),
+  };
+  await db.put('lactate', record);
+  await queueOp('lactate', 'upsert', record);
+  return record;
+}
+
+export async function clearLactateForDate(date) {
+  const existing = await getLactateForDate(date);
+  if (!existing) return;
+  existing.deleted = true;
+  existing.updatedAt = nowIso();
+  await db.put('lactate', existing);
+  await queueOp('lactate', 'upsert', existing);
+}
+
+export async function getDailyNutritionSummary(date = todayStr()) {
+  const intakes = await getFoodIntakesForDate(date);
+  const lactate = await getLactateForDate(date);
+  const proteinG = intakes.reduce((sum, i) => sum + (i.proteinG || 0), 0);
+  const carbsG = intakes.reduce((sum, i) => sum + (i.carbsG || 0), 0);
+  return {
+    date,
+    proteinG,
+    carbsG,
+    intakeCount: intakes.length,
+    lactate: lactate ? lactate.produced : null,
+    intakes,
+  };
+}
+
 /** Sletter alle lokale data (brukes fra innstillinger). */
 export async function wipeLocalData() {
-  for (const s of ['exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'mood', 'plans', 'settings', 'queue', 'meta']) {
+  for (const s of [
+    'exercises', 'workouts', 'sets', 'bodyweight', 'aerobic', 'sleep', 'mood',
+    'foodPresets', 'foodIntakes', 'lactate', 'plans', 'settings', 'queue', 'meta',
+  ]) {
     await db.clearStore(s);
   }
   Object.assign(settingsCache, DEFAULT_SETTINGS);

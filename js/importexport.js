@@ -40,6 +40,9 @@ export async function exportJson() {
     aerobic: await store.getAerobicSessions(),
     sleep: await store.getSleepEntries(),
     mood: await store.getMoodEntries(),
+    foodPresets: await store.getFoodPresets(),
+    foodIntakes: await store.getAllFoodIntakes(),
+    lactate: await store.getLactateEntries(),
   };
   download(`treningsjournal-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
@@ -128,6 +131,9 @@ export async function importJson(text) {
   for (const a of data.aerobic || []) { await store.saveAerobicSession(a); count++; }
   for (const s of data.sleep || []) { await store.saveSleepEntry(s); count++; }
   for (const m of data.mood || []) { await store.saveMoodEntry(m); count++; }
+  for (const p of data.foodPresets || []) { await store.saveFoodPreset(p); count++; }
+  for (const i of data.foodIntakes || []) { await store.saveFoodIntake(i); count++; }
+  for (const l of data.lactate || []) { await store.saveLactateEntry(l); count++; }
   return count;
 }
 

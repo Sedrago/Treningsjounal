@@ -28,6 +28,7 @@ import * as settings from './views/settings.js';
 import * as programImport from './views/program-import.js';
 import * as inbox from './views/inbox.js';
 import * as setupImport from './views/setup-import.js';
+import * as nutrition from './views/nutrition.js';
 import * as relay from './relay-api.js';
 
 /** Rutetabell: sti → render-funksjon. */
@@ -47,6 +48,7 @@ const routes = {
   ovelse: history.renderExercise,
   statistikk: statistics.render,
   kroppsvekt: bodyweight.render,
+  inntak: nutrition.render,
   aerob: aerobic.render,
   sovn: sleep.render,
   folelse: mood.render,

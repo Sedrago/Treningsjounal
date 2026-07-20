@@ -8,6 +8,7 @@ import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, 
 import { balanceBars } from '../charts.js';
 import { homeStrengthLabel } from './strength.js';
 import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml, fmtSleepHours } from '../utils.js';
+import { mountHomeNutrition } from '../nutrition-ui.js';
 
 export async function render(container) {
   const sets = await store.getEnrichedSets();
@@ -55,10 +56,15 @@ export async function render(container) {
     <a href="#/styrke" class="knapp primaer stor" id="start-styrke">${esc(styrke.title)}</a>
     <p class="dus liten hjem-styrke-sub">${esc(styrke.sub)}</p>
     <div class="knapp-rad hjem-ekstra">
+      <a href="#/inntak" class="knapp sekundaer">🍳 Inntak</a>
       <a href="#/aerob" class="knapp sekundaer"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> Aerob</a>
       <a href="#/sovn" class="knapp sekundaer">😴 Søvn</a>
       <a href="#/folelse" class="knapp sekundaer">🙂 Dagsform</a>
     </div>
+
+    <section class="kort kost-hjem" id="kost-hjem" aria-label="Kost i dag">
+      <div id="kost-hjem-innhold"><p class="dus liten">Laster …</p></div>
+    </section>
 
     ${messages.length ? `
     <section class="kort assistent" aria-label="Treningsassistent">
@@ -89,7 +95,10 @@ export async function render(container) {
       <a href="#/statistikk" class="meny-knapp"><span aria-hidden="true">📊</span>Statistikk</a>
       <a href="#/ovelser" class="meny-knapp"><span aria-hidden="true">🏷️</span>Øvelser</a>
       <a href="#/kroppsvekt" class="meny-knapp"><span aria-hidden="true">⚖️</span>Kroppsvekt</a>
+      <a href="#/inntak" class="meny-knapp"><span aria-hidden="true">🍳</span>Inntak</a>
       <a href="#/innstillinger" class="meny-knapp"><span aria-hidden="true">⚙️</span>Innstillinger</a>
     </nav>
   `;
+
+  await mountHomeNutrition(container);
 }
