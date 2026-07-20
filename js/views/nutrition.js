@@ -2,7 +2,7 @@
  * views/nutrition.js – logging av protein/karbo-inntak og favoritt-presets.
  */
 
-import * as store from './store.js';
+import * as store from '../store.js';
 import { renderNutritionSummaryHtml, bindNutritionSummary } from '../nutrition-ui.js';
 import { esc, fmtNum, todayStr, toast } from '../utils.js';
 
