@@ -1,11 +1,11 @@
-# Oppsett av Treningsjournal
+# Oppsett av FlowBooster
 
 Følg disse stegene én gang, så er alt klart. Regn med 10–15 minutter.
 
 ## Del 1: Google Sheets-databasen
 
 1. Gå til [sheets.new](https://sheets.new) og opprett et nytt regneark.
-   Gi det gjerne navnet **Treningsjournal**.
+   Gi det gjerne navnet **FlowBooster**.
 
 2. Velg **Utvidelser → Apps Script** i menyen. Et nytt skriptprosjekt åpnes.
 
@@ -36,7 +36,7 @@ Følg disse stegene én gang, så er alt klart. Regn med 10–15 minutter.
 
 ### Test API-et i nettleseren
 
-Grunn-URL uten parametere skal vise: *«Treningsjournal-API kjører…»* (det er normalt).
+Grunn-URL uten parametere skal vise: *«FlowBooster-API kjører…»* (det er normalt).
 
 For å teste ping, må spesialtegn **URL-enkodes**. `{}` blir `%7B%7D`:
 
@@ -114,7 +114,7 @@ Versjon: Ny versjon → Distribuer**. URL-en forblir den samme.
   2. Distribusjonen har tilgang **«Alle»** (Anyone), ikke «Kun meg».
   3. **`Kode.gs` er utdatert** – lim inn nyeste versjon fra repoet og velg
      Distribuer → Administrer distribusjoner → Rediger → Ny versjon → Distribuer.
-  4. Test URL-en i nettleseren: den skal vise «Treningsjournal-API kjører…».
+  4. Test URL-en i nettleseren: den skal vise «FlowBooster-API kjører…».
 
 - **«Ugyldig API-nøkkel»** – sjekk at nøkkelen i appen er identisk med verdien
   for `apiKey` i Settings-arket.
@@ -143,7 +143,7 @@ Kjør dette etter endringer i `exercises.json`. Filen må være lagret på disk
 For QR-import og publisering til grupper (f.eks. plakat på veggen). Personlig
 treningslogg deles **ikke** via relay — kun programstruktur.
 
-1. Opprett et **nytt** regneark (f.eks. «Treningsjournal Relay») — ikke det
+1. Opprett et **nytt** regneark (f.eks. «FlowBooster Relay») — ikke det
    personlige treningsarket.
 2. Lim inn **`apps-script/Relay.gs`** i Apps Script (erstatt standardkoden).
 3. Kjør **`kjorRelayOppsett`** én gang. Noter **publiseringsnøkkelen**.

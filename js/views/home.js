@@ -81,7 +81,7 @@ export async function render(container) {
   container.innerHTML = `
     <header class="hjem-topp">
       <p class="dato">${formatDateLong(todayStr())}</p>
-      <h1 class="app-tittel">Treningsjournal</h1>
+      <img src="icons/flowbooster-logo.png" alt="FlowBooster" class="app-logo">
     </header>
 
     <section class="kort momentum-kort" aria-label="Momentum">

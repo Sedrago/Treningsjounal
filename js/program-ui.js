@@ -247,7 +247,7 @@ export function openPublishedProgramSheet(host, result, fallbackTitle) {
         .kode { font-size: 1.25rem; letter-spacing: 0.15em; margin-top: 12px; }
       </style></head><body>
       <h1>${esc(title)}</h1>
-      <p>Skann for å importere programmet i Treningsjournal</p>
+      <p>Skann for å importere programmet i FlowBooster</p>
       <img src="${esc(qrUrl)}" width="320" height="320" alt="">
       <p class="kode">${esc(result.code)}</p>
       </body></html>`);

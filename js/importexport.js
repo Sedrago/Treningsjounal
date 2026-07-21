@@ -91,7 +91,7 @@ export async function exportPdf() {
   const win = window.open('', '_blank');
   if (!win) return;
   win.document.write(`<!DOCTYPE html>
-    <html lang="nb"><head><meta charset="utf-8"><title>Treningsjournal – rapport</title>
+    <html lang="nb"><head><meta charset="utf-8"><title>FlowBooster – rapport</title>
     <style>
       body { font-family: -apple-system, sans-serif; margin: 2rem; color: #111; }
       h1 { font-size: 1.6rem; } h2 { font-size: 1.15rem; margin-top: 1.6rem; }
@@ -99,7 +99,7 @@ export async function exportPdf() {
       th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
       th { background: #f0f0f0; }
     </style></head><body>
-    <h1>Treningsjournal – rapport</h1>
+    <h1>FlowBooster – rapport</h1>
     <p>Generert ${todayStr()} · ${dates.length} økter · ${fmtVolume(stats.totalVolume(enriched))} kg totalt volum</p>
     <h2>Personlige rekorder</h2>
     <table><tr><th>Øvelse</th><th>PR</th><th>Est. 1RM</th><th>Økter</th></tr>

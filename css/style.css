@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Treningsjournal – designsystem
+   FlowBooster – designsystem
    Mørkt tema som standard, lyst tema via [data-theme="light"].
    Mobil først, store trykkflater, høy kontrast.
    ========================================================================== */
@@ -349,8 +349,15 @@ select.inndata { appearance: none; }
 /* ---------- Hjem ---------- */
 
 .hjem-topp { text-align: center; padding-top: 8px; }
-.dato { color: var(--tekst-dus); margin: 0 0 2px; }
+.dato { color: var(--tekst-dus); margin: 0 0 8px; }
 .dato::first-letter { text-transform: uppercase; }
+.app-logo {
+  display: block;
+  width: min(280px, 88vw);
+  height: auto;
+  margin: 0 auto 12px;
+  border-radius: var(--radius-liten);
+}
 .app-tittel { font-size: 1.7rem; margin: 0 0 16px; }
 
 .momentum-kort {

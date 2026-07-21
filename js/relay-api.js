@@ -1,5 +1,5 @@
 /**
- * relay-api.js – klient mot Treningsjournal Relay (programdeling / QR / innboks).
+ * relay-api.js – klient mot FlowBooster Relay (programdeling / QR / innboks).
  *
  * Henting (meta/fetch) krever bare relay-URL.
  * Publisering krever publiseringsnøkkel.
@@ -133,7 +133,7 @@ async function parseRelayResponse(res) {
   try {
     json = JSON.parse(text);
   } catch {
-    if (text.includes('Treningsjournal Relay kjører')) {
+    if (text.includes('FlowBooster Relay kjører') || text.includes('Treningsjournal Relay kjører')) {
       throw new Error('Relay svarer uten API-modus. Sjekk at Relay.gs er deployet.');
     }
     throw new Error(`Ugyldig svar fra relay (${res.status}).`);

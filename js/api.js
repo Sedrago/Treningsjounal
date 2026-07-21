@@ -54,7 +54,7 @@ async function parseResponse(res) {
   try {
     json = JSON.parse(text);
   } catch {
-    if (text.includes('Treningsjournal-API kjører')) {
+    if (text.includes('FlowBooster-API kjører') || text.includes('Treningsjournal-API kjører')) {
       throw new Error(
         'Serveren svarer uten API-modus. Lim inn nyeste Kode.gs i Apps Script '
         + 'og redeploy (Distribuer → Administrer distribusjoner → Ny versjon).'

@@ -1,5 +1,5 @@
 /**
- * Treningsjournal – komplett backend i én fil.
+ * FlowBooster – komplett backend i én fil.
  *
  * BRUK:
  *   1. Lim inn HELE denne filen i Kode.gs i Apps Script (erstatt alt som står der).
@@ -348,7 +348,7 @@ function doGet(e) {
 
 function statusPage_() {
   return ContentService
-    .createTextOutput('Treningsjournal-API kjører. Bruk appen for å koble til.')
+    .createTextOutput('FlowBooster-API kjører. Bruk appen for å koble til.')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 

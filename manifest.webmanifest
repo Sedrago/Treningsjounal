@@ -1,7 +1,7 @@
 {
-  "name": "Treningsjournal",
-  "short_name": "Trening",
-  "description": "Personlig treningsjournal basert på bevegelsesmønstre.",
+  "name": "FlowBooster",
+  "short_name": "FlowBooster",
+  "description": "Bygg momentum i treningsperioden din — styrke, kost, søvn og mer.",
   "lang": "nb",
   "start_url": "./",
   "scope": "./",

@@ -501,14 +501,14 @@ function openSetupShareSheet(host, opts = {}) {
       toast('Kunne ikke åpne utskrift — tillat popups', 'feil');
       return;
     }
-    w.document.write(`<!DOCTYPE html><html lang="nb"><head><meta charset="utf-8"><title>Treningsjournal – oppsett</title>
+    w.document.write(`<!DOCTYPE html><html lang="nb"><head><meta charset="utf-8"><title>FlowBooster – oppsett</title>
       <style>
         body { font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
         h1 { font-size: 1.35rem; margin-bottom: 8px; }
         p { color: #444; max-width: 360px; margin: 0 auto 16px; }
         img { margin: 0 auto 16px; display: block; }
       </style></head><body>
-      <h1>Koble til Treningsjournal</h1>
+      <h1>Koble til FlowBooster</h1>
       <p>Skann QR-koden med mobilen for å koble appen til Google Sheets.</p>
       <img src="${esc(qrUrl)}" width="320" height="320" alt="">
       <p class="dus">Personlig invitasjon — ikke heng opp offentlig.</p>

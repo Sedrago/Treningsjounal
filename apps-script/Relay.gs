@@ -1,10 +1,10 @@
 /**
- * Treningsjournal Relay – programdeling (gruppe-QR / publisering).
+ * FlowBooster Relay – programdeling (gruppe-QR / publisering).
  *
  * Eget Apps Script-prosjekt knyttet til et EGET regneark (ikke personlig treningsark).
  *
  * BRUK:
- *   1. Opprett nytt regneark (f.eks. «Treningsjournal Relay»).
+ *   1. Opprett nytt regneark (f.eks. «FlowBooster Relay»).
  *   2. Lim inn HELE denne filen i Kode.gs.
  *   3. Kjør kjorRelayOppsett én gang.
  *   4. Deploy som Web App (Alle, Kjør som: Meg).
@@ -54,7 +54,7 @@ function doPost(e) {
 
 function relayStatusPage_() {
   return ContentService
-    .createTextOutput('Treningsjournal Relay kjører. Bruk appen for å hente eller publisere programmer.')
+    .createTextOutput('FlowBooster Relay kjører. Bruk appen for å hente eller publisere programmer.')
     .setMimeType(ContentService.MimeType.TEXT);
 }
 

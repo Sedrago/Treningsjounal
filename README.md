@@ -1,7 +1,7 @@
-# Treningsjournal
+# FlowBooster
 
-Personlig, mobiltilpasset treningsjournal (PWA) bygget på **bevegelsesmønstre**
-i stedet for faste splittprogrammer. Vanilla JavaScript uten rammeverk,
+Personlig, mobiltilpasset treningsapp (PWA) for å **bygge momentum** i treningsperioden —
+styrke, kost, søvn, aerob og mer. Vanilla JavaScript uten rammeverk,
 Google Sheets som database via Google Apps Script.
 
 ## Funksjoner
