@@ -138,6 +138,7 @@ function smoothSeries(values, window = 5) {
   });
 }
 
+function pillarStatusText(pct) {
   if (pct >= 95) return 'Godt dekket i dag';
   if (pct >= 50) return 'Delvis i dag';
   if (pct > 0) return 'Påbegynt i dag';
