@@ -140,18 +140,18 @@ export async function render(container, params, query) {
     </section>
   `;
 
-  const refresh = () => {
+  const reload = async () => {
+    const d = container.querySelector('#inntak-dato')?.value || date;
+    const nextQuery = {};
+    if (d !== todayStr()) nextQuery.date = d;
+    if (query.favoritter === '1') nextQuery.favoritter = '1';
+    await render(container, params, nextQuery);
+  };
+
+  container.querySelector('#inntak-dato').addEventListener('change', () => {
     const d = container.querySelector('#inntak-dato').value;
     location.hash = d === todayStr() ? '#/inntak' : `#/inntak?date=${d}`;
-  };
-
-  const refreshSummaryOnly = async () => {
-    const d = container.querySelector('#inntak-dato').value;
-    const s = await store.getDailyNutritionSummary(d);
-    container.querySelector('#inntak-oppsummering').innerHTML = renderNutritionSummaryHtml(s);
-  };
-
-  container.querySelector('#inntak-dato').addEventListener('change', refresh);
+  });
 
   let selectedQty = 1;
   container.querySelectorAll('.kost-qty-pill').forEach((btn) => {
@@ -179,7 +179,7 @@ export async function render(container, params, query) {
     const d = container.querySelector('#inntak-dato').value;
     await store.saveFoodIntake(store.intakeFromPreset(preset, qty, { date: d }));
     toast('Inntak lagret', 'suksess');
-    refresh();
+    await reload();
   });
 
   const favCheckbox = container.querySelector('#inntak-lagre-favoritt');
@@ -215,13 +215,13 @@ export async function render(container, params, query) {
     } else {
       toast('Inntak lagret', 'suksess');
     }
-    refresh();
+    await reload();
   });
 
   container.querySelectorAll('[data-slett]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await store.deleteFoodIntake(btn.dataset.slett);
-      refresh();
+      await reload();
     });
   });
 
@@ -244,7 +244,7 @@ export async function render(container, params, query) {
       unitLabel: container.querySelector('#preset-enhet').value,
     });
     toast('Favoritt lagret', 'suksess');
-    refresh();
+    await reload();
   });
 
   presetCancel.addEventListener('click', resetPresetForm);
@@ -267,7 +267,7 @@ export async function render(container, params, query) {
     btn.addEventListener('click', async () => {
       if (!confirm('Slette denne favoritten?')) return;
       await store.deleteFoodPreset(btn.dataset.slettPreset);
-      refresh();
+      await reload();
     });
   });
 

@@ -79,9 +79,9 @@ export async function render(container) {
     : (streak === 1 ? 'periode' : 'perioder');
 
   container.innerHTML = `
-    <header class="hjem-topp">
+    <header class="hjem-topp hjem-topp--merke">
       <p class="dato">${formatDateLong(todayStr())}</p>
-      <img src="icons/flowbooster-logo.png" alt="FlowBooster" class="app-logo">
+      <img src="icons/flowbooster-logo-dark.png" alt="FlowBooster" class="app-logo" width="1024" height="576">
     </header>
 
     <section class="kort momentum-kort" aria-label="Momentum">

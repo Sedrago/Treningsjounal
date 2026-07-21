@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'flowbooster-v95';
+const CACHE = 'flowbooster-v97';
 
 const ASSETS = [
   './',
@@ -58,8 +58,10 @@ const ASSETS = [
   'js/views/inbox.js',
   'js/views/setup-import.js',
   'icons/flowbooster-logo.png',
+  'icons/flowbooster-logo-dark.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'icons/icon-512-maskable.png',
   'icons/apple-touch-icon.png',
   'images/core.jpg',
   'images/hinge.jpg',
