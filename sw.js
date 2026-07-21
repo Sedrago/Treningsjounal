@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'flowbooster-v102';
+const CACHE = 'flowbooster-v103';
 
 const ASSETS = [
   './',
@@ -15,6 +15,7 @@ const ASSETS = [
   'js/utils.js',
   'js/db.js',
   'js/store.js',
+  'js/legacy-exercises.js',
   'js/content.js',
   'js/exercise-filters.js',
   'js/api.js',

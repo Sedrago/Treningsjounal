@@ -8,6 +8,7 @@
 
 import * as db from './db.js';
 import { scheduleFlush } from './sync.js';
+import { isLegacyDefaultExercise } from './legacy-exercises.js';
 import {
   uuid, nowIso, todayStr, addDaysStr, fmtNum, toDisplayWeight, weightUnit,
 } from './utils.js';
@@ -327,6 +328,45 @@ export async function deleteExercise(id) {
   ex.updatedAt = nowIso();
   await db.put('exercises', ex);
   await queueOp('exercise', 'upsert', ex);
+}
+
+/** Fjerner def-* standardøvelser fra gammel seed (norske navn, ikke i katalog). */
+async function removeLegacyExerciseIdsFromPlans(removedIds) {
+  const all = await db.getAll('plans');
+  for (const raw of all) {
+    if (raw.deleted) continue;
+    const plan = parsePlanItems(raw);
+    const items = plan.items || [];
+    const nextItems = items.filter((it) => !removedIds.has(it.exerciseId));
+    if (nextItems.length === items.length) continue;
+    const record = planRecord({ ...plan, items: nextItems }, raw);
+    await db.put('plans', record);
+    await queueOp('plan', 'upsert', record);
+  }
+}
+
+/**
+ * Sletter legacy standardøvelser én gang (eller igjen hvis synk har hentet dem tilbake).
+ * @returns {Promise<{ count: number, removed: Array<{ id: string, name: string }> }>}
+ */
+export async function purgeLegacyDefaultExercisesIfNeeded() {
+  const all = await db.getAll('exercises');
+  const toRemove = all.filter(isLegacyDefaultExercise);
+  if (!toRemove.length) {
+    if (!(await db.getMeta('legacyDefExercisesPurged'))) {
+      await db.setMeta('legacyDefExercisesPurged', '1');
+    }
+    return { count: 0, removed: [] };
+  }
+
+  const removedIds = new Set(toRemove.map((e) => e.id));
+  const removed = toRemove.map((e) => ({ id: e.id, name: e.name }));
+  for (const ex of toRemove) {
+    await deleteExercise(ex.id);
+  }
+  await removeLegacyExerciseIdsFromPlans(removedIds);
+  await db.setMeta('legacyDefExercisesPurged', '1');
+  return { count: toRemove.length, removed };
 }
 
 /** Map catalogId → brukerens øvelsespost (inkl. inaktive). */

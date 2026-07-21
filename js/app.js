@@ -98,6 +98,11 @@ async function applyStarterPackIfNeeded() {
   return added;
 }
 
+async function afterDataMaintenance() {
+  await store.purgeLegacyDefaultExercisesIfNeeded();
+  await applyStarterPackIfNeeded();
+}
+
 async function renderRoute() {
   const { route, params, query } = parseHash();
   const renderFn = routes[route] || home.render;
@@ -156,8 +161,8 @@ async function main() {
   setupSyncBadge();
 
   window.addEventListener('hashchange', renderRoute);
-  window.addEventListener('content-updated', () => applyStarterPackIfNeeded().then(() => renderRoute()));
-  window.addEventListener('sync-complete', () => applyStarterPackIfNeeded().then(() => renderRoute()));
+  window.addEventListener('content-updated', () => afterDataMaintenance().then(() => renderRoute()));
+  window.addEventListener('sync-complete', () => afterDataMaintenance().then(() => renderRoute()));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkContentUpdate();
@@ -168,7 +173,7 @@ async function main() {
 
   // Vis UI raskt – cache først, nett og synk i bakgrunnen.
   await initContentFromCache();
-  await applyStarterPackIfNeeded();
+  await afterDataMaintenance();
   await renderRoute();
 
   checkRelayInboxOnStart();
@@ -176,7 +181,7 @@ async function main() {
   sync.init();
   initContent({ force: false }).then(async (ok) => {
     if (ok) {
-      await applyStarterPackIfNeeded();
+      await afterDataMaintenance();
       renderRoute();
     }
   });
