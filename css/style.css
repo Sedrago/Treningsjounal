@@ -359,35 +359,6 @@ select.inndata { appearance: none; }
 
 /* ---------- Hjem ---------- */
 
-.hjem-skjerm {
-  position: relative;
-  isolation: isolate;
-}
-.hjem-skjerm::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -24px;
-  transform: translateX(-50%);
-  width: min(520px, 118%);
-  aspect-ratio: 16 / 9;
-  background: url('../icons/flowbooster-logo-dark.png') center / contain no-repeat;
-  opacity: 0.1;
-  pointer-events: none;
-  z-index: 0;
-  mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 92%);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 92%);
-}
-[data-theme="light"] .hjem-skjerm::before { opacity: 0.055; }
-.hjem-skjerm > * { position: relative; z-index: 1; }
-.hjem-skjerm .kort,
-.hjem-skjerm .nokkel,
-.hjem-skjerm .hjem-hovednav-kort {
-  background: color-mix(in srgb, var(--flate) 86%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
 .hjem-topp { text-align: center; padding-top: 8px; margin-bottom: 4px; }
 .dato { color: var(--tekst-dus); margin: 0; }
 .dato::first-letter { text-transform: uppercase; }

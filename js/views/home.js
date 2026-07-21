@@ -79,7 +79,6 @@ export async function render(container) {
     : (streak === 1 ? 'periode' : 'perioder');
 
   container.innerHTML = `
-    <div class="hjem-skjerm">
     <h1 class="sr-only">FlowBooster</h1>
     <header class="hjem-topp">
       <p class="dato">${formatDateLong(todayStr())}</p>
@@ -148,7 +147,6 @@ export async function render(container) {
       ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${fmtSleepHours(sleepSum.avgHours)} søvn (${sleepSum.nights} netter)</p>` : ''}
       ${moodSum ? `<p class="dus liten mood-oppsummert">🙂 Snitt ${moodSum.avgValue}/100 dagsform (${moodSum.count} registrering${moodSum.count === 1 ? '' : 'er'})</p>` : ''}
     </section>
-    </div>
   `;
 
   const chartHost = container.querySelector('#momentum-graf');
