@@ -458,43 +458,40 @@ select.inndata { appearance: none; }
 }
 .momentum-faktor:hover { color: var(--momentum); text-decoration: none; }
 
-.hjem-makro {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 4px 0 10px;
-  padding: 0 2px;
+.momentum-karbo {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kant);
 }
-.hjem-makro-rad { min-width: 0; }
-.hjem-makro-hode {
+.momentum-karbo-hode {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
-.hjem-makro-etikett {
+.momentum-karbo-etikett {
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--tekst-dus);
+  color: var(--aksent-dyp);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.hjem-makro-status { font-size: 0.82rem; }
-.hjem-makro-spor {
+.momentum-karbo-status { font-size: 0.82rem; }
+.momentum-karbo-spor {
   height: 6px;
   border-radius: 999px;
-  background: var(--flate);
-  border: 1px solid var(--kant);
+  background: var(--flate-2);
   overflow: hidden;
 }
-.hjem-makro-bar {
+.momentum-karbo-bar {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--aksent);
+  background: linear-gradient(90deg, var(--aksent-dyp), var(--aksent));
 }
-.hjem-makro-rad--advarsel .hjem-makro-bar { background: var(--advarsel); }
+.momentum-karbo--advarsel .momentum-karbo-etikett { color: var(--advarsel); }
+.momentum-karbo--advarsel .momentum-karbo-bar { background: var(--advarsel); }
 
 .hjem-info {
   margin: 0 0 14px;

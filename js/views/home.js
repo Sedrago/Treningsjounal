@@ -1,5 +1,5 @@
 /**
- * views/home.js – hjem: momentum, faktorer, makro-barer og innsikt/innstillinger.
+ * views/home.js – hjem: momentum, faktorer, valgfri karbo-linje og innsikt/innstillinger.
  */
 
 import * as store from '../store.js';
@@ -8,7 +8,7 @@ import * as sync from '../sync.js';
 import { computeMomentum } from '../momentum.js';
 import { pickHomeInsight } from '../home-insight.js';
 import { momentumChart } from '../charts.js';
-import { renderHomeMacroBarsHtml } from '../nutrition-ui.js';
+import { renderHomeCarbsLineHtml } from '../nutrition-ui.js';
 import {
   esc, formatDateLong, todayStr, weekdayShort,
 } from '../utils.js';
@@ -110,11 +110,8 @@ export async function render(container) {
       </div>
       <div id="momentum-graf" class="momentum-graf-wrap"></div>
       ${renderMomentumFactors(momentum.factors)}
+      ${renderHomeCarbsLineHtml(nutritionSummary)}
     </section>
-
-    <div class="hjem-makro" aria-label="Kost i dag">
-      ${renderHomeMacroBarsHtml(nutritionSummary)}
-    </div>
 
     ${renderHomeInsight(insight)}
 

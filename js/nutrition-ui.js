@@ -35,33 +35,38 @@ export function renderNutritionSummaryHtml(summary) {
     ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { warnOver: true }) : ''}`;
 }
 
-export function renderHomeMacroBarsHtml(summary) {
-  const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
-  const carbMax = store.nutritionCarbMaxG();
-  const parts = [compactMacroBar('Protein', summary.proteinG, proteinGoal)];
-  if (carbMax != null) parts.push(compactMacroBar('Karbo', summary.carbsG, carbMax, { warnOver: true }));
-  return parts.join('');
-}
+/** Karbo-linje under momentum-faktorer; tom når ingenting er logget i dag. */
+export function renderHomeCarbsLineHtml(summary) {
+  const carbsG = summary?.carbsG ?? 0;
+  if (carbsG <= 0) return '';
 
-function compactMacroBar(label, current, goal, { warnOver = false } = {}) {
-  const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0;
-  const over = warnOver && goal > 0 && current > goal;
-  const status = goal > 0
-    ? `${fmtNum(current, 0)} / ${fmtNum(goal, 0)} g`
-    : `${fmtNum(current, 0)} g`;
+  const carbMax = store.nutritionCarbMaxG();
+  const pct = carbMax != null && carbMax > 0
+    ? Math.min(100, Math.round((carbsG / carbMax) * 100))
+    : 100;
+  const over = carbMax != null && carbMax > 0 && carbsG > carbMax;
+  const status = carbMax != null
+    ? `${fmtNum(carbsG, 0)} / ${fmtNum(carbMax, 0)} g${over ? ' (over)' : ''}`
+    : `${fmtNum(carbsG, 0)} g`;
+
   return `
-    <div class="hjem-makro-rad${over ? ' hjem-makro-rad--advarsel' : ''}">
-      <div class="hjem-makro-hode">
-        <span class="hjem-makro-etikett">${esc(label)}</span>
-        <span class="hjem-makro-status dus">${status}</span>
+    <div class="momentum-karbo${over ? ' momentum-karbo--advarsel' : ''}" aria-label="Karbohydrater i dag">
+      <div class="momentum-karbo-hode">
+        <span class="momentum-karbo-etikett">Karbo</span>
+        <span class="momentum-karbo-status dus">${status}</span>
       </div>
-      <div class="hjem-makro-spor" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(label)}">
-        <div class="hjem-makro-bar" style="width:${pct}%"></div>
+      <div class="momentum-karbo-spor" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Karbo">
+        <div class="momentum-karbo-bar" style="width:${pct}%"></div>
       </div>
     </div>`;
 }
 
-/** @deprecated – bruk renderHomeMacroBarsHtml på hjem */
+/** @deprecated – bruk renderHomeCarbsLineHtml på hjem */
+export function renderHomeMacroBarsHtml(summary) {
+  return renderHomeCarbsLineHtml(summary);
+}
+
+/** @deprecated – bruk renderHomeCarbsLineHtml på hjem */
 export function renderHomeNutritionHtml(summary) {
   return `
     <h2 class="kort-tittel">I dag</h2>
@@ -77,5 +82,5 @@ export async function mountHomeNutrition(container) {
   const summary = await store.getDailyNutritionSummary(date);
   const host = container.querySelector('#kost-hjem-innhold');
   if (!host) return;
-  host.innerHTML = renderHomeMacroBarsHtml(summary);
+  host.innerHTML = renderHomeCarbsLineHtml(summary);
 }
