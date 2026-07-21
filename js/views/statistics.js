@@ -4,10 +4,12 @@
 
 import * as store from '../store.js';
 import * as stats from '../stats.js';
-import { activityHeatmap, progressionChart, lineChart } from '../charts.js';
+import { getMessages, balanceSince } from '../assistant.js';
+import { activityHeatmap, progressionChart, lineChart, balanceBars } from '../charts.js';
 import {
-  esc, fmtNum, fmtDuration,
+  esc, fmtNum, fmtDuration, fmtSleepHours,
   toDisplayWeight, weightUnit, categoryIconHtml,
+  relativeDays, windowStartStr,
 } from '../utils.js';
 
 export async function render(container) {
@@ -48,16 +50,50 @@ export async function render(container) {
   const hasSleep = sleepPts.filter((p) => p.value != null).length >= 2;
   const hasMood = moodPts.filter((p) => p.value != null).length >= 2;
 
+  const datesSorted = [...new Set(enriched.map((s) => s.date))].sort();
+  const lastDate = datesSorted[datesSorted.length - 1] || null;
+  const last7Days = stats.daysLast7Days(enriched);
+  const since7 = windowStartStr(7);
+  const messages = getMessages(enriched);
+  const balance = balanceSince(enriched, since7);
+  const aerobMin = stats.aerobicMinutesSince(aerobic, since7);
+  const sleepSum = stats.sleepSummarySince(sleepRows, since7);
+  const moodSum = stats.moodSummarySince(moodRows, since7);
+  const streakLabel = streakMode === 'calendar'
+    ? (streak === 1 ? 'uke' : 'uker')
+    : (streak === 1 ? 'periode' : 'perioder');
+
   container.innerHTML = `
     <header class="side-topp">
       <a href="#/hjem" class="tilbake" aria-label="Tilbake til hjem">‹</a>
-      <h1>Statistikk</h1>
+      <h1>Innsikt</h1>
     </header>
+
+    <div class="nokkeltal nokkeltal--kompakt">
+      <div class="nokkel"><span class="nokkel-verdi">${lastDate ? relativeDays(lastDate) : '–'}</span><span class="nokkel-navn">Siste styrkeøkt</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${last7Days}</span><span class="nokkel-navn">Dager siste 7 dager</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${streak} ${streakLabel}</span><span class="nokkel-navn">Streak</span></div>
+    </div>
+
+    ${messages.length ? `
+    <section class="kort assistent" aria-label="Observasjoner">
+      <h2 class="kort-tittel">Observasjoner</h2>
+      ${messages.map((m) => `<p class="assistent-melding"><span aria-hidden="true">${m.icon}</span> ${esc(m.text)}</p>`).join('')}
+    </section>` : ''}
+
+    <section class="kort" aria-label="Bevegelsesbalanse siste 7 dager">
+      <h2 class="kort-tittel">Siste 7 dager</h2>
+      ${balanceBars(store.KATEGORIER.map((k) => ({ category: k, name: k.name, count: balance.counts.get(k.id) || 0 })))}
+      ${balance.missing.length && enriched.length ? `<p class="dus liten">Mangler: ${balance.missing.map((k) => esc(k.name)).join(', ')}</p>` : ''}
+      ${aerobMin > 0 ? `<p class="dus liten aerob-oppsummert"><img src="${store.AEROB_ICON}" class="knapp-ikon" alt="" aria-hidden="true"> ${aerobMin} min aerob</p>` : ''}
+      ${sleepSum ? `<p class="dus liten sovn-oppsummert">😴 Snitt ${fmtSleepHours(sleepSum.avgHours)} søvn (${sleepSum.nights} netter)</p>` : ''}
+      ${moodSum ? `<p class="dus liten mood-oppsummert">🙂 Snitt ${moodSum.avgValue}/100 dagsform (${moodSum.count} registrering${moodSum.count === 1 ? '' : 'er'})</p>` : ''}
+    </section>
 
     <div class="nokkeltal">
       <div class="nokkel"><span class="nokkel-verdi">${dates.length}</span><span class="nokkel-navn">Styrkeøkter</span></div>
-      <div class="nokkel"><span class="nokkel-verdi">${streak}</span><span class="nokkel-navn">Streak</span></div>
       <div class="nokkel"><span class="nokkel-verdi">${fmtDuration(totalTime)}</span><span class="nokkel-navn">Tid totalt</span></div>
+      <div class="nokkel"><span class="nokkel-verdi">${favorites.length ? favorites[0].sessions : '–'}</span><span class="nokkel-navn">Topp øvelse (økter)</span></div>
     </div>
 
     <section class="kort" aria-label="Aktivitet">

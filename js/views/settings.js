@@ -129,6 +129,20 @@ export async function render(container) {
       <p class="dus liten"><a href="#/inntak?favoritter=1">Administrer inntaksfavoritter</a></p>
     </section>
 
+    <section class="kort" aria-label="Kropp">
+      <h2 class="kort-tittel">Kropp</h2>
+      <nav class="hub-meny hub-meny--kompakt" aria-label="Kropp">
+        <a href="#/kroppsvekt" class="hub-lenke">
+          <span class="hub-lenke-ikon" aria-hidden="true">⚖️</span>
+          <span class="hub-lenke-tekst">
+            <strong>Kroppsvekt</strong>
+            <span class="dus liten">Vekt og fettprosent</span>
+          </span>
+          <span class="hub-lenke-pil" aria-hidden="true">›</span>
+        </a>
+      </nav>
+    </section>
+
     <section class="kort" aria-label="Eksport og import">
       <h2 class="kort-tittel">Eksport</h2>
       <div class="knapp-rad">

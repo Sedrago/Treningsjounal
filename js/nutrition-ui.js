@@ -35,6 +35,33 @@ export function renderNutritionSummaryHtml(summary) {
     ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { warnOver: true }) : ''}`;
 }
 
+export function renderHomeMacroBarsHtml(summary) {
+  const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
+  const carbMax = store.nutritionCarbMaxG();
+  const parts = [compactMacroBar('Protein', summary.proteinG, proteinGoal)];
+  if (carbMax != null) parts.push(compactMacroBar('Karbo', summary.carbsG, carbMax, { warnOver: true }));
+  return parts.join('');
+}
+
+function compactMacroBar(label, current, goal, { warnOver = false } = {}) {
+  const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0;
+  const over = warnOver && goal > 0 && current > goal;
+  const status = goal > 0
+    ? `${fmtNum(current, 0)} / ${fmtNum(goal, 0)} g`
+    : `${fmtNum(current, 0)} g`;
+  return `
+    <div class="hjem-makro-rad${over ? ' hjem-makro-rad--advarsel' : ''}">
+      <div class="hjem-makro-hode">
+        <span class="hjem-makro-etikett">${esc(label)}</span>
+        <span class="hjem-makro-status dus">${status}</span>
+      </div>
+      <div class="hjem-makro-spor" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(label)}">
+        <div class="hjem-makro-bar" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+}
+
+/** @deprecated – bruk renderHomeMacroBarsHtml på hjem */
 export function renderHomeNutritionHtml(summary) {
   return `
     <h2 class="kort-tittel">I dag</h2>
@@ -44,10 +71,11 @@ export function renderHomeNutritionHtml(summary) {
     </div>`;
 }
 
+/** @deprecated – kost-widget på hjem erstattet av makro-barer */
 export async function mountHomeNutrition(container) {
   const date = todayStr();
   const summary = await store.getDailyNutritionSummary(date);
   const host = container.querySelector('#kost-hjem-innhold');
   if (!host) return;
-  host.innerHTML = renderHomeNutritionHtml(summary);
+  host.innerHTML = renderHomeMacroBarsHtml(summary);
 }

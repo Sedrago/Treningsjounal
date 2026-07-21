@@ -409,6 +409,109 @@ select.inndata { appearance: none; }
 .momentum-grid { opacity: 0.35; }
 .momentum-akse { font-size: 11px; fill: var(--tekst-dus); }
 
+.momentum-faktorer {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--kant);
+}
+.momentum-faktor {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 4px 8px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--kant) 65%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+.momentum-faktor:last-child { border-bottom: none; padding-bottom: 0; }
+.momentum-faktor-hode {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.momentum-faktor-navn { font-weight: 600; }
+.momentum-faktor-status { font-size: 0.82rem; }
+.momentum-faktor-spor {
+  grid-column: 1 / -1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--flate-2);
+  overflow: hidden;
+}
+.momentum-faktor-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--momentum-dyp), var(--momentum));
+}
+.momentum-faktor-pil {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--momentum);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.momentum-faktor:hover { color: var(--momentum); text-decoration: none; }
+
+.hjem-makro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 10px;
+  padding: 0 2px;
+}
+.hjem-makro-rad { min-width: 0; }
+.hjem-makro-hode {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.hjem-makro-etikett {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--tekst-dus);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hjem-makro-status { font-size: 0.82rem; }
+.hjem-makro-spor {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  overflow: hidden;
+}
+.hjem-makro-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--aksent);
+}
+.hjem-makro-rad--advarsel .hjem-makro-bar { background: var(--advarsel); }
+
+.hjem-info {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--tekst-dus);
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+}
+.hjem-info-lenke { color: inherit; text-decoration: none; }
+.hjem-info-lenke:hover { color: var(--momentum); text-decoration: underline; }
+
+.hjem-hovednav--to { margin-top: 4px; }
+.hub-meny--kompakt { margin: 0; }
+
 .momentum-tips {
   list-style: none;
   margin: 8px 0 0;

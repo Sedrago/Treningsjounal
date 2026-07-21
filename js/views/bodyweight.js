@@ -16,7 +16,7 @@ export async function render(container) {
 
   container.innerHTML = `
     <header class="side-topp">
-      <a href="#/logging" class="tilbake" aria-label="Tilbake til logging">‹</a>
+      <a href="#/innstillinger" class="tilbake" aria-label="Tilbake til innstillinger">‹</a>
       <h1>Kroppsvekt</h1>
     </header>
 

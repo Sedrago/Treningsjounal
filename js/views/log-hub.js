@@ -23,14 +23,6 @@ export async function render(container) {
         </span>
         <span class="hub-lenke-pil" aria-hidden="true">›</span>
       </a>
-      <a href="#/kroppsvekt" class="hub-lenke">
-        <span class="hub-lenke-ikon" aria-hidden="true">⚖️</span>
-        <span class="hub-lenke-tekst">
-          <strong>Kroppsvekt</strong>
-          <span class="dus liten">Vekt og fettprosent</span>
-        </span>
-        <span class="hub-lenke-pil" aria-hidden="true">›</span>
-      </a>
       <a href="#/aerob" class="hub-lenke">
         <span class="hub-lenke-ikon hub-lenke-ikon--bilde" aria-hidden="true">
           <img src="${store.AEROB_ICON}" class="knapp-ikon" alt="">
