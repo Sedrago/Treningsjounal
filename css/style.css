@@ -14,6 +14,10 @@
   --aksent: #34d399;
   --aksent-dyp: #10b981;
   --aksent-tekst: #06281c;
+  --momentum: #f472b6;
+  --momentum-dyp: #ec4899;
+  --momentum-fill-top: rgb(244 114 182 / 0.35);
+  --momentum-fill-bottom: rgb(244 114 182 / 0.02);
   --advarsel: #fbbf24;
   --fare: #f87171;
   --skygge: 0 2px 12px rgb(0 0 0 / 0.35);
@@ -34,6 +38,10 @@
   --aksent: #0e9f6e;
   --aksent-dyp: #0b8a5f;
   --aksent-tekst: #ffffff;
+  --momentum: #db2777;
+  --momentum-dyp: #be185d;
+  --momentum-fill-top: rgb(219 39 119 / 0.28);
+  --momentum-fill-bottom: rgb(219 39 119 / 0.03);
   --advarsel: #b45309;
   --fare: #dc2626;
   --skygge: 0 2px 10px rgb(20 30 50 / 0.08);
@@ -344,6 +352,75 @@ select.inndata { appearance: none; }
 .dato { color: var(--tekst-dus); margin: 0 0 2px; }
 .dato::first-letter { text-transform: uppercase; }
 .app-tittel { font-size: 1.7rem; margin: 0 0 16px; }
+
+.momentum-kort {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-color: color-mix(in srgb, var(--momentum) 35%, var(--kant));
+}
+.momentum-hode {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.momentum-tittel {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--tekst-dus);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.momentum-verdi {
+  margin: 0;
+  font-size: 2.75rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--momentum);
+  font-variant-numeric: tabular-nums;
+}
+.momentum-graf-wrap { margin: 0 -4px 8px; }
+.momentum-graf { display: block; width: 100%; height: auto; }
+.graf-linje-momentum {
+  stroke: var(--momentum);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.graf-areal-momentum { fill: url(#momentumFill); }
+.momentum-grid { opacity: 0.35; }
+.momentum-akse { font-size: 11px; fill: var(--tekst-dus); }
+
+.momentum-tips {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--kant);
+}
+.momentum-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--kant);
+  color: var(--tekst);
+  font-weight: 600;
+  text-decoration: none;
+}
+.momentum-tip::after {
+  content: '›';
+  color: var(--momentum);
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+.momentum-tip:last-child { border-bottom: none; }
+.momentum-tip:hover { color: var(--momentum); text-decoration: none; }
+
+.nokkeltal--kompakt { margin-bottom: 12px; }
+.nokkeltal--kompakt .nokkel { padding: 10px 4px; }
+.nokkeltal--kompakt .nokkel-verdi { font-size: 1rem; }
 
 .nokkeltal { display: flex; gap: 10px; }
 .nokkel {

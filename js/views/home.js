@@ -1,19 +1,52 @@
 /**
- * views/home.js – hjemskjermen med nøkkeltall, assistent og navigasjon.
+ * views/home.js – hjemskjermen med momentum, nøkkeltall og navigasjon.
  */
 
 import * as store from '../store.js';
 import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
+import { computeMomentum } from '../momentum.js';
 import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, moodSummarySince } from '../stats.js';
-import { balanceBars } from '../charts.js';
-import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml, fmtSleepHours } from '../utils.js';
+import { balanceBars, momentumChart } from '../charts.js';
+import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml, fmtSleepHours, weekdayShort } from '../utils.js';
 import { mountHomeNutrition } from '../nutrition-ui.js';
 
+function momentumSeriesLabels(series) {
+  return series.map((p, i, arr) => {
+    if (i === arr.length - 1) return { ...p, label: 'i dag' };
+    if (i === 0) return { ...p, label: weekdayShort(p.date) };
+    if (i === arr.length - 8) return { ...p, label: '7d' };
+    return { ...p, label: '' };
+  });
+}
+
+function renderMomentumTips(tips) {
+  if (!tips.length) return '';
+  return `
+    <ul class="momentum-tips" aria-label="Forslag">
+      ${tips.map((t) => `
+        <li>
+          <a href="${esc(t.href)}" class="momentum-tip">${esc(t.label)}</a>
+        </li>`).join('')}
+    </ul>`;
+}
+
 export async function render(container) {
-  const sets = await store.getEnrichedSets();
-  const aerobic = await store.getAerobicSessions();
-  const sleepRows = await store.getSleepEntries();
-  const moodRows = await store.getMoodEntries();
+  const [
+    sets,
+    aerobic,
+    sleepRows,
+    moodRows,
+    foodIntakes,
+    lactate,
+  ] = await Promise.all([
+    store.getEnrichedSets(),
+    store.getAerobicSessions(),
+    store.getSleepEntries(),
+    store.getMoodEntries(),
+    store.getAllFoodIntakes(),
+    store.getLactateEntries(),
+  ]);
+
   const dates = [...new Set(sets.map((s) => s.date))].sort();
   const lastDate = dates[dates.length - 1] || null;
   const streakMode = store.getSetting('streakMode');
@@ -27,6 +60,14 @@ export async function render(container) {
   const sleepSum = sleepSummarySince(sleepRows, since7);
   const moodSum = moodSummarySince(moodRows, since7);
 
+  const momentum = computeMomentum({
+    sets,
+    foodIntakes,
+    sleep: sleepRows,
+    aerobic,
+    lactate,
+  });
+
   const streakLabel = streakMode === 'calendar'
     ? (streak === 1 ? 'uke' : 'uker')
     : (streak === 1 ? 'periode' : 'perioder');
@@ -35,21 +76,31 @@ export async function render(container) {
     <header class="hjem-topp">
       <p class="dato">${formatDateLong(todayStr())}</p>
       <h1 class="app-tittel">Treningsjournal</h1>
-      <div class="nokkeltal" role="list">
-        <div class="nokkel" role="listitem">
-          <span class="nokkel-verdi">${lastDate ? relativeDays(lastDate) : '–'}</span>
-          <span class="nokkel-navn">Siste styrkeøkt</span>
-        </div>
-        <div class="nokkel" role="listitem">
-          <span class="nokkel-verdi">${last7Days}</span>
-          <span class="nokkel-navn">Dager siste 7 dager</span>
-        </div>
-        <div class="nokkel" role="listitem">
-          <span class="nokkel-verdi">${streak} ${streakLabel}</span>
-          <span class="nokkel-navn">Streak</span>
-        </div>
-      </div>
     </header>
+
+    <section class="kort momentum-kort" aria-label="Momentum">
+      <div class="momentum-hode">
+        <h2 class="momentum-tittel">Momentum</h2>
+        <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
+      </div>
+      <div id="momentum-graf" class="momentum-graf-wrap"></div>
+      ${renderMomentumTips(momentum.tips)}
+    </section>
+
+    <div class="nokkeltal nokkeltal--kompakt" role="list">
+      <div class="nokkel" role="listitem">
+        <span class="nokkel-verdi">${lastDate ? relativeDays(lastDate) : '–'}</span>
+        <span class="nokkel-navn">Siste styrkeøkt</span>
+      </div>
+      <div class="nokkel" role="listitem">
+        <span class="nokkel-verdi">${last7Days}</span>
+        <span class="nokkel-navn">Dager siste 7 dager</span>
+      </div>
+      <div class="nokkel" role="listitem">
+        <span class="nokkel-verdi">${streak} ${streakLabel}</span>
+        <span class="nokkel-navn">Streak</span>
+      </div>
+    </div>
 
     <nav class="hjem-hovednav" aria-label="Hovednavigasjon">
       <a href="#/styrketrening" class="hjem-hovednav-kort">
@@ -96,6 +147,11 @@ export async function render(container) {
       ${moodSum ? `<p class="dus liten mood-oppsummert">🙂 Snitt ${moodSum.avgValue}/100 dagsform (${moodSum.count} registrering${moodSum.count === 1 ? '' : 'er'})</p>` : ''}
     </section>
   `;
+
+  const chartHost = container.querySelector('#momentum-graf');
+  if (chartHost) {
+    momentumChart(chartHost, momentumSeriesLabels(momentum.series));
+  }
 
   await mountHomeNutrition(container);
 }

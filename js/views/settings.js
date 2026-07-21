@@ -112,7 +112,7 @@ export async function render(container) {
       </select>
 
       <hr class="program-del-skille">
-      <h3 class="program-del-under-tittel">Kost</h3>
+      <h3 class="program-del-under-tittel">Kost og restitusjon</h3>
       <div class="skjema-rad">
         <div class="felt">
           <label class="felt-navn" for="s-protein-mal">Daglig proteinmål (g)</label>
@@ -123,6 +123,9 @@ export async function render(container) {
           <input type="number" class="inndata" id="s-karbo-tak" value="${esc(s('carbsDailyMaxG'))}" min="0" max="2000" step="1" inputmode="numeric" placeholder="–">
         </div>
       </div>
+      <label class="felt-navn" for="s-sovn-mal">Optimalt søvnmål (timer)</label>
+      <input type="number" class="inndata" id="s-sovn-mal" value="${esc(s('sleepDailyGoalHours'))}" min="1" max="14" step="0.5" inputmode="decimal">
+      <p class="dus liten">Momentum bruker målet som optimum — mer søvn gir ikke ekstra poeng.</p>
       <p class="dus liten"><a href="#/inntak?favoritter=1">Administrer inntaksfavoritter</a></p>
     </section>
 
@@ -252,6 +255,7 @@ export async function render(container) {
   bind('#s-start', 'startPage');
   bind('#s-streak', 'streakMode');
   bind('#s-protein-mal', 'proteinDailyGoalG');
+  bind('#s-sovn-mal', 'sleepDailyGoalHours');
   container.querySelector('#s-karbo-tak').addEventListener('change', async (e) => {
     const v = e.target.value.trim();
     await store.setSetting('carbsDailyMaxG', v === '' ? '' : v);

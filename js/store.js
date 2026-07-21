@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS = {
   streakMode: 'rolling7',   // 'rolling7' | 'calendar'
   proteinDailyGoalG: '150',
   carbsDailyMaxG: '',       // tom = ingen karbo-tak på hjem
+  sleepDailyGoalHours: '7.5',
 };
 
 /** Typer aerob aktivitet. */
@@ -1057,6 +1058,14 @@ export function nutritionCarbMaxG() {
   if (raw === '' || raw == null) return null;
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Optimalt søvnmål i timer (ingen bonus over målet). */
+export function sleepGoalHours() {
+  const raw = getSetting('sleepDailyGoalHours');
+  if (raw === '' || raw == null) return 7.5;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 7.5;
 }
 
 export async function getFoodPresets() {

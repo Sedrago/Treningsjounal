@@ -337,6 +337,61 @@ export function progressionChart(container, points, opts = {}) {
 }
 
 /**
+ * Momentum-kurve: glatt rosa linje, 0–100, uten synlige punkter.
+ * @param {HTMLElement} container
+ * @param {Array<{label:string, value:number}>} points
+ */
+export function momentumChart(container, points) {
+  container.innerHTML = '';
+  if (points.length < 2) {
+    container.innerHTML = '<p class="tomt dus">Logg trening noen dager for å se momentum.</p>';
+    return;
+  }
+
+  const W = 600;
+  const H = 160;
+  const pad = { t: 12, r: 8, b: 22, l: 8 };
+  const min = 0;
+  const max = 100;
+
+  const x = (i) => pad.l + (i / (points.length - 1)) * (W - pad.l - pad.r);
+  const y = (v) => pad.t + (1 - (v - min) / (max - min)) * (H - pad.t - pad.b);
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'graf momentum-graf', role: 'img' });
+  svg.setAttribute('aria-label', `Momentum de siste ${points.length} dagene`);
+
+  const defs = svgEl('defs');
+  const grad = svgEl('linearGradient', { id: 'momentumFill', x1: '0', y1: '0', x2: '0', y2: '1' });
+  grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': 'var(--momentum-fill-top)' }));
+  grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': 'var(--momentum-fill-bottom)' }));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  svg.appendChild(svgEl('line', {
+    x1: pad.l, y1: y(50), x2: W - pad.r, y2: y(50), class: 'graf-grid momentum-grid',
+  }));
+
+  const pts = points.map((p, i) => ({ i, v: p.value }));
+  const pathD = smoothPath(pts, x, y);
+  const areaD = `${pathD} L ${x(pts[pts.length - 1].i)},${H - pad.b} L ${x(pts[0].i)},${H - pad.b} Z`;
+
+  svg.appendChild(svgEl('path', { d: areaD, class: 'graf-areal-momentum' }));
+  svg.appendChild(svgEl('path', { d: pathD, class: 'graf-linje-momentum', fill: 'none' }));
+
+  const labelIdx = new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]);
+  points.forEach((p, i) => {
+    if (!labelIdx.has(i) || !p.label) return;
+    const label = svgEl('text', {
+      x: x(i), y: H - 6, class: 'graf-akse momentum-akse', 'text-anchor': i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle',
+    });
+    label.textContent = p.label;
+    svg.appendChild(label);
+  });
+
+  container.appendChild(svg);
+}
+
+/**
  * Aktivitets-heatmap à la GitHub: mengde (grønt) + intensitet (rødt) + aerob-glød (blått).
  * @param {HTMLElement} container
  * @param {Map<string, {volume:number, intensity:number, aerobic:number}>} data
