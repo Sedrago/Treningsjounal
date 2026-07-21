@@ -233,6 +233,15 @@ export function esc(str) {
     .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 }
 
+/** CSS-selektor for plan-mal-felt knyttet til en øvelse. */
+export function planMalSelector(exerciseId) {
+  const id = String(exerciseId ?? '');
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return `[data-plan-mal="${CSS.escape(id)}"]`;
+  }
+  return `[data-plan-mal="${id.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+}
+
 /** Rendrer kategori-ikon som bilde eller emoji (fallback). */
 export function categoryIconHtml(category, className = 'kategori-ikon') {
   const icon = category?.icon;

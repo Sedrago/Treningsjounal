@@ -85,11 +85,17 @@ export async function openExercisePicker(host, categoryId, planItems, onPick, on
   const category = store.categoryById(categoryId);
   const catalog = getCatalogByCategory(categoryId);
   const activeCatalogIds = new Set(await store.getActiveCatalogIds());
-  const inPlan = new Set(planItems.map((it) => it.exerciseId));
+  const exMap = store.buildExerciseMap(await store.getExercises({ includeInactive: true }));
   const mine = await store.getExercisesByCategory(categoryId);
   const mineById = new Map(mine.map((e) => [e.id, e]));
   const catalogRest = catalog.filter((c) => !activeCatalogIds.has(c.id));
   const filterOptions = getCatalogFilterOptions({ categoryId });
+
+  function exerciseInPlan(exerciseId) {
+    const ex = store.getExerciseFromMap(exMap, exerciseId);
+    if (!ex) return false;
+    return planItems.some((it) => store.getExerciseFromMap(exMap, it.exerciseId)?.id === ex.id);
+  }
 
   let filters = { utstyr: '', muskel: '' };
   let searchQuery = '';
@@ -119,10 +125,10 @@ export async function openExercisePicker(host, categoryId, planItems, onPick, on
     return list.map((e) => `
     <article class="plan-bib-rad plan-mine-rad" data-id="${e.id}">
       <div class="plan-bib-topp">
-        <h3 class="plan-bib-navn">${esc(e.name)}${inPlan.has(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
+        <h3 class="plan-bib-navn">${esc(e.name)}${exerciseInPlan(e.id) ? ' <span class="dus">✓ i programmet</span>' : ''}</h3>
         <span class="plan-mine-handlinger">
-          <button type="button" class="ikon-knapp plan-rediger" data-id="${e.id}" aria-label="Rediger øvelse">✎</button>
-          <button type="button" class="plan-bib-bruk" data-id="${e.id}" ${inPlan.has(e.id) ? 'disabled' : ''}>Bruk denne →</button>
+          <button type="button" class="ikon-knapp plan-rediger" data-id="${esc(e.id)}" aria-label="Rediger øvelse">✎</button>
+          <button type="button" class="plan-bib-bruk" data-id="${esc(e.id)}" ${exerciseInPlan(e.id) ? 'disabled' : ''}>Bruk denne →</button>
         </span>
       </div>
       ${descriptionBlock(exercisePickerDescription(e), 120)}

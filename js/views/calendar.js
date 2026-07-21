@@ -27,7 +27,7 @@ function renderPlanItems(items, exMap) {
   if (!items?.length) return '';
   const units = store.getSetting('units');
   return items.map((it) => {
-    const ex = exMap.get(it.exerciseId);
+    const ex = store.getExerciseFromMap(exMap, it.exerciseId);
     const name = ex?.name || 'Ukjent øvelse';
     const hint = store.planItemSuggestionText(it, ex, units);
     return `<li class="kalender-ovelse"><span class="kalender-ovelse-navn">${esc(name)}</span>
@@ -215,7 +215,7 @@ export async function render(container, params, query = {}) {
     store.getExercises({ includeInactive: true }),
     store.getSavedTemplates(),
   ]);
-  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const exMap = store.buildExerciseMap(exercises);
   const units = store.getSetting('units');
   const planByDate = new Map(scheduled.map((p) => [p.date, p]));
   const setsByDate = groupBy(enriched, (s) => s.date);

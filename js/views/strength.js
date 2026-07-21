@@ -12,7 +12,7 @@ import { defaultProgramName, openSaveTemplateSheet } from '../program-ui.js';
 import { categoryStats, openCategoryPicker, openExercisePicker } from '../program-pickers.js';
 import {
   esc, formatDateShort, formatDateLong, todayStr,
-  toast, categoryIconHtml, debounce,
+  toast, categoryIconHtml, debounce, planMalSelector,
 } from '../utils.js';
 
 function sessionProgress(items, todaySets) {
@@ -47,7 +47,7 @@ function planMalFieldsHtml(item, ex, { editable }) {
   }
   const val = (key) => item[key] ?? '';
   return `
-    <div class="plan-mal-felt" data-plan-mal="${item.exerciseId}">
+    <div class="plan-mal-felt" data-plan-mal="${esc(item.exerciseId)}">
       <p class="felt-navn liten">Foreslått (valgfritt)</p>
       <div class="plan-mal-rad">
         <label class="plan-mal-celle">
@@ -71,7 +71,9 @@ function planMalFieldsHtml(item, ex, { editable }) {
 }
 
 function planItemFromMalFields(item, host) {
-  const block = host.querySelector(`[data-plan-mal="${item.exerciseId}"]`);
+  const block = host.dataset?.planMal === String(item.exerciseId)
+    ? host
+    : host.querySelector(planMalSelector(item.exerciseId));
   if (!block) return store.sanitizePlanItem({ exerciseId: item.exerciseId });
   const raw = { exerciseId: item.exerciseId };
   block.querySelectorAll('.plan-mal-inp').forEach((inp) => {
@@ -103,7 +105,7 @@ function resolveActive(items, setsByEx, exMap) {
   }
 
   const item = items[exIndex];
-  const exercise = exMap.get(item.exerciseId);
+  const exercise = store.getExerciseFromMap(exMap, item.exerciseId);
   const persisted = setsByEx.get(item.exerciseId) || [];
   const setNum = nextSetNumber(persisted);
 
@@ -154,7 +156,7 @@ export async function render(container, params, query = {}) {
   const isToday = viewDate === today;
   const daySets = enriched.filter((s) => s.date === viewDate);
   const exercises = await store.getExercises({ includeInactive: true });
-  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const exMap = store.buildExerciseMap(exercises);
   const plan = await store.getWorkoutPlanForDate(viewDate);
   const items = plan?.items || [];
   const stats = categoryStats(enriched);
@@ -177,7 +179,7 @@ export async function render(container, params, query = {}) {
   container.classList.toggle('app--styrke-oktt', sessionActive);
 
   const rows = items.map((item, i) => {
-    const ex = exMap.get(item.exerciseId);
+    const ex = store.getExerciseFromMap(exMap, item.exerciseId);
     const name = ex ? ex.name : 'Ukjent øvelse';
     const cat = ex ? store.categoryById(ex.category) : null;
     const logged = (setsByEx.get(item.exerciseId) || []).length;
@@ -214,7 +216,7 @@ export async function render(container, params, query = {}) {
 
     return `
       <div class="plan-rad styrke-rad styrke-rad--liste ${sessionActive ? 'styrke-rad--oktt' : ''} ${isActive ? 'styrke-rad--aktiv' : ''} ${compact ? 'styrke-rad--kompakt' : 'styrke-rad--utvidet'}"
-        data-idx="${i}" data-ex-id="${item.exerciseId}">
+        data-idx="${i}" data-ex-id="${esc(item.exerciseId)}">
         <div class="styrke-lenke">
           <span class="plan-rekkefolge">${i + 1}</span>
           ${cat ? `<span class="styrke-rad-kat">${categoryIconHtml(cat, 'kategori-ikon styrke-kat-ikon')}</span>` : ''}

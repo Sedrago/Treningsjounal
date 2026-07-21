@@ -187,6 +187,32 @@ export function sanitizePlanItems(items) {
   return (items || []).map(sanitizePlanItem).filter(Boolean);
 }
 
+/** Kart for oppslag på både lokal id og catalogId. */
+export function buildExerciseMap(exercises) {
+  const map = new Map();
+  for (const ex of exercises) {
+    if (!ex?.id) continue;
+    map.set(ex.id, ex);
+    if (ex.catalogId && ex.catalogId !== ex.id) map.set(ex.catalogId, ex);
+  }
+  return map;
+}
+
+/** Finner øvelse fra plan-referanse (lokal id eller catalogId). */
+export function getExerciseFromMap(exMap, exerciseId) {
+  if (!exerciseId || !exMap) return null;
+  return exMap.get(exerciseId) || null;
+}
+
+/** Normaliserer plan-rader til kanonisk exerciseId der øvelsen finnes lokalt. */
+export function normalizePlanItems(items, exMap) {
+  return sanitizePlanItems((items || []).map((item) => {
+    const ex = getExerciseFromMap(exMap, item?.exerciseId);
+    if (!ex) return item;
+    return { ...item, exerciseId: ex.id };
+  }));
+}
+
 /** Lesbar foreslått dose for program-rad, f.eks. «3 × 8 · ca. 60 kg». */
 export function planItemSuggestionText(item, exercise, units = getSetting('units')) {
   if (!item) return '';
@@ -831,7 +857,9 @@ export async function savePlan(plan) {
   await migratePlanModelOnce();
   const status = plan.status || 'planlagt';
   const existing = plan.id ? await db.get('plans', plan.id) : null;
-  const record = planRecord(plan, existing);
+  const rawItems = plan.items ?? (existing ? parsePlanItems(existing).items : []);
+  const exMap = buildExerciseMap(await getExercises({ includeInactive: true }));
+  const record = planRecord({ ...plan, items: normalizePlanItems(rawItems, exMap) }, existing);
 
   if (status === 'planlagt') {
     const all = await db.getAll('plans');
@@ -972,12 +1000,12 @@ export async function getEnrichedSets() {
     getAllSets(), getWorkouts(), getExercises({ includeInactive: true }),
   ]);
   const woMap = new Map(workouts.map((w) => [w.id, w]));
-  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const exMap = buildExerciseMap(exercises);
   return sets
-    .filter((s) => woMap.has(s.workoutId) && exMap.has(s.exerciseId))
+    .filter((s) => woMap.has(s.workoutId) && getExerciseFromMap(exMap, s.exerciseId))
     .map((s) => {
       const w = woMap.get(s.workoutId);
-      const e = exMap.get(s.exerciseId);
+      const e = getExerciseFromMap(exMap, s.exerciseId);
       return { ...s, date: w.date, exerciseName: e.name, category: e.category, logMode: logModeOf(e) };
     })
     .sort((a, b) => a.date.localeCompare(b.date) || a.setNumber - b.setNumber);

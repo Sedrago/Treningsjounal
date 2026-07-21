@@ -11,7 +11,7 @@ import {
 } from '../program-ui.js';
 import { categoryStats, openCategoryPicker, openExercisePicker } from '../program-pickers.js';
 import {
-  esc, formatDateShort, todayStr, toast, categoryIconHtml,
+  esc, formatDateShort, todayStr, toast, categoryIconHtml, planMalSelector,
 } from '../utils.js';
 
 function planMalFieldsHtml(item, ex) {
@@ -21,7 +21,7 @@ function planMalFieldsHtml(item, ex) {
   const hint = store.planItemSuggestionText(item, ex);
   const val = (key) => item[key] ?? '';
   return `
-    <div class="plan-mal-felt" data-plan-mal="${item.exerciseId}">
+    <div class="plan-mal-felt" data-plan-mal="${esc(item.exerciseId)}">
       ${hint ? `<p class="plan-mal-hint dus liten">${esc(hint)}</p>` : ''}
       <p class="felt-navn liten">Foreslått (valgfritt)</p>
       <div class="plan-mal-rad">
@@ -46,7 +46,7 @@ function planMalFieldsHtml(item, ex) {
 }
 
 function planItemFromMalFields(item, host) {
-  const block = host.querySelector(`[data-plan-mal="${item.exerciseId}"]`);
+  const block = host.querySelector(planMalSelector(item.exerciseId));
   if (!block) return store.sanitizePlanItem({ exerciseId: item.exerciseId });
   const raw = { exerciseId: item.exerciseId };
   block.querySelectorAll('.plan-mal-inp').forEach((inp) => {
@@ -73,23 +73,25 @@ export async function render(container, params) {
   }
 
   let template = raw;
-  const [exercises, enriched] = await Promise.all([
-    store.getExercises({ includeInactive: true }),
-    store.getEnrichedSets(),
-  ]);
-  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const enriched = await store.getEnrichedSets();
+  let exMap = store.buildExerciseMap(await store.getExercises({ includeInactive: true }));
   const stats = categoryStats(enriched);
   const items = template.items.map((it) => ({ ...it }));
 
-  function renderPage() {
+  async function refreshExMap() {
+    exMap = store.buildExerciseMap(await store.getExercises({ includeInactive: true }));
+  }
+
+  async function renderPage() {
+    await refreshExMap();
     const rows = items.map((item, i) => {
-      const ex = exMap.get(item.exerciseId);
+      const ex = store.getExerciseFromMap(exMap, item.exerciseId);
       const name = ex ? ex.name : 'Ukjent øvelse';
       const cat = ex ? store.categoryById(ex.category) : null;
       const hasTeknikk = ex && (getDescription(ex) || ex.notes?.trim() || ex.video?.trim());
 
       return `
-        <div class="plan-rad styrke-rad styrke-rad--liste styrke-rad--utvidet" data-idx="${i}" data-ex-id="${item.exerciseId}">
+        <div class="plan-rad styrke-rad styrke-rad--liste styrke-rad--utvidet" data-idx="${i}" data-ex-id="${esc(item.exerciseId)}">
           <div class="styrke-lenke">
             <span class="plan-rekkefolge">${i + 1}</span>
             ${cat ? `<span class="styrke-rad-kat">${categoryIconHtml(cat, 'kategori-ikon styrke-kat-ikon')}</span>` : ''}
@@ -150,6 +152,8 @@ export async function render(container, params) {
       date: template.date || todayStr(),
       sourceTemplateId: '',
     });
+    items.length = 0;
+    items.push(...template.items.map((it) => ({ ...it })));
   }
 
   function bindEvents() {
@@ -161,7 +165,7 @@ export async function render(container, params) {
           host.innerHTML = '';
           await persistItems([...items, { exerciseId: ex.id }]);
           toast(`«${ex.name}» lagt til`, 'suksess');
-          renderPage();
+          await renderPage();
         }, () => render(container, params));
       });
     });
@@ -177,7 +181,10 @@ export async function render(container, params) {
         date: template.date || todayStr(),
         sourceTemplateId: '',
       });
+      items.length = 0;
+      items.push(...template.items.map((it) => ({ ...it })));
       toast('Program lagret', 'suksess');
+      await renderPage();
     });
 
     container.querySelector('#legg-kalender')?.addEventListener('click', async () => {
@@ -244,7 +251,7 @@ export async function render(container, params) {
             return;
           }
           await persistItems(next);
-          renderPage();
+          await renderPage();
         });
       });
 
@@ -261,5 +268,5 @@ export async function render(container, params) {
     });
   }
 
-  renderPage();
+  await renderPage();
 }

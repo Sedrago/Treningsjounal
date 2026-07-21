@@ -57,8 +57,8 @@ export function openCopySheet(host, enriched, exMap, onCopy) {
       const sets = enriched.filter((s) => s.date === date);
       const byEx = groupBy(sets, (s) => s.exerciseId);
       const dayItems = [...byEx.keys()]
-        .filter((exerciseId) => exMap.has(exerciseId))
-        .map((exerciseId) => ({ exerciseId }));
+        .filter((exerciseId) => store.getExerciseFromMap(exMap, exerciseId))
+        .map((exerciseId) => ({ exerciseId: store.getExerciseFromMap(exMap, exerciseId).id }));
       host.innerHTML = '';
       onCopy(dayItems);
     });
@@ -378,7 +378,7 @@ export function openSaveTemplateSheet(host, items, exMap, setsByEx, defaultDate,
   } = opts;
   const today = todayStr();
   const malRows = items.map((it) => {
-    const ex = exMap.get(it.exerciseId);
+    const ex = store.getExerciseFromMap(exMap, it.exerciseId);
     const name = ex?.name || 'Ukjent øvelse';
     const logMode = ex ? store.logModeOf(ex) : 'weight';
     const showWeight = logMode === 'weight';
@@ -527,7 +527,7 @@ export async function openPickCalendarPlanSheet(host, exMap, viewDate, onPick) {
 
   const rows = plans.map((p) => {
     const names = p.items
-      .map((it) => exMap.get(it.exerciseId)?.name)
+      .map((it) => store.getExerciseFromMap(exMap, it.exerciseId)?.name)
       .filter(Boolean)
       .slice(0, 3);
     const extra = p.items.length > 3 ? ` +${p.items.length - 3}` : '';

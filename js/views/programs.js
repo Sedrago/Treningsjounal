@@ -14,7 +14,7 @@ import { esc, formatDateShort, todayStr, toast } from '../utils.js';
 
 function templatePreview(items, exMap) {
   const names = items
-    .map((it) => exMap.get(it.exerciseId)?.name)
+    .map((it) => store.getExerciseFromMap(exMap, it.exerciseId)?.name)
     .filter(Boolean)
     .slice(0, 4);
   const extra = items.length > 4 ? ` +${items.length - 4}` : '';
@@ -27,7 +27,7 @@ export async function render(container, params, query = {}) {
     store.getSavedTemplates(),
     store.getExercises({ includeInactive: true }),
   ]);
-  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const exMap = store.buildExerciseMap(exercises);
 
   function rerender() {
     return render(container, params, query);

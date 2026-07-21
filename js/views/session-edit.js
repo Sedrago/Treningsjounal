@@ -100,11 +100,11 @@ export async function render(container, params) {
   const workout = await store.getOrCreateWorkoutForDate(date, { retroactive: isRetroactive });
   const sets = await store.getSetsForWorkout(workout.id);
   const exercises = await store.getExercises();
-  const exById = new Map(exercises.map((e) => [e.id, e]));
+  const exById = store.buildExerciseMap(exercises);
   const byEx = groupBy(sets, (s) => s.exerciseId);
 
   const exerciseRows = [...byEx.entries()].map(([exId, exSets]) => {
-    const exercise = exById.get(exId);
+    const exercise = store.getExerciseFromMap(exById, exId);
     const name = exercise?.name || 'Ukjent øvelse';
     const mode = exercise ? store.logModeOf(exercise) : 'weight';
     const sorted = exSets.sort((a, b) => a.setNumber - b.setNumber);

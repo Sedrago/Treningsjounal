@@ -28,7 +28,7 @@ function safeFilename(name) {
 /** Bygger portable program-payload fra navn, items og øvelseskart. */
 export function buildProgramPayload(name, items, exMap) {
   const exercises = (items || []).map((item) => {
-    const ex = exMap.get(item.exerciseId);
+    const ex = store.getExerciseFromMap(exMap, item.exerciseId);
     if (!ex) return null;
     const ref = {
       name: ex.name,
