@@ -130,7 +130,7 @@ export function momentumAsOf(targetDate, dailyScores) {
   return Math.round(Math.min(100, Math.max(0, (weighted / wSum) * 100)));
 }
 
-function smoothSeries(values, window = 3) {
+function smoothSeries(values, window = 5) {
   return values.map((_, i) => {
     const start = Math.max(0, i - window + 1);
     const slice = values.slice(start, i + 1);
@@ -156,13 +156,16 @@ function buildTips(today, dailyScores, sets, ctx) {
   const todayEntry = dailyScores.get(today) || computeDailyScore(today, ctx);
   const candidates = [];
 
-  const tryTip = (label, href, apply) => {
+  const tryTip = (label, href, apply, priority = 0) => {
     const nextPillars = { ...todayEntry.pillars, ...apply() };
     const nextDaily = recomputeTotal({ pillars: nextPillars });
     const sim = new Map(dailyScores);
     sim.set(today, nextDaily);
     const delta = momentumAsOf(today, sim) - baseline;
-    if (delta > 0.15) candidates.push({ label, href, delta });
+    const score = priority + delta;
+    if (delta > 0.02 || priority > 0.4) {
+      candidates.push({ label, href, delta, score });
+    }
   };
 
   if ((todayEntry.pillars.strength ?? 0) < 0.9) {
@@ -176,34 +179,43 @@ function buildTips(today, dailyScores, sets, ctx) {
       .filter(({ daysSince }) => daysSince >= 2)
       .sort((a, b) => b.daysSince - a.daysSince);
 
-    for (const { cat } of ready.slice(0, 3)) {
+    for (const { cat, daysSince } of ready.slice(0, 4)) {
+      const priority = 0.5 + Math.min(0.4, daysSince / 14);
       tryTip(`Tren ${cat.name.toLowerCase()}`, '#/styrke', () => ({
         strength: simulateStrengthAdd(today, sets, cat.id),
-      }));
+      }), priority);
     }
 
     if (!ready.length && (todayEntry.pillars.strength ?? 0) < 0.2) {
-      tryTip('Start styrketrening', '#/styrke', () => ({ strength: 0.35 }));
+      tryTip('Start styrketrening', '#/styrke', () => ({ strength: 0.35 }), 0.55);
     }
   }
 
-  if ((todayEntry.pillars.protein ?? 0) < 0.95) {
-    tryTip('Logg proteininntak', '#/inntak', () => ({ protein: 1 }));
+  const protein = todayEntry.pillars.protein ?? 0;
+  if (protein < 0.95) {
+    const label = protein < 0.25 ? 'Logg proteininntak' : 'Logg mer protein i dag';
+    tryTip(label, '#/inntak', () => ({ protein: 1 }), 0.35 + (1 - protein) * 0.3);
   }
 
   if ((todayEntry.pillars.sleep ?? 0) < 0.5) {
-    tryTip('Logg søvn', '#/sovn', () => ({ sleep: 1 }));
+    tryTip('Logg søvn', '#/sovn', () => ({ sleep: 1 }), 0.4);
   }
 
   if ((todayEntry.pillars.aerobic ?? 0) < 0.5) {
-    tryTip('Logg aerob økt', '#/aerob', () => ({ aerobic: 0.85 }));
+    const aerobRecent = [...(ctx.aerobByDate.keys() || [])].some((d) => daysBetween(d, today) <= 7);
+    tryTip(
+      aerobRecent ? 'Logg aerob økt' : 'Logg aerob aktivitet',
+      '#/aerob',
+      () => ({ aerobic: 0.85 }),
+      aerobRecent ? 0.25 : 0.35,
+    );
   }
 
   if ((todayEntry.pillars.lactate ?? 0) < 0.5 && (todayEntry.pillars.strength ?? 0) > 0.2) {
-    tryTip('Registrer anaerob innsats', '#/anaerob', () => ({ lactate: 1 }));
+    tryTip('Registrer anaerob innsats', '#/anaerob', () => ({ lactate: 1 }), 0.2);
   }
 
-  candidates.sort((a, b) => b.delta - a.delta);
+  candidates.sort((a, b) => b.score - a.score);
 
   const out = [];
   const seen = new Set();
@@ -217,6 +229,9 @@ function buildTips(today, dailyScores, sets, ctx) {
 
   if (!out.length && !sets.length) {
     out.push({ label: 'Kom i gang med styrketrening', href: '#/styrke' });
+  } else if (!out.length) {
+    out.push({ label: 'Start styrketrening', href: '#/styrke' });
+    if (protein < 1) out.push({ label: 'Logg proteininntak', href: '#/inntak' });
   }
 
   return out;
@@ -300,8 +315,13 @@ export function computeMomentum(input) {
 
   const tips = buildTips(today, dailyScores, sets, ctx);
 
+  const change = series.length >= 2
+    ? series[series.length - 1].value - series[series.length - 2].value
+    : 0;
+
   return {
     today: series[series.length - 1].value,
+    change,
     series,
     tips,
   };

@@ -3,11 +3,11 @@
  */
 
 import * as store from '../store.js';
-import { getMessages, nextRecommendedCategory, balanceSince } from '../assistant.js';
+import { getMessages, balanceSince } from '../assistant.js';
 import { computeMomentum } from '../momentum.js';
 import { daysLast7Days, trainingStreak, aerobicMinutesSince, sleepSummarySince, moodSummarySince } from '../stats.js';
 import { balanceBars, momentumChart } from '../charts.js';
-import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, categoryIconHtml, fmtSleepHours, weekdayShort } from '../utils.js';
+import { esc, formatDateLong, relativeDays, todayStr, windowStartStr, fmtSleepHours, weekdayShort } from '../utils.js';
 import { mountHomeNutrition } from '../nutrition-ui.js';
 
 function momentumSeriesLabels(series) {
@@ -17,6 +17,13 @@ function momentumSeriesLabels(series) {
     if (i === arr.length - 8) return { ...p, label: '7d' };
     return { ...p, label: '' };
   });
+}
+
+function momentumChangeHtml(change) {
+  if (change == null || change === 0) return '<p class="momentum-endring dus">Uendret siden i går</p>';
+  const sign = change > 0 ? '+' : '';
+  const cls = change > 0 ? 'momentum-endring--opp' : 'momentum-endring--ned';
+  return `<p class="momentum-endring ${cls}">${sign}${change} siden i går</p>`;
 }
 
 function renderMomentumTips(tips) {
@@ -54,7 +61,6 @@ export async function render(container) {
   const last7Days = daysLast7Days(sets);
   const since7 = windowStartStr(7);
   const messages = getMessages(sets);
-  const next = nextRecommendedCategory(sets);
   const balance = balanceSince(sets, since7);
   const aerobMin = aerobicMinutesSince(aerobic, since7);
   const sleepSum = sleepSummarySince(sleepRows, since7);
@@ -80,7 +86,10 @@ export async function render(container) {
 
     <section class="kort momentum-kort" aria-label="Momentum">
       <div class="momentum-hode">
-        <h2 class="momentum-tittel">Momentum</h2>
+        <div>
+          <h2 class="momentum-tittel">Momentum</h2>
+          ${momentumChangeHtml(momentum.change)}
+        </div>
         <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
       </div>
       <div id="momentum-graf" class="momentum-graf-wrap"></div>
@@ -128,14 +137,6 @@ export async function render(container) {
     ${messages.length ? `
     <section class="kort assistent" aria-label="Treningsassistent">
       ${messages.map((m) => `<p class="assistent-melding"><span aria-hidden="true">${m.icon}</span> ${esc(m.text)}</p>`).join('')}
-    </section>` : ''}
-
-    ${next ? `
-    <section class="kort" aria-label="Anbefaling">
-      <h2 class="kort-tittel">Neste anbefalte kategori</h2>
-      <p class="anbefaling">${categoryIconHtml(next.category, 'kategori-ikon liten')} ${esc(next.category.name)}
-        ${next.days === null ? '<span class="dus">(aldri trent)</span>' : `<span class="dus">(${next.days} dager siden)</span>`}
-      </p>
     </section>` : ''}
 
     <section class="kort" aria-label="Bevegelsesbalanse siste 7 dager">

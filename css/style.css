@@ -360,11 +360,17 @@ select.inndata { appearance: none; }
 }
 .momentum-hode {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 4px;
 }
+.momentum-endring {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+}
+.momentum-endring--opp { color: var(--momentum); }
+.momentum-endring--ned { color: var(--tekst-dus); }
 .momentum-tittel {
   margin: 0;
   font-size: 1rem;
