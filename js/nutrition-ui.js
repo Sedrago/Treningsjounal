@@ -3,17 +3,17 @@
  */
 
 import * as store from './store.js';
-import { esc, fmtNum, todayStr } from './utils.js';
+import { esc, fmtMacroG, todayStr } from './utils.js';
 
 function progressBar(label, current, goal, { warnOver = false, unit = 'g' } = {}) {
   const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0;
   const over = warnOver && goal > 0 && current > goal;
   const remaining = goal > 0 ? Math.max(0, goal - current) : null;
   const status = over
-    ? `${fmtNum(current, 0)} / ${fmtNum(goal, 0)} ${unit} (over)`
+    ? `${fmtMacroG(current)} / ${fmtMacroG(goal)} ${unit} (over)`
     : remaining != null
-      ? `${fmtNum(current, 0)} / ${fmtNum(goal, 0)} ${unit} (${fmtNum(remaining, 0)} igjen)`
-      : `${fmtNum(current, 0)} ${unit}`;
+      ? `${fmtMacroG(current)} / ${fmtMacroG(goal)} ${unit} (${fmtMacroG(remaining)} igjen)`
+      : `${fmtMacroG(current)} ${unit}`;
   return `
     <div class="kost-fremdrift${over ? ' kost-fremdrift--advarsel' : ''}">
       <div class="kost-fremdrift-hode">
@@ -46,8 +46,8 @@ export function renderHomeCarbsLineHtml(summary) {
     : 100;
   const over = carbMax != null && carbMax > 0 && carbsG > carbMax;
   const status = carbMax != null
-    ? `${fmtNum(carbsG, 0)} / ${fmtNum(carbMax, 0)} g${over ? ' (over)' : ''}`
-    : `${fmtNum(carbsG, 0)} g`;
+    ? `${fmtMacroG(carbsG)} / ${fmtMacroG(carbMax)} g${over ? ' (over)' : ''}`
+    : `${fmtMacroG(carbsG)} g`;
 
   return `
     <div class="momentum-karbo${over ? ' momentum-karbo--advarsel' : ''}" aria-label="Karbohydrater i dag">

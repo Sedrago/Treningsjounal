@@ -4,11 +4,12 @@
 
 import * as store from '../store.js';
 import { renderNutritionSummaryHtml } from '../nutrition-ui.js';
-import { esc, fmtNum, todayStr, toast } from '../utils.js';
+import { esc, fmtMacroG, todayStr, toast } from '../utils.js';
 
 function presetLabel(p) {
   const unit = p.unitLabel ? ` / ${p.unitLabel}` : '';
-  return `${p.name} (${p.proteinG} g P${p.carbsG ? `, ${p.carbsG} g K` : ''}${unit})`;
+  const karbo = p.carbsG ? `, ${fmtMacroG(p.carbsG)} g K` : '';
+  return `${p.name} (${fmtMacroG(p.proteinG)} g P${karbo}${unit})`;
 }
 
 export async function render(container, params, query) {
@@ -58,11 +59,11 @@ export async function render(container, params, query) {
           <div class="skjema-rad">
             <div class="felt">
               <label class="felt-navn" for="inntak-protein">Protein (g)</label>
-              <input type="number" class="inndata" id="inntak-protein" min="0" step="1" inputmode="numeric">
+              <input type="number" class="inndata" id="inntak-protein" min="0" step="0.1" inputmode="decimal">
             </div>
             <div class="felt">
               <label class="felt-navn" for="inntak-karbo">Karbo (g)</label>
-              <input type="number" class="inndata" id="inntak-karbo" min="0" step="1" inputmode="numeric">
+              <input type="number" class="inndata" id="inntak-karbo" min="0" step="0.1" inputmode="decimal">
             </div>
           </div>
           <label class="felt-navn" for="inntak-notat">Notat <span class="dus">(valgfritt)</span></label>
@@ -88,8 +89,8 @@ export async function render(container, params, query) {
         ${summary.intakes.map((i) => `
           <div class="kort inntak-rad" data-id="${i.id}">
             <div>
-              <strong>${fmtNum(i.proteinG, 0)} g P</strong>
-              ${i.carbsG ? `<span class="dus"> · ${fmtNum(i.carbsG, 0)} g K</span>` : ''}
+              <strong>${fmtMacroG(i.proteinG)} g P</strong>
+              ${i.carbsG ? `<span class="dus"> · ${fmtMacroG(i.carbsG)} g K</span>` : ''}
               <span class="dus"> · ${esc(i.time || '–')}</span>
               ${i.note ? `<p class="dus liten">${esc(i.note)}</p>` : ''}
             </div>
@@ -108,11 +109,11 @@ export async function render(container, params, query) {
         <div class="skjema-rad">
           <div class="felt">
             <label class="felt-navn" for="preset-protein">Protein (g)</label>
-            <input type="number" class="inndata" id="preset-protein" min="0" step="1" required inputmode="numeric">
+            <input type="number" class="inndata" id="preset-protein" min="0" step="0.1" required inputmode="decimal">
           </div>
           <div class="felt">
             <label class="felt-navn" for="preset-karbo">Karbo (g)</label>
-            <input type="number" class="inndata" id="preset-karbo" min="0" step="0" value="0" inputmode="numeric">
+            <input type="number" class="inndata" id="preset-karbo" min="0" step="0.1" value="0" inputmode="decimal">
           </div>
           <div class="felt">
             <label class="felt-navn" for="preset-enhet">Enhet</label>
@@ -129,7 +130,7 @@ export async function render(container, params, query) {
           <div class="kort preset-rad" data-id="${p.id}">
             <div>
               <strong>${esc(p.name)}</strong>
-              <span class="dus"> · ${p.proteinG} g P${p.carbsG ? `, ${p.carbsG} g K` : ''}${p.unitLabel ? ` / ${esc(p.unitLabel)}` : ''}</span>
+              <span class="dus"> · ${fmtMacroG(p.proteinG)} g P${p.carbsG ? `, ${fmtMacroG(p.carbsG)} g K` : ''}${p.unitLabel ? ` / ${esc(p.unitLabel)}` : ''}</span>
             </div>
             <div class="preset-handlinger">
               <button type="button" class="ikon-knapp" data-rediger="${p.id}" aria-label="Rediger favoritt">✎</button>

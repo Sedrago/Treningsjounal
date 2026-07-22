@@ -5,7 +5,7 @@
 import { getMessages, balanceSince } from './assistant.js';
 import { PILLAR_WEIGHTS } from './momentum.js';
 import { volumeTrend30 } from './stats.js';
-import { fmtNum, windowStartStr } from './utils.js';
+import { fmtNum, fmtMacroG, windowStartStr } from './utils.js';
 
 const PILLAR_LABELS = {
   strength: 'Styrketrening',
@@ -52,9 +52,9 @@ function collectMomentumSlides({
     return slides;
   }
 
-  const proteinLeft = proteinGoal > 0 ? Math.max(0, Math.round(proteinGoal - proteinG)) : 0;
+  const proteinLeft = proteinGoal > 0 ? Math.max(0, Math.round((proteinGoal - proteinG) * 10) / 10) : 0;
   if (proteinLeft >= 25 && (pillars.protein ?? 0) < 0.85) {
-    pushUnique(slides, { text: `Ca. ${proteinLeft} g protein igjen til målet i dag.`, href: '#/inntak' });
+    pushUnique(slides, { text: `Ca. ${fmtMacroG(proteinLeft)} g protein igjen til målet i dag.`, href: '#/inntak' });
   }
 
   if ((pillars.sleep ?? 0) < 0.3) {

@@ -152,6 +152,14 @@ export function fmtNum(n, decimals = 1) {
   return String(rounded).replace('.', ',');
 }
 
+/** Protein/karbo i gram: desimal kun når nødvendig (1,3 / 12). */
+export function fmtMacroG(n) {
+  if (n == null || Number.isNaN(Number(n))) return '–';
+  const x = Number(n);
+  if (Math.abs(x - Math.round(x)) < 1e-9) return fmtNum(x, 0);
+  return fmtNum(x, 1);
+}
+
 /** Volum-tall med tusenskille: 12345 → '12 345'. */
 export function fmtVolume(n) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');

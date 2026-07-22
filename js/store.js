@@ -1083,7 +1083,9 @@ function nowTimeStr() {
 }
 
 function roundMacroG(n) {
-  return Math.round(Number(n) || 0);
+  const x = Number(n);
+  if (!Number.isFinite(x) || x < 0) return 0;
+  return Math.round(x * 10) / 10;
 }
 
 export function nutritionGoalG(key, fallback = 0) {
@@ -1235,8 +1237,8 @@ export async function clearLactateForDate(date) {
 
 export async function getDailyNutritionSummary(date = todayStr()) {
   const intakes = await getFoodIntakesForDate(date);
-  const proteinG = intakes.reduce((sum, i) => sum + (i.proteinG || 0), 0);
-  const carbsG = intakes.reduce((sum, i) => sum + (i.carbsG || 0), 0);
+  const proteinG = roundMacroG(intakes.reduce((sum, i) => sum + (i.proteinG || 0), 0));
+  const carbsG = roundMacroG(intakes.reduce((sum, i) => sum + (i.carbsG || 0), 0));
   return {
     date,
     proteinG,
