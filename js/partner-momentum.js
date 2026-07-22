@@ -43,6 +43,19 @@ export function partnerDisplayName(username) {
   return String(username || '').replace(/^@/, '');
 }
 
+/** Siste momentum-verdi i partner-serien (nyeste dato). */
+export function partnerLatestMomentum(series) {
+  if (!series?.length) return null;
+  let latest = null;
+  for (const p of series) {
+    if (!p?.date) continue;
+    const v = Number(p.value);
+    if (!Number.isFinite(v)) continue;
+    if (!latest || p.date > latest.date) latest = { date: p.date, value: Math.round(v) };
+  }
+  return latest?.value ?? null;
+}
+
 /** @param {Array<{ date: string, value: number }>} selfSeries */
 export function alignPartnerToSelfSeries(selfSeries, partnerSeries) {
   const byDate = new Map((partnerSeries || []).map((p) => [p.date, p.value]));
@@ -152,6 +165,7 @@ export function listPartnersForDisplay(state, partnerUsernames) {
     series: state.cache[username]?.series || [],
     updatedAt: state.cache[username]?.updatedAt || '',
     visible: state.visible[username] !== false,
+    latestScore: partnerLatestMomentum(state.cache[username]?.series || []),
   }));
 }
 

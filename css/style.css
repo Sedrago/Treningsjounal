@@ -476,6 +476,14 @@ select.inndata { appearance: none; }
   gap: 8px;
   font-size: 0.88rem;
   cursor: pointer;
+  width: 100%;
+}
+.momentum-venner-navn { flex: 1; min-width: 0; color: var(--tekst-dus); }
+.momentum-venner-poeng {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--tekst);
 }
 .momentum-venner-prikk {
   width: 10px;
@@ -485,7 +493,6 @@ select.inndata { appearance: none; }
   opacity: 0.55;
   flex-shrink: 0;
 }
-.momentum-venner-navn { color: var(--tekst-dus); }
 .graf-linje-partner {
   stroke-width: 1.75;
   stroke-linecap: round;

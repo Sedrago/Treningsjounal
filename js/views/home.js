@@ -159,6 +159,7 @@ function renderPartnerPanel(partners, state) {
                 ${p.visible ? 'checked' : ''}>
               <span class="momentum-venner-prikk" style="--partner-farge: ${esc(p.color)}"></span>
               <span class="momentum-venner-navn">@${esc(p.label)}</span>
+              <span class="momentum-venner-poeng" aria-label="Momentum">${p.latestScore != null ? p.latestScore : '—'}</span>
             </label>
           </li>`).join('')}
       </ul>
