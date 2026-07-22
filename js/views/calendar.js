@@ -64,9 +64,9 @@ function dayStatus(date, today, hasLog, hasPlan) {
 function openRescheduleDateSheet(host, { planId, fromDate, rerender }) {
   host.innerHTML = `
     <div class="ark-bakgrunn" data-lukk></div>
-    <div class="ark" role="dialog" aria-label="Bytt dato for program">
+    <div class="ark" role="dialog" aria-label="Endre dato for program">
       <div class="ark-hode">
-        <h2>Bytt dato</h2>
+        <h2>Endre dato</h2>
         <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
       </div>
       <p class="dus">Flytt programmet fra <strong>${esc(formatDateShort(fromDate))}</strong> til:</p>
@@ -138,7 +138,7 @@ function openDayActionSheet(host, { date, hasLog, hasPlan, plan, templates, toda
   } else if (hasPlan) {
     body = `
       <a href="${dayLink(date, today, hasLog, hasPlan)}" class="knapp primaer bred">${date === today ? 'Start økt' : 'Se plan'}</a>
-      <button type="button" class="knapp sekundaer bred" data-handling="bytt-dato">Bytt dato</button>
+      <button type="button" class="knapp sekundaer bred" data-handling="bytt-dato">Endre dato</button>
       <button type="button" class="knapp sekundaer bred" data-handling="bytt">Bytt program</button>
       <button type="button" class="knapp sekundaer bred farlig" data-handling="fjern">Fjern plan</button>`;
   } else {
@@ -316,7 +316,7 @@ export async function render(container, params, query = {}) {
             </div>
             ${hasPlan && !hasLog && plan?.id ? `
               <button type="button" class="kalender-bytt-dato" data-bytte-dato="${date}"
-                aria-label="Bytt dato for program">Bytt dato →</button>` : ''}
+                aria-label="Endre dato for program">Endre dato →</button>` : ''}
           </div>
         </header>
         ${title ? `<p class="kalender-program-tittel">${esc(title)}</p>` : ''}
