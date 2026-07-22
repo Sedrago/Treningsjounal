@@ -103,19 +103,31 @@ async function afterDataMaintenance() {
   await applyStarterPackIfNeeded();
 }
 
-async function renderRoute() {
+let lastRenderedHash = '';
+
+async function renderRoute(options = {}) {
   const { route, params, query } = parseHash();
   const renderFn = routes[route] || home.render;
   const main = document.getElementById('app');
+  const hashKey = location.hash || `#/${route}`;
+  const preserveScroll = options.preserveScroll ?? (hashKey === lastRenderedHash && lastRenderedHash !== '');
+  const scrollY = preserveScroll ? window.scrollY : 0;
+
   main.classList.remove('app--styrke-oktt');
-  main.scrollTop = 0;
-  window.scrollTo(0, 0);
+  if (!preserveScroll) {
+    main.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
   try {
     await renderFn(main, params, query);
     await maybeShowMoodPrompt(route);
   } catch (err) {
     console.error(err);
     main.innerHTML = `<p class="tomt">Noe gikk galt: ${err.message}</p>`;
+  }
+  lastRenderedHash = hashKey;
+  if (preserveScroll && scrollY > 0) {
+    requestAnimationFrame(() => window.scrollTo(0, scrollY));
   }
 }
 
