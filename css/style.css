@@ -2460,32 +2460,6 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 
 /* ---------- Progresjon ---------- */
 
-.progresjon-faner {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.progresjon-fane {
-  flex: 1;
-  min-height: 40px;
-  padding: 8px 12px;
-  border: 1px solid var(--kant);
-  border-radius: var(--radius-liten);
-  background: var(--flate-2);
-  color: var(--tekst-dus);
-  font-family: inherit;
-  font-size: 0.92rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.progresjon-fane.aktiv {
-  background: var(--aksent);
-  color: var(--aksent-tekst);
-  border-color: var(--aksent-dyp);
-}
-.progresjon-intro { margin: 0 0 10px; }
-.progresjon-intro.skjult { display: none; }
-
 .graf-linje-progresjon { stroke: var(--aksent); stroke-width: 2.5; stroke-linejoin: round; }
 .graf-linje-styrke { stroke: #6bc98a; stroke-width: 2.5; stroke-linejoin: round; }
 .graf-linje-sovn { stroke: #7eb8e8; stroke-width: 2.5; stroke-linejoin: round; }

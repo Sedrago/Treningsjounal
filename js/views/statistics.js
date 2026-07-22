@@ -102,17 +102,22 @@ export async function render(container) {
       <div id="heatmap"></div>
     </section>
 
-    <section class="kort" aria-label="Progresjon">
-      <h2 class="kort-tittel">Progresjon</h2>
-      <div class="progresjon-faner" role="tablist">
-        <button type="button" class="progresjon-fane aktiv" data-fane="styrke" role="tab" aria-selected="true">Styrke</button>
-        <button type="button" class="progresjon-fane" data-fane="sovn" role="tab" aria-selected="false">Søvn</button>
-        <button type="button" class="progresjon-fane" data-fane="dagsform" role="tab" aria-selected="false">Dagsform</button>
-      </div>
-      <p class="dus liten progresjon-intro" data-intro="styrke">Utvikling mot egen historikk — uten konkrete tall.</p>
-      <p class="dus liten progresjon-intro skjult" data-intro="sovn">Timer per natt. Kvalitet forsterker utslaget. Stiplet linje = ditt snitt.</p>
-      <p class="dus liten progresjon-intro skjult" data-intro="dagsform">100 = ditt vanlige nivå.</p>
-      <div id="progresjon-graf"></div>
+    <section class="kort" aria-label="Styrkeprogresjon">
+      <h2 class="kort-tittel">Styrke</h2>
+      <p class="dus liten">Utvikling mot egen historikk — uten konkrete tall.</p>
+      <div id="progresjon-styrke"></div>
+    </section>
+
+    <section class="kort" aria-label="Søvnprogresjon">
+      <h2 class="kort-tittel">Søvn</h2>
+      <p class="dus liten">Timer per natt. Kvalitet forsterker utslaget. Stiplet linje = ditt snitt.</p>
+      <div id="progresjon-sovn"></div>
+    </section>
+
+    <section class="kort" aria-label="Dagsform">
+      <h2 class="kort-tittel">Dagsform</h2>
+      <p class="dus liten">100 = ditt vanlige nivå.</p>
+      <div id="progresjon-dagsform"></div>
     </section>
 
     ${bodyweights.length >= 2 ? `
@@ -147,48 +152,40 @@ export async function render(container) {
 
   activityHeatmap(container.querySelector('#heatmap'), heatmapData, 52);
 
-  const progHost = container.querySelector('#progresjon-graf');
-  const intros = container.querySelectorAll('[data-intro]');
-  const tabs = container.querySelectorAll('.progresjon-fane');
-
-  function renderProgression(mode) {
-    tabs.forEach((t) => {
-      const on = t.dataset.fane === mode;
-      t.classList.toggle('aktiv', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-    });
-    intros.forEach((p) => {
-      p.classList.toggle('skjult', p.dataset.intro !== mode);
-    });
-
-    if (mode === 'styrke') {
-      if (!hasStrength) {
-        progHost.innerHTML = '<p class="tomt">Logg styrkeøvelser over flere uker for å se utvikling.</p>';
-        return;
-      }
-      progressionChart(progHost, strengthPts, {
+  const strengthHost = container.querySelector('#progresjon-styrke');
+  if (strengthHost) {
+    if (!hasStrength) {
+      strengthHost.innerHTML = '<p class="tomt">Logg styrkeøvelser over flere uker for å se utvikling.</p>';
+    } else {
+      progressionChart(strengthHost, strengthPts, {
         hideYAxis: true,
         referenceLine: 100,
         lineClass: 'graf-linje-styrke',
         pointClass: 'graf-punkt-styrke',
       });
-    } else if (mode === 'sovn') {
-      if (!hasSleep) {
-        progHost.innerHTML = '<p class="tomt">Logg søvn over flere uker for å se utvikling.</p>';
-        return;
-      }
-      progressionChart(progHost, sleepPts, {
+    }
+  }
+
+  const sleepHost = container.querySelector('#progresjon-sovn');
+  if (sleepHost) {
+    if (!hasSleep) {
+      sleepHost.innerHTML = '<p class="tomt">Logg søvn over flere uker for å se utvikling.</p>';
+    } else {
+      progressionChart(sleepHost, sleepPts, {
         hideYAxis: false,
         showBaseline: true,
         lineClass: 'graf-linje-sovn',
         pointClass: 'graf-punkt-sovn',
       });
+    }
+  }
+
+  const moodHost = container.querySelector('#progresjon-dagsform');
+  if (moodHost) {
+    if (!hasMood) {
+      moodHost.innerHTML = '<p class="tomt">Logg dagsform over flere uker for å se utvikling.</p>';
     } else {
-      if (!hasMood) {
-        progHost.innerHTML = '<p class="tomt">Logg dagsform over flere uker for å se utvikling.</p>';
-        return;
-      }
-      progressionChart(progHost, moodPts, {
+      progressionChart(moodHost, moodPts, {
         hideYAxis: true,
         referenceLine: 100,
         lineClass: 'graf-linje-dagsform',
@@ -196,11 +193,6 @@ export async function render(container) {
       });
     }
   }
-
-  tabs.forEach((tab) => {
-    tab.addEventListener('click', () => renderProgression(tab.dataset.fane));
-  });
-  renderProgression('styrke');
 
   if (bodyweights.length >= 2) {
     const points = [...bodyweights].reverse().slice(-30).map((b) => ({
