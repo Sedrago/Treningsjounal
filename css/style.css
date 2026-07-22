@@ -2331,10 +2331,37 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .kalender-kolonne-hode {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kalender-kolonne-hode-rad {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.kalender-kolonne-dato-linje {
+  display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px;
+  min-width: 0;
 }
+.kalender-bytt-dato {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--aksent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kalender-bytt-dato:hover { text-decoration: underline; }
 .kalender-ukedag {
   font-weight: 700;
   text-transform: uppercase;

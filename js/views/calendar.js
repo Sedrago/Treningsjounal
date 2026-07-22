@@ -61,6 +61,44 @@ function dayStatus(date, today, hasLog, hasPlan) {
   return 'tom';
 }
 
+function openRescheduleDateSheet(host, { planId, fromDate, rerender }) {
+  host.innerHTML = `
+    <div class="ark-bakgrunn" data-lukk></div>
+    <div class="ark" role="dialog" aria-label="Bytt dato for program">
+      <div class="ark-hode">
+        <h2>Bytt dato</h2>
+        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
+      </div>
+      <p class="dus">Flytt programmet fra <strong>${esc(formatDateShort(fromDate))}</strong> til:</p>
+      <label class="felt">
+        <span class="felt-navn">Ny dato</span>
+        <input type="date" class="inndata" id="kalender-ny-dato" value="${fromDate}" required>
+      </label>
+      <button type="button" class="knapp primaer bred" id="kalender-bekreft-flytt">Flytt program</button>
+    </div>`;
+
+  const close = () => { host.innerHTML = ''; };
+  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', close));
+
+  host.querySelector('#kalender-bekreft-flytt')?.addEventListener('click', async () => {
+    const input = host.querySelector('#kalender-ny-dato');
+    const newDate = input?.value;
+    if (!newDate || !/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+      toast('Velg en gyldig dato', 'info');
+      return;
+    }
+    if (newDate === fromDate) {
+      toast('Programmet ligger allerede på den datoen', 'info');
+      close();
+      return;
+    }
+    await store.reschedulePlan(planId, newDate);
+    close();
+    toast(`Program flyttet til ${formatDateShort(newDate)}`, 'suksess');
+    rerender();
+  });
+}
+
 function openPickTemplateSheet(host, templates, onPick) {
   const rows = templates.map((t) => `
     <button type="button" class="velger-rad" data-id="${t.id}">
@@ -100,6 +138,7 @@ function openDayActionSheet(host, { date, hasLog, hasPlan, plan, templates, toda
   } else if (hasPlan) {
     body = `
       <a href="${dayLink(date, today, hasLog, hasPlan)}" class="knapp primaer bred">${date === today ? 'Start økt' : 'Se plan'}</a>
+      <button type="button" class="knapp sekundaer bred" data-handling="bytt-dato">Bytt dato</button>
       <button type="button" class="knapp sekundaer bred" data-handling="bytt">Bytt program</button>
       <button type="button" class="knapp sekundaer bred farlig" data-handling="fjern">Fjern plan</button>`;
   } else {
@@ -133,6 +172,12 @@ function openDayActionSheet(host, { date, hasLog, hasPlan, plan, templates, toda
       toast('Program lagt på kalenderen', 'suksess');
       rerender();
     });
+  });
+
+  host.querySelector('[data-handling="bytt-dato"]')?.addEventListener('click', () => {
+    if (!plan?.id) return;
+    close();
+    openRescheduleDateSheet(host, { planId: plan.id, fromDate: date, rerender });
   });
 
   host.querySelector('[data-handling="bytt"]')?.addEventListener('click', () => {
@@ -188,6 +233,16 @@ function bindPlanner(container, { templates, planByDate, rangeDates, rerender })
         today,
         rerender,
       });
+    });
+  });
+
+  container.querySelectorAll('.kalender-bytt-dato').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const date = btn.dataset.bytteDato;
+      const plan = planByDate.get(date);
+      if (!plan?.id) return;
+      openRescheduleDateSheet(host, { planId: plan.id, fromDate: date, rerender });
     });
   });
 
@@ -251,11 +306,18 @@ export async function render(container, params, query = {}) {
 
     return `
       <article class="kalender-kolonne kalender-kolonne--${status}"
-        data-dato="${date}" data-dag="1" ${plan?.id ? `data-plan-id="${plan.id}" data-plan-navn="${esc(plan.name || '')}"` : ''}>
+        data-dato="${date}" data-dag="1" ${plan?.id ? `data-plan-id="${plan.id}"` : ''}>
         <header class="kalender-kolonne-hode">
-          <span class="kalender-ukedag">${weekdayShort(date)}</span>
-          <span class="kalender-dato">${formatDateShort(date).replace(/ \d{4}$/, '')}</span>
-          ${date === today ? '<span class="kalender-i-dag">I dag</span>' : ''}
+          <div class="kalender-kolonne-hode-rad">
+            <div class="kalender-kolonne-dato-linje">
+              <span class="kalender-ukedag">${weekdayShort(date)}</span>
+              <span class="kalender-dato">${formatDateShort(date).replace(/ \d{4}$/, '')}</span>
+              ${date === today ? '<span class="kalender-i-dag">I dag</span>' : ''}
+            </div>
+            ${hasPlan && !hasLog && plan?.id ? `
+              <button type="button" class="kalender-bytt-dato" data-bytte-dato="${date}"
+                aria-label="Bytt dato for program">Bytt dato →</button>` : ''}
+          </div>
         </header>
         ${title ? `<p class="kalender-program-tittel">${esc(title)}</p>` : ''}
         ${badge}
