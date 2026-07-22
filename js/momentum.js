@@ -47,14 +47,12 @@ function spacingQuality(sortedDates) {
   return total / (sortedDates.length - 1);
 }
 
-/** Frekvens per kategori (distinkte dager / 7): 1 → 75 %, 2 → 92 %, 3 → 100 %; over 3 teller ned. */
+/** Frekvens per kategori (distinkte dager / 7): 1 → 75 %, 2 → 92 %, 3+ → 100 % (ingen ekstra over 3). */
 function frequencyQuality(sessionDays) {
   if (sessionDays === 0) return 0;
   if (sessionDays === 1) return 0.75;
   if (sessionDays === 2) return 0.92;
-  if (sessionDays === 3) return 1;
-  if (sessionDays === 4) return 0.9;
-  return 0.82;
+  return 1;
 }
 
 function categoryStrengthScoreRolling(categoryId, date, sets) {

@@ -45,7 +45,7 @@ function momentumGuideHtml() {
             (push/pull, knebøy, hoftehengsel, core). Valgfri tilleggsøvelse teller ikke.
           </p>
           <ul class="momentum-guide-liste">
-            <li>Frekvens siste 7 dager (per kategori): <strong>1 dag 75 %</strong>, <strong>2 dager 92 %</strong>, <strong>3 dager 100 %</strong> — mer enn tre dager samme uke teller ned.</li>
+            <li>Frekvens siste 7 dager (per kategori): <strong>1 dag 75 %</strong>, <strong>2 dager 92 %</strong>, <strong>3 dager 100 %</strong> — flere dager gir ikke mer på frekvens.</li>
             <li>Ca. <strong>tre dager mellom</strong> øktene gir best uttelling; for tett trening senker scoren.</li>
             <li>Styrke-faktoren er <strong>snitt over alle syv kategorier</strong>.</li>
           </ul>
