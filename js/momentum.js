@@ -1,6 +1,6 @@
 /**
  * momentum.js – momentum-score: glidende bilde av treningsperiode (0–100).
- * Styrke: rullerende 7 dager per kategori — 2 økter/uke og ~3 dager mellom er optimalt.
+ * Styrke: rullerende 7 dager per kategori — frekvens 75/92/100 % ved 1–3 dager, ~3 dager mellom er optimalt.
  */
 
 import { KATEGORIER, nutritionGoalG, sleepGoalHours } from './store.js';
@@ -47,12 +47,14 @@ function spacingQuality(sortedDates) {
   return total / (sortedDates.length - 1);
 }
 
-/** Størst utbytte ved 2 økter per kategori per uke. */
+/** Frekvens per kategori (distinkte dager / 7): 1 → 75 %, 2 → 92 %, 3 → 100 %; over 3 teller ned. */
 function frequencyQuality(sessionDays) {
   if (sessionDays === 0) return 0;
-  if (sessionDays === 1) return 0.55;
-  if (sessionDays === 2) return 1;
-  return 0.88;
+  if (sessionDays === 1) return 0.75;
+  if (sessionDays === 2) return 0.92;
+  if (sessionDays === 3) return 1;
+  if (sessionDays === 4) return 0.9;
+  return 0.82;
 }
 
 function categoryStrengthScoreRolling(categoryId, date, sets) {
@@ -63,7 +65,7 @@ function categoryStrengthScoreRolling(categoryId, date, sets) {
 
 /**
  * Styrke-pilar (0–1): snitt over hovedkategorier ut fra siste 7 dager —
- * 2 treningsdager per kategori og ~3 dager mellom gir høyest score.
+ * 3 treningsdager per kategori (siste 7) og ~3 dager mellom gir høyest score.
  */
 function strengthDaily(date, sets) {
   if (!MAIN_CATEGORIES.length) return 0;

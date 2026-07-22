@@ -45,10 +45,9 @@ function momentumGuideHtml() {
             (push/pull, knebøy, hoftehengsel, core). Valgfri tilleggsøvelse teller ikke.
           </p>
           <ul class="momentum-guide-liste">
-            <li>Størst utbytte: <strong>to treningsdager</strong> per kategori i uka.</li>
-            <li>Optimalt med ca. <strong>tre dager mellom</strong> øktene (for tett trening samme mønster senker scoren).</li>
-            <li>Én dag per kategori gir delvis uttelling; mer enn to gir litt mindre enn optimalt 2×.</li>
-            <li>Styrke-faktoren er <strong>snitt over alle kategorier</strong> — balanse belønnes.</li>
+            <li>Frekvens siste 7 dager (per kategori): <strong>1 dag 75 %</strong>, <strong>2 dager 92 %</strong>, <strong>3 dager 100 %</strong> — mer enn tre dager samme uke teller ned.</li>
+            <li>Ca. <strong>tre dager mellom</strong> øktene gir best uttelling; for tett trening senker scoren.</li>
+            <li>Styrke-faktoren er <strong>snitt over alle syv kategorier</strong>.</li>
           </ul>
         </section>
 

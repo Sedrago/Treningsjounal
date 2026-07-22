@@ -68,7 +68,7 @@ function collectMomentumSlides({
 
   if ((pillars.strength ?? 0) < 0.5) {
     pushUnique(slides, {
-      text: 'Størst utbytte av styrke: tren hver kategori ca. 2 ganger i uken, helst med tre dager mellom.',
+      text: 'Styrke: sikt mot 2–3 økter per kategori i uken, helst med ca. tre dager mellom.',
       href: '#/styrketrening',
     });
   }
