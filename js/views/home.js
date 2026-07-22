@@ -202,18 +202,19 @@ function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerU
     const partners = getPartners();
     const show = usernames.length > 0;
     const unread = hasUnreadPartnerSync(ctx.state);
-    const hoyre = container.querySelector('.momentum-hode-hoyre');
+    const slot = container.querySelector('.momentum-venner-slot');
     let btn = container.querySelector('#momentum-venner');
 
     if (!show) {
       btn?.remove();
+      if (slot) slot.innerHTML = '';
       container.querySelector('#momentum-venner-panel')?.remove();
       refreshChart();
       return;
     }
 
-    if (!btn && hoyre) {
-      hoyre.insertAdjacentHTML('afterbegin', renderPartnerVennerButton(true, unread));
+    if (!btn && slot) {
+      slot.innerHTML = renderPartnerVennerButton(true, unread);
       bindVennerClick();
       btn = container.querySelector('#momentum-venner');
     } else if (btn) {
@@ -292,14 +293,12 @@ export async function render(container) {
 
     <section class="kort momentum-kort" aria-label="Momentum">
       <div class="momentum-hode">
-        <div>
+        <div class="momentum-hode-venstre">
           <h2 class="momentum-tittel">Momentum</h2>
           ${momentumChangeHtml(momentum.change)}
         </div>
-        <div class="momentum-hode-hoyre">
-          ${renderPartnerVennerButton(showVennerBtn, vennerUnread)}
-          <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
-        </div>
+        <div class="momentum-venner-slot">${renderPartnerVennerButton(showVennerBtn, vennerUnread)}</div>
+        <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
       </div>
       <div id="momentum-graf" class="momentum-graf-wrap"></div>
       ${renderPartnerPanel(partnersForUi, partnerState)}
