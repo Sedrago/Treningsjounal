@@ -126,6 +126,24 @@ export async function syncPartnerMomentum(ownSeries) {
   return { state, partnerUsernames: names };
 }
 
+const PARTNER_SYNC_TIMEOUT_MS = 12_000;
+
+/** Relay-synk uten å blokkere UI (timeout ved treg/kald relay). */
+export function runPartnerMomentumSyncInBackground(ownSeries, onSuccess) {
+  if (!relay.canUseRelayInbox()) return;
+  const work = syncPartnerMomentum(ownSeries);
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Partner sync timeout')), PARTNER_SYNC_TIMEOUT_MS);
+  });
+  Promise.race([work, timeout])
+    .then((result) => {
+      if (onSuccess) onSuccess(result);
+    })
+    .catch((err) => {
+      console.warn('[FlowBooster] Partner momentum:', err?.message || err);
+    });
+}
+
 export function listPartnersForDisplay(state, partnerUsernames) {
   return (partnerUsernames || []).map((username) => ({
     username,

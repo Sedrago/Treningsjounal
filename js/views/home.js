@@ -14,10 +14,9 @@ import {
   hasUnreadPartnerSync,
   listPartnersForDisplay,
   loadPartnerMomentumState,
-  loadPartnerUsernames,
   markPartnerSyncSeen,
+  runPartnerMomentumSyncInBackground,
   savePartnerMomentumState,
-  syncPartnerMomentum,
 } from '../partner-momentum.js';
 import {
   esc, formatDateLong, todayStr, weekdayShort,
@@ -139,57 +138,103 @@ function paintMomentumChart(container, labeledSeries, state, partners) {
 }
 
 function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerUsernames) {
-  const partners = listPartnersForDisplay(initialState, partnerUsernames);
-  let state = { ...initialState };
-
-  const persist = () => savePartnerMomentumState(state);
-
-  const refreshChart = () => {
-    paintMomentumChart(container, labeledSeries, state, listPartnersForDisplay(state, partnerUsernames));
+  const ctx = {
+    state: { ...initialState },
+    partnerUsernames: [...partnerUsernames],
+    labeledSeries,
   };
 
-  const vennerBtn = container.querySelector('#momentum-venner');
-  const panel = container.querySelector('#momentum-venner-panel');
+  const getPartners = () => listPartnersForDisplay(ctx.state, ctx.partnerUsernames);
+
+  const persist = () => savePartnerMomentumState(ctx.state);
+
+  const refreshChart = () => {
+    paintMomentumChart(container, ctx.labeledSeries, ctx.state, getPartners());
+  };
 
   const setPanelOpen = (open) => {
-    state = { ...state, panelOpen: open };
+    ctx.state = { ...ctx.state, panelOpen: open };
     if (open) {
-      state = markPartnerSyncSeen(state);
-      vennerBtn?.classList.remove('momentum-venner-knapp--ny');
+      ctx.state = markPartnerSyncSeen(ctx.state);
+      container.querySelector('#momentum-venner')?.classList.remove('momentum-venner-knapp--ny');
     }
     persist();
+    const panel = container.querySelector('#momentum-venner-panel');
     if (panel) {
       panel.classList.toggle('skjult', !open);
       panel.hidden = !open;
     }
-    vennerBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    container.querySelector('#momentum-venner')?.setAttribute('aria-expanded', open ? 'true' : 'false');
     refreshChart();
   };
 
-  vennerBtn?.addEventListener('click', () => {
-    setPanelOpen(!state.panelOpen);
-  });
+  const bindVennerClick = () => {
+    const vennerBtn = container.querySelector('#momentum-venner');
+    if (!vennerBtn || vennerBtn.dataset.bound) return;
+    vennerBtn.dataset.bound = '1';
+    vennerBtn.addEventListener('click', () => setPanelOpen(!ctx.state.panelOpen));
+  };
 
-  container.querySelector('#momentum-venner-default')?.addEventListener('change', (e) => {
-    state = { ...state, showByDefault: e.target.checked };
-    persist();
-    refreshChart();
-  });
-
-  container.querySelectorAll('.momentum-venner-vis').forEach((input) => {
-    input.addEventListener('change', () => {
-      const u = input.dataset.partner;
-      if (!u) return;
-      state = {
-        ...state,
-        visible: { ...state.visible, [u]: input.checked },
-      };
+  const wirePanelInputs = () => {
+    container.querySelector('#momentum-venner-default')?.addEventListener('change', (e) => {
+      ctx.state = { ...ctx.state, showByDefault: e.target.checked };
       persist();
       refreshChart();
     });
-  });
 
+    container.querySelectorAll('.momentum-venner-vis').forEach((input) => {
+      input.addEventListener('change', () => {
+        const u = input.dataset.partner;
+        if (!u) return;
+        ctx.state = {
+          ...ctx.state,
+          visible: { ...ctx.state.visible, [u]: input.checked },
+        };
+        persist();
+        refreshChart();
+      });
+    });
+  };
+
+  function setPartnerData(state, usernames) {
+    ctx.state = state;
+    ctx.partnerUsernames = usernames;
+    const partners = getPartners();
+    const show = usernames.length > 0;
+    const unread = hasUnreadPartnerSync(ctx.state);
+    const hoyre = container.querySelector('.momentum-hode-hoyre');
+    let btn = container.querySelector('#momentum-venner');
+
+    if (!show) {
+      btn?.remove();
+      container.querySelector('#momentum-venner-panel')?.remove();
+      refreshChart();
+      return;
+    }
+
+    if (!btn && hoyre) {
+      hoyre.insertAdjacentHTML('afterbegin', renderPartnerVennerButton(true, unread));
+      bindVennerClick();
+      btn = container.querySelector('#momentum-venner');
+    } else if (btn) {
+      btn.classList.toggle('momentum-venner-knapp--ny', unread);
+    }
+
+    container.querySelector('#momentum-venner-panel')?.remove();
+    const panelHtml = renderPartnerPanel(partners, ctx.state);
+    if (panelHtml) {
+      container.querySelector('#momentum-graf')?.insertAdjacentHTML('afterend', panelHtml);
+      wirePanelInputs();
+    }
+    btn?.setAttribute('aria-expanded', ctx.state.panelOpen ? 'true' : 'false');
+    refreshChart();
+  }
+
+  bindVennerClick();
+  wirePanelInputs();
   refreshChart();
+
+  return { setPartnerData };
 }
 
 export async function render(container) {
@@ -233,22 +278,8 @@ export async function render(container) {
 
   const labeledSeries = momentumSeriesLabels(momentum.series);
 
-  let partnerState = loadPartnerMomentumState();
-  let partnerUsernames = [];
-  try {
-    const synced = await syncPartnerMomentum(momentum.series);
-    partnerState = synced.state;
-    partnerUsernames = synced.partnerUsernames;
-  } catch (err) {
-    console.warn('[FlowBooster] Partner momentum:', err);
-    partnerState = loadPartnerMomentumState();
-    try {
-      partnerUsernames = await loadPartnerUsernames();
-    } catch {
-      partnerUsernames = Object.keys(partnerState.cache || {});
-    }
-  }
-
+  const partnerState = loadPartnerMomentumState();
+  const partnerUsernames = Object.keys(partnerState.cache || {});
   const partnersForUi = listPartnersForDisplay(partnerState, partnerUsernames);
   const showVennerBtn = partnerUsernames.length > 0;
   const vennerUnread = hasUnreadPartnerSync(partnerState);
@@ -290,6 +321,11 @@ export async function render(container) {
     </nav>
   `;
 
-  mountPartnerMomentumUi(container, labeledSeries, partnerState, partnerUsernames);
+  const partnerUi = mountPartnerMomentumUi(container, labeledSeries, partnerState, partnerUsernames);
   mountHomeInsightRotator(container, infoSlides);
+
+  runPartnerMomentumSyncInBackground(momentum.series, ({ state, partnerUsernames: names }) => {
+    if (!container.isConnected) return;
+    partnerUi.setPartnerData(state, names);
+  });
 }
