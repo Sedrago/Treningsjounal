@@ -503,6 +503,10 @@ select.inndata { appearance: none; }
   border: 1px solid var(--kant);
   border-radius: var(--radius-liten);
 }
+.hjem-info--rotator {
+  min-height: 2.75em;
+  transition: opacity 0.35s ease;
+}
 .hjem-info-lenke { color: inherit; text-decoration: none; }
 .hjem-info-lenke:hover { color: var(--momentum); text-decoration: underline; }
 

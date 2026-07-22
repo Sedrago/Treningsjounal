@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'flowbooster-v104';
+const CACHE = 'flowbooster-v105';
 
 const ASSETS = [
   './',

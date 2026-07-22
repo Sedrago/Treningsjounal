@@ -1,11 +1,11 @@
 /**
- * home-insight.js – én prioritert infolinje på hjem (under makro-barer).
+ * home-insight.js – infolinje(r) på hjem: momentum-tips og drypp fra Innsikt.
  */
 
-import { getMessages } from './assistant.js';
+import { getMessages, balanceSince } from './assistant.js';
 import { PILLAR_WEIGHTS } from './momentum.js';
 import { volumeTrend30 } from './stats.js';
-import { fmtNum } from './utils.js';
+import { fmtNum, windowStartStr } from './utils.js';
 
 const PILLAR_LABELS = {
   strength: 'Styrketrening',
@@ -14,6 +14,15 @@ const PILLAR_LABELS = {
   aerobic: 'Aerob',
   lactate: 'Anaerob',
 };
+
+/** @typedef {{ text: string, href?: string }} HomeInfoSlide */
+
+function pushUnique(list, slide) {
+  if (!slide?.text) return;
+  const key = slide.text.trim();
+  if (list.some((s) => s.text.trim() === key)) return;
+  list.push(slide);
+}
 
 function weakestPillarLabel(pillars) {
   let best = null;
@@ -25,25 +34,120 @@ function weakestPillarLabel(pillars) {
   return PILLAR_LABELS[best.key];
 }
 
-function aggregatedTrainingInsight(sets) {
-  const messages = getMessages(sets);
-  for (const m of messages) {
-    if (m.text.startsWith('Velkommen')) return { text: m.text, href: '#/styrketrening' };
-    if (m.text.includes('ikke trent') || m.text.includes('ikke gjort')) {
-      return { text: 'Noen bevegelsesmønstre har hvilet lenge — se Innsikt.', href: '#/innsikt' };
-    }
-    if (m.icon === '⚖️') {
-      return { text: 'Push og pull er litt ujevnt siste uke — se Innsikt.', href: '#/innsikt' };
-    }
-    if (m.icon === '📈' || m.icon === '📉') return { text: m.text, href: '#/innsikt' };
+/** @returns {HomeInfoSlide[]} */
+function collectMomentumSlides({
+  sets,
+  pillars,
+  proteinG,
+  proteinGoal,
+  momentumToday,
+  momentumChange,
+  series,
+}) {
+  /** @type {HomeInfoSlide[]} */
+  const slides = [];
+
+  if (!sets.length) {
+    pushUnique(slides, { text: 'Start med styrketrening under Momentum.' });
+    return slides;
   }
-  return null;
+
+  const proteinLeft = proteinGoal > 0 ? Math.max(0, Math.round(proteinGoal - proteinG)) : 0;
+  if (proteinLeft >= 25 && (pillars.protein ?? 0) < 0.85) {
+    pushUnique(slides, { text: `Ca. ${proteinLeft} g protein igjen til målet i dag.`, href: '#/inntak' });
+  }
+
+  if ((pillars.sleep ?? 0) < 0.3) {
+    pushUnique(slides, { text: 'Ingen søvn registrert i natt — logg under Momentum.', href: '#/sovn' });
+  }
+
+  const weak = weakestPillarLabel(pillars);
+  if (weak) {
+    pushUnique(slides, { text: `${weak} har størst effekt på scoren i dag.` });
+  }
+
+  if ((pillars.strength ?? 0) < 0.5) {
+    pushUnique(slides, { text: 'Styrketrening løfter momentum mest når du logger økter.', href: '#/styrketrening' });
+  }
+  if ((pillars.aerobic ?? 0) < 0.5) {
+    pushUnique(slides, { text: 'Aerob aktivitet teller mot momentum — logg minutter.', href: '#/aerob' });
+  }
+  if ((pillars.lactate ?? 0) < 0.5) {
+    pushUnique(slides, { text: 'Anaerob innsats (f.eks. intervaller) kan heve scoren.', href: '#/anaerob' });
+  }
+
+  const trend = volumeTrend30(sets);
+  if (trend !== null && Math.abs(trend) >= 8) {
+    const dir = trend > 0 ? 'opp' : 'ned';
+    pushUnique(slides, {
+      text: `Volum ${dir} ${fmtNum(Math.abs(trend), 0)} % siste måned.`,
+      href: '#/innsikt',
+    });
+  }
+
+  if (series?.length >= 7) {
+    const vals = series.map((p) => p.value);
+    const max = Math.max(...vals);
+    if (momentumToday >= max - 1 && momentumToday >= 55) {
+      pushUnique(slides, { text: 'Du er nær beste momentum på tre uker.' });
+    }
+  }
+
+  if (momentumChange > 0) {
+    pushUnique(slides, { text: `Momentum +${momentumChange} siden i går — fortsett.` });
+  } else if (momentumChange < 0) {
+    pushUnique(slides, { text: `Momentum ${momentumChange} siden i går — logg det som gjenstår.` });
+  }
+
+  pushUnique(slides, { text: 'Logg det som gjenstår under Momentum.' });
+  return slides;
+}
+
+/** @returns {HomeInfoSlide[]} */
+function collectInnsiktSlides(sets) {
+  /** @type {HomeInfoSlide[]} */
+  const slides = [];
+
+  for (const m of getMessages(sets)) {
+    if (m.text.startsWith('Velkommen')) {
+      pushUnique(slides, { text: m.text, href: '#/styrketrening' });
+      continue;
+    }
+    pushUnique(slides, { text: m.text, href: '#/innsikt' });
+  }
+
+  if (sets.length) {
+    const since7 = windowStartStr(7);
+    const balance = balanceSince(sets, since7);
+    if (balance.missing.length) {
+      const names = balance.missing.map((k) => k.name.toLowerCase()).join(', ');
+      pushUnique(slides, {
+        text: `Mangler siste 7 dager: ${names}.`,
+        href: '#/innsikt',
+      });
+    }
+  }
+
+  return slides;
+}
+
+function interleaveSlides(momentum, innsikt) {
+  /** @type {HomeInfoSlide[]} */
+  const out = [];
+  let mi = 0;
+  let ii = 0;
+  while (mi < momentum.length || ii < innsikt.length) {
+    if (mi < momentum.length) out.push(momentum[mi++]);
+    if (ii < innsikt.length) out.push(innsikt[ii++]);
+  }
+  return out;
 }
 
 /**
- * @returns {{ text: string, href?: string }}
+ * Liste for roterende infofelt på hjem (momentum + Innsikt).
+ * @returns {HomeInfoSlide[]}
  */
-export function pickHomeInsight({
+export function buildHomeInfoRotation({
   sets,
   pillars,
   proteinG,
@@ -55,55 +159,38 @@ export function pickHomeInsight({
   syncState,
 }) {
   if (!apiConfigured) {
-    return { text: 'Koble appen til Google Sheets under Innstillinger.', href: '#/innstillinger' };
+    return [{ text: 'Koble appen til Google Sheets under Innstillinger.', href: '#/innstillinger' }];
   }
 
   if (syncState && !syncState.online && syncState.pending > 0) {
-    return { text: `${syncState.pending} endringer venter — synk når du er på nett.` };
+    return [{ text: `${syncState.pending} endringer venter — synk når du er på nett.` }];
   }
 
   if (syncState?.lastError) {
-    return { text: `Synk-feil: ${syncState.lastError}`, href: '#/innstillinger' };
+    return [{ text: `Synk-feil: ${syncState.lastError}`, href: '#/innstillinger' }];
   }
 
-  if (!sets.length) {
-    return { text: 'Start med styrketrening under Momentum.' };
-  }
+  const momentum = collectMomentumSlides({
+    sets,
+    pillars,
+    proteinG,
+    proteinGoal,
+    momentumToday,
+    momentumChange,
+    series,
+  });
 
-  const proteinLeft = proteinGoal > 0 ? Math.max(0, Math.round(proteinGoal - proteinG)) : 0;
-  if (proteinLeft >= 25 && (pillars.protein ?? 0) < 0.85) {
-    return { text: `Ca. ${proteinLeft} g protein igjen til målet i dag.` };
-  }
+  const innsikt = collectInnsiktSlides(sets).filter(
+    (s) => !momentum.some((m) => m.text.trim() === s.text.trim()),
+  );
 
-  if ((pillars.sleep ?? 0) < 0.3) {
-    return { text: 'Ingen søvn registrert i natt — logg under Momentum.' };
-  }
+  const merged = interleaveSlides(momentum, innsikt);
+  return merged.length ? merged : [{ text: 'Logg det som gjenstår under Momentum.' }];
+}
 
-  const weak = weakestPillarLabel(pillars);
-  if (weak) {
-    return { text: `${weak} har størst effekt på scoren i dag.` };
-  }
-
-  const training = aggregatedTrainingInsight(sets);
-  if (training) return training;
-
-  const trend = volumeTrend30(sets);
-  if (trend !== null && Math.abs(trend) >= 8) {
-    const dir = trend > 0 ? 'opp' : 'ned';
-    return { text: `Volum ${dir} ${fmtNum(Math.abs(trend), 0)} % siste måned.`, href: '#/innsikt' };
-  }
-
-  if (series?.length >= 7) {
-    const vals = series.map((p) => p.value);
-    const max = Math.max(...vals);
-    if (momentumToday >= max - 1 && momentumToday >= 55) {
-      return { text: 'Du er nær beste momentum på tre uker.' };
-    }
-  }
-
-  if (momentumChange > 0) {
-    return { text: `Momentum ${momentumChange > 0 ? '+' : ''}${momentumChange} siden i går — fortsett.` };
-  }
-
-  return { text: 'Logg det som gjenstår under Momentum.' };
+/**
+ * @returns {HomeInfoSlide}
+ */
+export function pickHomeInsight(params) {
+  return buildHomeInfoRotation(params)[0];
 }

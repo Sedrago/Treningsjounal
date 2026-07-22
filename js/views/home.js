@@ -6,7 +6,7 @@ import * as store from '../store.js';
 import * as api from '../api.js';
 import * as sync from '../sync.js';
 import { computeMomentum } from '../momentum.js';
-import { pickHomeInsight } from '../home-insight.js';
+import { buildHomeInfoRotation } from '../home-insight.js';
 import { momentumChart } from '../charts.js';
 import { renderHomeCarbsLineHtml } from '../nutrition-ui.js';
 import {
@@ -48,16 +48,47 @@ function renderMomentumFactors(factors) {
     </ul>`;
 }
 
-function renderHomeInsight(insight) {
-  if (!insight?.text) return '';
-  const inner = esc(insight.text);
-  if (insight.href) {
-    return `<p class="hjem-info"><a href="${esc(insight.href)}" class="hjem-info-lenke">${inner}</a></p>`;
+function insightSlideInnerHtml(slide) {
+  const inner = esc(slide.text);
+  if (slide.href) {
+    return `<a href="${esc(slide.href)}" class="hjem-info-lenke">${inner}</a>`;
   }
-  return `<p class="hjem-info">${inner}</p>`;
+  return inner;
+}
+
+function renderHomeInsightRotatorPlaceholder() {
+  return `<p class="hjem-info hjem-info--rotator" id="hjem-info-rotator" aria-live="polite"></p>`;
+}
+
+function mountHomeInsightRotator(container, slides) {
+  const host = container.querySelector('#hjem-info-rotator');
+  if (!host || !slides.length) {
+    if (host) host.remove();
+    return;
+  }
+
+  let idx = 0;
+  const show = () => {
+    host.innerHTML = insightSlideInnerHtml(slides[idx % slides.length]);
+    idx = (idx + 1) % slides.length;
+  };
+
+  show();
+  if (slides.length <= 1) return;
+
+  container._homeInfoTimer = setInterval(show, 10_000);
+}
+
+function clearHomeInsightRotator(container) {
+  if (container._homeInfoTimer) {
+    clearInterval(container._homeInfoTimer);
+    container._homeInfoTimer = null;
+  }
 }
 
 export async function render(container) {
+  clearHomeInsightRotator(container);
+
   const [
     sets,
     aerobic,
@@ -82,7 +113,7 @@ export async function render(container) {
     lactate,
   });
 
-  const insight = pickHomeInsight({
+  const infoSlides = buildHomeInfoRotation({
     sets,
     pillars: momentum.pillarsToday,
     proteinG: momentum.proteinG,
@@ -113,7 +144,7 @@ export async function render(container) {
       ${renderHomeCarbsLineHtml(nutritionSummary)}
     </section>
 
-    ${renderHomeInsight(insight)}
+    ${renderHomeInsightRotatorPlaceholder()}
 
     <nav class="hjem-hovednav hjem-hovednav--to" aria-label="Hovednavigasjon">
       <a href="#/innsikt" class="hjem-hovednav-kort">
@@ -131,4 +162,6 @@ export async function render(container) {
   if (chartHost) {
     momentumChart(chartHost, momentumSeriesLabels(momentum.series));
   }
+
+  mountHomeInsightRotator(container, infoSlides);
 }
