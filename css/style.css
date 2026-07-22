@@ -381,18 +381,18 @@ select.inndata { appearance: none; }
   min-width: 0;
   align-self: flex-start;
 }
-.momentum-venner-slot {
+.momentum-hode-knapper {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 32px;
+  gap: 6px;
 }
 .momentum-hode .momentum-verdi {
   flex-shrink: 0;
   align-self: flex-start;
 }
-.momentum-venner-knapp {
+.momentum-hode-knapp {
   width: 32px;
   height: 32px;
   padding: 0;
@@ -406,17 +406,46 @@ select.inndata { appearance: none; }
   cursor: pointer;
   line-height: 1;
 }
-.momentum-venner-knapp:hover { border-color: var(--partner-accent, #5b9bd5); color: var(--partner-accent, #5b9bd5); }
-.momentum-venner-knapp--ny {
+.momentum-hode-knapp-bokstav { font-style: italic; font-weight: 700; }
+.momentum-hode-knapp--info:hover,
+.momentum-hode-knapp--info[aria-expanded="true"] {
+  border-color: var(--momentum);
+  color: var(--momentum);
+  background: color-mix(in srgb, var(--momentum) 14%, var(--flate-2));
+}
+.momentum-hode-knapp--venner:hover { border-color: var(--partner-accent, #5b9bd5); color: var(--partner-accent, #5b9bd5); }
+.momentum-hode-knapp--venner--ny {
   border-color: var(--partner-accent, #5b9bd5);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--partner-accent, #5b9bd5) 35%, transparent);
   color: var(--partner-accent, #5b9bd5);
 }
-.momentum-venner-knapp[aria-expanded="true"] {
+.momentum-hode-knapp--venner[aria-expanded="true"] {
   background: color-mix(in srgb, var(--partner-accent, #5b9bd5) 18%, var(--flate-2));
   border-color: var(--partner-accent, #5b9bd5);
   color: var(--partner-accent, #5b9bd5);
 }
+.momentum-guide-innhold { font-size: 0.92rem; line-height: 1.45; }
+.momentum-guide-intro { margin: 0 0 14px; }
+.momentum-guide-del {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--momentum);
+}
+.momentum-guide-seksjon { margin-bottom: 12px; }
+.momentum-guide-seksjon h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.momentum-guide-seksjon p { margin: 0 0 6px; }
+.momentum-guide-liste {
+  margin: 0 0 8px;
+  padding-left: 1.15rem;
+}
+.momentum-guide-liste li { margin-bottom: 4px; }
+.momentum-guide-vekter { margin-bottom: 4px; }
+.momentum-guide-fotnote { margin: 12px 0 0; }
 .momentum-venner-panel {
   margin: 0 0 8px;
   padding: 10px 10px 8px;

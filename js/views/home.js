@@ -7,6 +7,7 @@ import * as api from '../api.js';
 import * as sync from '../sync.js';
 import { computeMomentum } from '../momentum.js';
 import { buildHomeInfoRotation } from '../home-insight.js';
+import { openMomentumGuide, closeMomentumGuide } from '../momentum-guide.js';
 import { momentumChart } from '../charts.js';
 import { renderHomeCarbsLineHtml } from '../nutrition-ui.js';
 import {
@@ -97,12 +98,46 @@ function clearHomeInsightRotator(container) {
 
 function renderPartnerVennerButton(show, unread) {
   if (!show) return '';
-  const cls = unread ? ' momentum-venner-knapp--ny' : '';
+  const cls = unread ? ' momentum-hode-knapp--venner--ny' : '';
   return `
-    <button type="button" class="momentum-venner-knapp${cls}" id="momentum-venner"
+    <button type="button" class="momentum-hode-knapp momentum-hode-knapp--venner${cls}" id="momentum-venner"
       aria-label="Partnere på momentum-grafen" aria-expanded="false" aria-controls="momentum-venner-panel">
-      <span class="momentum-venner-bokstav" aria-hidden="true">V</span>
+      <span class="momentum-hode-knapp-bokstav" aria-hidden="true">V</span>
     </button>`;
+}
+
+function renderMomentumHeadButtons(showVenner, vennerUnread) {
+  return `
+    <div class="momentum-hode-knapper">
+      <button type="button" class="momentum-hode-knapp momentum-hode-knapp--info" id="momentum-info"
+        aria-label="Slik fungerer momentum" aria-expanded="false">
+        <span class="momentum-hode-knapp-bokstav" aria-hidden="true">I</span>
+      </button>
+      ${renderPartnerVennerButton(showVenner, vennerUnread)}
+    </div>`;
+}
+
+function mountMomentumGuideUi(container) {
+  const infoBtn = container.querySelector('#momentum-info');
+  const host = container.querySelector('#momentum-guide-host');
+  if (!infoBtn || !host || infoBtn.dataset.bound) return;
+  infoBtn.dataset.bound = '1';
+
+  const setExpanded = (open) => {
+    infoBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  infoBtn.addEventListener('click', () => {
+    if (host.innerHTML) {
+      closeMomentumGuide(host);
+      setExpanded(false);
+      return;
+    }
+    openMomentumGuide(host, {
+      onClose: () => setExpanded(false),
+    });
+    setExpanded(true);
+  });
 }
 
 function renderPartnerPanel(partners, state) {
@@ -156,7 +191,7 @@ function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerU
     ctx.state = { ...ctx.state, panelOpen: open };
     if (open) {
       ctx.state = markPartnerSyncSeen(ctx.state);
-      container.querySelector('#momentum-venner')?.classList.remove('momentum-venner-knapp--ny');
+      container.querySelector('#momentum-venner')?.classList.remove('momentum-hode-knapp--venner--ny');
     }
     persist();
     const panel = container.querySelector('#momentum-venner-panel');
@@ -202,23 +237,22 @@ function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerU
     const partners = getPartners();
     const show = usernames.length > 0;
     const unread = hasUnreadPartnerSync(ctx.state);
-    const slot = container.querySelector('.momentum-venner-slot');
+    const knapper = container.querySelector('.momentum-hode-knapper');
     let btn = container.querySelector('#momentum-venner');
 
     if (!show) {
       btn?.remove();
-      if (slot) slot.innerHTML = '';
       container.querySelector('#momentum-venner-panel')?.remove();
       refreshChart();
       return;
     }
 
-    if (!btn && slot) {
-      slot.innerHTML = renderPartnerVennerButton(true, unread);
+    if (!btn && knapper) {
+      knapper.insertAdjacentHTML('beforeend', renderPartnerVennerButton(true, unread));
       bindVennerClick();
       btn = container.querySelector('#momentum-venner');
     } else if (btn) {
-      btn.classList.toggle('momentum-venner-knapp--ny', unread);
+      btn.classList.toggle('momentum-hode-knapp--venner--ny', unread);
     }
 
     container.querySelector('#momentum-venner-panel')?.remove();
@@ -240,6 +274,7 @@ function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerU
 
 export async function render(container) {
   clearHomeInsightRotator(container);
+  closeMomentumGuide(container.querySelector('#momentum-guide-host'));
 
   const [
     sets,
@@ -297,7 +332,7 @@ export async function render(container) {
           <h2 class="momentum-tittel">Momentum</h2>
           ${momentumChangeHtml(momentum.change)}
         </div>
-        <div class="momentum-venner-slot">${renderPartnerVennerButton(showVennerBtn, vennerUnread)}</div>
+        ${renderMomentumHeadButtons(showVennerBtn, vennerUnread)}
         <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
       </div>
       <div id="momentum-graf" class="momentum-graf-wrap"></div>
@@ -305,6 +340,8 @@ export async function render(container) {
       ${renderMomentumFactors(momentum.factors)}
       ${renderHomeCarbsLineHtml(nutritionSummary)}
     </section>
+
+    <div id="momentum-guide-host"></div>
 
     ${renderHomeInsightRotatorPlaceholder()}
 
@@ -321,6 +358,7 @@ export async function render(container) {
   `;
 
   const partnerUi = mountPartnerMomentumUi(container, labeledSeries, partnerState, partnerUsernames);
+  mountMomentumGuideUi(container);
   mountHomeInsightRotator(container, infoSlides);
 
   runPartnerMomentumSyncInBackground(momentum.series, ({ state, partnerUsernames: names }) => {
