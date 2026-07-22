@@ -43,10 +43,14 @@ function momentumGuideHtml() {
           <p>
             Ser på <strong>siste 7 dager</strong> for hver av syv hovedkategorier
             (push/pull, knebøy, hoftehengsel, core). Valgfri tilleggsøvelse teller ikke.
+            Per kategori beregnes to ting som <strong>ganges</strong> (0–100 % hver):
+            hvor mange <strong>distinkte treningsdager</strong> i vinduet, og
+            <strong>mellomrom</strong> mellom dem når det er mer enn én dag.
           </p>
           <ul class="momentum-guide-liste">
-            <li>Frekvens siste 7 dager (per kategori): <strong>1 dag 75 %</strong>, <strong>2 dager 92 %</strong>, <strong>3 dager 100 %</strong> — flere dager gir ikke mer på frekvens.</li>
-            <li>Ca. <strong>tre dager mellom</strong> øktene gir best uttelling; for tett trening senker scoren.</li>
+            <li><strong>Frekvens:</strong> 1 dag 75 %, 2 dager 92 %, 3+ dager 100 % (ingen ekstra over 3).</li>
+            <li><strong>Mellomrom:</strong> for tett (1–2 dager mellom) senker det; ca. 3–4 dager mellom er best når du har flere økter.</li>
+            <li><strong>Praksis:</strong> sikt mot 2–3 økter per kategori per uke med rolig mellomrom — vinduet ruller, så frekvens og mellomrom henger sammen, ikke to separate «maks» hver dag.</li>
             <li>Styrke-faktoren er <strong>snitt over alle syv kategorier</strong>.</li>
           </ul>
         </section>
