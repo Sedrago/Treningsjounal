@@ -74,6 +74,17 @@ function strengthDaily(date, sets) {
   return sum / MAIN_CATEGORIES.length;
 }
 
+/** Styrke i faktorlisten på hjem: kun kategorier logget i dag (0–1, snitt over syv). */
+function strengthUiDaily(date, sets) {
+  if (!MAIN_CATEGORIES.length) return 0;
+  let sum = 0;
+  for (const cat of MAIN_CATEGORIES) {
+    if (!sets.some((s) => s.category === cat.id && s.date === date)) continue;
+    sum += categoryStrengthScoreRolling(cat.id, date, sets);
+  }
+  return sum / MAIN_CATEGORIES.length;
+}
+
 function proteinDaily(date, proteinByDate, goalG) {
   if (!goalG) return 0;
   const g = proteinByDate.get(date) || 0;
@@ -157,18 +168,6 @@ function pillarStatusText(pct) {
   return 'Ikke logget i dag';
 }
 
-function strengthLoggedOnDate(date, sets) {
-  return MAIN_CATEGORIES.some(
-    (cat) => sets.some((s) => s.category === cat.id && s.date === date),
-  );
-}
-
-/** Styrke-pilar er 7-dagers rullerende; status skal reflektere om du logget styrke den dagen. */
-function strengthFactorStatus(pillarPct, date, sets) {
-  if (!strengthLoggedOnDate(date, sets)) return 'Ikke logget i dag';
-  return pillarStatusText(pillarPct);
-}
-
 export const MOMENTUM_FACTORS = [
   { id: 'strength', label: 'Styrketrening', href: '#/styrketrening' },
   { id: 'protein', label: 'Protein', href: '#/inntak' },
@@ -179,15 +178,14 @@ export const MOMENTUM_FACTORS = [
 
 function buildFactors(pillars, { date, sets }) {
   return MOMENTUM_FACTORS.map((f) => {
-    const raw = pillars[f.id] ?? 0;
+    const raw = f.id === 'strength'
+      ? strengthUiDaily(date, sets)
+      : (pillars[f.id] ?? 0);
     const pct = Math.round(Math.min(100, Math.max(0, raw * 100)));
-    const status = f.id === 'strength'
-      ? strengthFactorStatus(pct, date, sets)
-      : pillarStatusText(pct);
     return {
       ...f,
       pct,
-      status,
+      status: pillarStatusText(pct),
     };
   });
 }
