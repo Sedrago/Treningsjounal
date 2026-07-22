@@ -1160,9 +1160,19 @@ export async function getLactateEntries() {
   return all.filter((l) => !l.deleted).sort((a, b) => b.date.localeCompare(a.date));
 }
 
+function formatPresetIntakeQty(q) {
+  const x = Number(q);
+  if (!Number.isFinite(x)) return '1';
+  if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
+  return fmtNum(x, 1);
+}
+
 export function intakeFromPreset(preset, qty, opts = {}) {
   const q = Math.max(0.25, Number(qty) || 1);
-  const unit = preset.unitLabel ? ` ${preset.unitLabel}` : '';
+  const unit = String(preset.unitLabel || '').trim();
+  const defaultNote = unit
+    ? `${preset.name} ${unit} x ${formatPresetIntakeQty(q)}`
+    : `${preset.name} x ${formatPresetIntakeQty(q)}`;
   return {
     date: opts.date || todayStr(),
     time: opts.time || nowTimeStr(),
@@ -1170,7 +1180,7 @@ export function intakeFromPreset(preset, qty, opts = {}) {
     carbsG: roundMacroG((preset.carbsG ?? 0) * q),
     qty: q,
     presetId: preset.id,
-    note: opts.note || `${preset.name} ×${q}${unit}`.trim(),
+    note: opts.note || defaultNote,
   };
 }
 
