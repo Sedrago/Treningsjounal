@@ -10,6 +10,16 @@ import { buildHomeInfoRotation } from '../home-insight.js';
 import { momentumChart } from '../charts.js';
 import { renderHomeCarbsLineHtml } from '../nutrition-ui.js';
 import {
+  buildMomentumOverlays,
+  hasUnreadPartnerSync,
+  listPartnersForDisplay,
+  loadPartnerMomentumState,
+  loadPartnerUsernames,
+  markPartnerSyncSeen,
+  savePartnerMomentumState,
+  syncPartnerMomentum,
+} from '../partner-momentum.js';
+import {
   esc, formatDateLong, todayStr, weekdayShort,
 } from '../utils.js';
 
@@ -86,6 +96,102 @@ function clearHomeInsightRotator(container) {
   }
 }
 
+function renderPartnerVennerButton(show, unread) {
+  if (!show) return '';
+  const cls = unread ? ' momentum-venner-knapp--ny' : '';
+  return `
+    <button type="button" class="momentum-venner-knapp${cls}" id="momentum-venner"
+      aria-label="Partnere på momentum-grafen" aria-expanded="false" aria-controls="momentum-venner-panel">
+      <span class="momentum-venner-bokstav" aria-hidden="true">V</span>
+    </button>`;
+}
+
+function renderPartnerPanel(partners, state) {
+  if (!partners.length) return '';
+  const open = state.panelOpen;
+  return `
+    <div id="momentum-venner-panel" class="momentum-venner-panel${open ? '' : ' skjult'}"
+      ${open ? '' : 'hidden'} aria-label="Partnergrafer">
+      <label class="momentum-venner-valg">
+        <input type="checkbox" id="momentum-venner-default" ${state.showByDefault ? 'checked' : ''}>
+        Vis valgte partnere på grafen som standard
+      </label>
+      <p class="dus liten momentum-venner-hint">Kun momentum-kurven deles — ikke detaljer i loggingen.</p>
+      <ul class="momentum-venner-legend">
+        ${partners.map((p) => `
+          <li>
+            <label class="momentum-venner-legend-rad">
+              <input type="checkbox" class="momentum-venner-vis" data-partner="${esc(p.username)}"
+                ${p.visible ? 'checked' : ''}>
+              <span class="momentum-venner-prikk" style="--partner-farge: ${esc(p.color)}"></span>
+              <span class="momentum-venner-navn">@${esc(p.label)}</span>
+            </label>
+          </li>`).join('')}
+      </ul>
+    </div>`;
+}
+
+function paintMomentumChart(container, labeledSeries, state, partners) {
+  const chartHost = container.querySelector('#momentum-graf');
+  if (!chartHost) return;
+  const { points, overlays } = buildMomentumOverlays(labeledSeries, state, partners);
+  momentumChart(chartHost, points, { overlays });
+}
+
+function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerUsernames) {
+  const partners = listPartnersForDisplay(initialState, partnerUsernames);
+  let state = { ...initialState };
+
+  const persist = () => savePartnerMomentumState(state);
+
+  const refreshChart = () => {
+    paintMomentumChart(container, labeledSeries, state, listPartnersForDisplay(state, partnerUsernames));
+  };
+
+  const vennerBtn = container.querySelector('#momentum-venner');
+  const panel = container.querySelector('#momentum-venner-panel');
+
+  const setPanelOpen = (open) => {
+    state = { ...state, panelOpen: open };
+    if (open) {
+      state = markPartnerSyncSeen(state);
+      vennerBtn?.classList.remove('momentum-venner-knapp--ny');
+    }
+    persist();
+    if (panel) {
+      panel.classList.toggle('skjult', !open);
+      panel.hidden = !open;
+    }
+    vennerBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    refreshChart();
+  };
+
+  vennerBtn?.addEventListener('click', () => {
+    setPanelOpen(!state.panelOpen);
+  });
+
+  container.querySelector('#momentum-venner-default')?.addEventListener('change', (e) => {
+    state = { ...state, showByDefault: e.target.checked };
+    persist();
+    refreshChart();
+  });
+
+  container.querySelectorAll('.momentum-venner-vis').forEach((input) => {
+    input.addEventListener('change', () => {
+      const u = input.dataset.partner;
+      if (!u) return;
+      state = {
+        ...state,
+        visible: { ...state.visible, [u]: input.checked },
+      };
+      persist();
+      refreshChart();
+    });
+  });
+
+  refreshChart();
+}
+
 export async function render(container) {
   clearHomeInsightRotator(container);
 
@@ -125,6 +231,28 @@ export async function render(container) {
     syncState: sync.state,
   });
 
+  const labeledSeries = momentumSeriesLabels(momentum.series);
+
+  let partnerState = loadPartnerMomentumState();
+  let partnerUsernames = [];
+  try {
+    const synced = await syncPartnerMomentum(momentum.series);
+    partnerState = synced.state;
+    partnerUsernames = synced.partnerUsernames;
+  } catch (err) {
+    console.warn('[FlowBooster] Partner momentum:', err);
+    partnerState = loadPartnerMomentumState();
+    try {
+      partnerUsernames = await loadPartnerUsernames();
+    } catch {
+      partnerUsernames = Object.keys(partnerState.cache || {});
+    }
+  }
+
+  const partnersForUi = listPartnersForDisplay(partnerState, partnerUsernames);
+  const showVennerBtn = partnerUsernames.length > 0;
+  const vennerUnread = hasUnreadPartnerSync(partnerState);
+
   container.innerHTML = `
     <h1 class="sr-only">FlowBooster</h1>
     <header class="hjem-topp">
@@ -137,9 +265,13 @@ export async function render(container) {
           <h2 class="momentum-tittel">Momentum</h2>
           ${momentumChangeHtml(momentum.change)}
         </div>
-        <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
+        <div class="momentum-hode-hoyre">
+          ${renderPartnerVennerButton(showVennerBtn, vennerUnread)}
+          <p class="momentum-verdi" aria-live="polite">${momentum.today}</p>
+        </div>
       </div>
       <div id="momentum-graf" class="momentum-graf-wrap"></div>
+      ${renderPartnerPanel(partnersForUi, partnerState)}
       ${renderMomentumFactors(momentum.factors)}
       ${renderHomeCarbsLineHtml(nutritionSummary)}
     </section>
@@ -158,10 +290,6 @@ export async function render(container) {
     </nav>
   `;
 
-  const chartHost = container.querySelector('#momentum-graf');
-  if (chartHost) {
-    momentumChart(chartHost, momentumSeriesLabels(momentum.series));
-  }
-
+  mountPartnerMomentumUi(container, labeledSeries, partnerState, partnerUsernames);
   mountHomeInsightRotator(container, infoSlides);
 }

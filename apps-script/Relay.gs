@@ -16,6 +16,7 @@ var RELAY_SHEETS = {
   users: 'Users',
   pairings: 'Pairings',
   inbox: 'Inbox',
+  momentum: 'Momentum',
 };
 
 var RELAY_COLUMNS = {
@@ -23,6 +24,7 @@ var RELAY_COLUMNS = {
   Users: ['username', 'secretHash', 'createdAt'],
   Pairings: ['id', 'userA', 'userB', 'status', 'invitedBy', 'createdAt', 'acceptedAt'],
   Inbox: ['id', 'fromUser', 'toUser', 'title', 'programJson', 'sentAt', 'readAt', 'expiresAt'],
+  Momentum: ['username', 'seriesJson', 'updatedAt'],
 };
 
 var PROGRAM_FORMAT = 'treningsjournal-program';
@@ -135,6 +137,12 @@ function routeRelay_(action, key, payload) {
     case 'dismissInbox':
       verifyUserAuth_(payload);
       return dismissInboxItem_(payload.username, payload.id);
+    case 'pushMomentum':
+      verifyUserAuth_(payload);
+      return pushMomentum_(payload.username, payload.series);
+    case 'fetchPartnersMomentum':
+      verifyUserAuth_(payload);
+      return fetchPartnersMomentum_(payload.username);
     default:
       throw new Error('Ukjent handling: ' + action);
   }
@@ -490,6 +498,81 @@ function assertPartners_(userA, userB) {
   }
 }
 
+function sanitizeMomentumSeries_(series) {
+  if (!Array.isArray(series)) throw new Error('series må være en liste');
+  var out = [];
+  var list = series.length > 100 ? series.slice(series.length - 100) : series;
+  list.forEach(function (p) {
+    var d = String(p.date || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    var v = Number(p.value);
+    if (!isFinite(v)) v = 0;
+    v = Math.max(0, Math.min(100, Math.round(v)));
+    out.push({ date: d, value: v });
+  });
+  if (!out.length) throw new Error('Momentum-serien er tom');
+  return out;
+}
+
+function findMomentumRow_(username) {
+  var u = normalizeUsername_(username);
+  var rows = readSheetRows_('momentum', 'Momentum');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].username) === u) {
+      return { row: rows[i], rowIndex: i + 2 };
+    }
+  }
+  return null;
+}
+
+function pushMomentum_(username, series) {
+  var u = normalizeUsername_(username);
+  var clean = sanitizeMomentumSeries_(series);
+  var now = new Date().toISOString();
+  var json = JSON.stringify(clean);
+  if (json.length > 50000) throw new Error('Momentum-serien er for stor');
+  var entry = {
+    username: u,
+    seriesJson: json,
+    updatedAt: now,
+  };
+  var found = findMomentumRow_(u);
+  if (found) {
+    updateSheetRow_('momentum', 'Momentum', found.rowIndex, entry);
+  } else {
+    appendSheetRow_('momentum', 'Momentum', entry);
+  }
+  return { updatedAt: now, points: clean.length };
+}
+
+function fetchPartnersMomentum_(username) {
+  var u = normalizeUsername_(username);
+  var partnerList = listPartners_(u).partners || [];
+  var rows = readSheetRows_('momentum', 'Momentum');
+  var byUser = {};
+  rows.forEach(function (row) {
+    byUser[String(row.username)] = row;
+  });
+  var partners = [];
+  partnerList.forEach(function (p) {
+    var row = byUser[p];
+    if (!row || !row.seriesJson) return;
+    var series;
+    try {
+      series = JSON.parse(String(row.seriesJson));
+    } catch (e) {
+      return;
+    }
+    if (!Array.isArray(series)) return;
+    partners.push({
+      username: p,
+      updatedAt: isoOrNull_(row.updatedAt) || '',
+      series: series,
+    });
+  });
+  return { partners: partners };
+}
+
 function sendProgram_(payload) {
   var from = normalizeUsername_(payload.username);
   var to = normalizeUsername_(payload.toUsername);
@@ -704,6 +787,7 @@ function kjorRelayOppsett() {
   getRelaySheet_(RELAY_SHEETS.users);
   getRelaySheet_(RELAY_SHEETS.pairings);
   getRelaySheet_(RELAY_SHEETS.inbox);
+  getRelaySheet_(RELAY_SHEETS.momentum);
 
   var props = PropertiesService.getScriptProperties();
   var publishKey = props.getProperty('relayPublishKey');

@@ -340,8 +340,9 @@ export function progressionChart(container, points, opts = {}) {
  * Momentum-kurve: glatt rosa linje, 0–100, uten synlige punkter.
  * @param {HTMLElement} container
  * @param {Array<{label:string, value:number}>} points
+ * @param {{ overlays?: Array<{ id: string, color: string, values: (number|null)[] }> }} [opts]
  */
-export function momentumChart(container, points) {
+export function momentumChart(container, points, opts = {}) {
   container.innerHTML = '';
   if (points.length < 2) {
     container.innerHTML = '<p class="tomt dus">Logg trening noen dager for å se momentum.</p>';
@@ -370,6 +371,22 @@ export function momentumChart(container, points) {
   svg.appendChild(svgEl('line', {
     x1: pad.l, y1: y(50), x2: W - pad.r, y2: y(50), class: 'graf-grid momentum-grid',
   }));
+
+  for (const layer of opts.overlays || []) {
+    const oPts = layer.values
+      .map((v, i) => (v != null && Number.isFinite(v) ? { i, v } : null))
+      .filter(Boolean);
+    if (oPts.length < 2) continue;
+    const oPath = smoothPath(oPts, x, y);
+    const path = svgEl('path', {
+      d: oPath,
+      class: 'graf-linje-partner',
+      fill: 'none',
+      'data-partner': layer.id,
+    });
+    path.style.stroke = layer.color;
+    svg.appendChild(path);
+  }
 
   const pts = points.map((p, i) => ({ i, v: p.value }));
   const pathD = smoothPath(pts, x, y);

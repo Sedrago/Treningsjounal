@@ -414,7 +414,7 @@ async function renderRelayPartnerSection(wrap) {
       <input type="text" class="inndata" id="relay-invite-user" autocapitalize="none" placeholder="@kari">
       <button type="button" class="knapp sekundaer" id="relay-invite">Inviter</button>
     </div>
-    <p class="dus liten">Partneren må også ha registrert brukernavn på samme relay.</p>`;
+    <p class="dus liten">Partneren må også ha registrert brukernavn på samme relay. Godkjente partnere kan sammenligne momentum på hjem (V-knappen) — kun kurven, ikke loggdetaljer.</p>`;
 
   wrap.querySelector('#relay-logg-ut').addEventListener('click', async () => {
     if (!confirm('Logge ut relay-brukernavn på denne enheten?')) return;

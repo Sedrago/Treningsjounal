@@ -259,6 +259,14 @@ export function relaySendProgram({ toUsername, program, title, expiresInDays = 3
   }), { usePublishKey: false });
 }
 
+export function relayFetchPartnersMomentum() {
+  return relayGet('fetchPartnersMomentum', authPayload());
+}
+
+export function relayPushMomentum({ series }) {
+  return relayGet('pushMomentum', authPayload({ series }));
+}
+
 /** Sjekker innboks ved oppstart; returnerer antall uleste. */
 export async function checkRelayInboxQuietly() {
   if (!canUseRelayInbox()) return 0;

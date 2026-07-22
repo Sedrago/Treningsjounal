@@ -25,6 +25,7 @@
   --radius-liten: 10px;
   --trykk: 52px; /* minste trykkflate */
   --hm-tom: #1d242f;
+  --partner-accent: #5b9bd5;
 }
 
 [data-theme="light"] {
@@ -374,6 +375,83 @@ select.inndata { appearance: none; }
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 4px;
+}
+.momentum-hode-hoyre {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.momentum-venner-knapp {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--kant);
+  background: var(--flate-2);
+  color: var(--tekst-dus);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+.momentum-venner-knapp:hover { border-color: var(--partner-accent, #5b9bd5); color: var(--partner-accent, #5b9bd5); }
+.momentum-venner-knapp--ny {
+  border-color: var(--partner-accent, #5b9bd5);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--partner-accent, #5b9bd5) 35%, transparent);
+  color: var(--partner-accent, #5b9bd5);
+}
+.momentum-venner-knapp[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--partner-accent, #5b9bd5) 18%, var(--flate-2));
+  border-color: var(--partner-accent, #5b9bd5);
+  color: var(--partner-accent, #5b9bd5);
+}
+.momentum-venner-panel {
+  margin: 0 0 8px;
+  padding: 10px 10px 8px;
+  border-radius: var(--radius-liten);
+  background: color-mix(in srgb, var(--flate-2) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kant) 85%, transparent);
+}
+.momentum-venner-valg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.88rem;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.momentum-venner-hint { margin: 0 0 8px; }
+.momentum-venner-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.momentum-venner-legend-rad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.momentum-venner-prikk {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--partner-farge, #5b9bd5);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+.momentum-venner-navn { color: var(--tekst-dus); }
+.graf-linje-partner {
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.48;
 }
 .momentum-endring {
   margin: 4px 0 0;
