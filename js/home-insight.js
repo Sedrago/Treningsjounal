@@ -67,7 +67,10 @@ function collectMomentumSlides({
   }
 
   if ((pillars.strength ?? 0) < 0.5) {
-    pushUnique(slides, { text: 'Styrketrening løfter momentum mest når du logger økter.', href: '#/styrketrening' });
+    pushUnique(slides, {
+      text: 'Størst utbytte av styrke: tren hver kategori ca. 2 ganger i uken, helst med tre dager mellom.',
+      href: '#/styrketrening',
+    });
   }
   if ((pillars.aerobic ?? 0) < 0.5) {
     pushUnique(slides, { text: 'Aerob aktivitet teller mot momentum — logg minutter.', href: '#/aerob' });

@@ -1,6 +1,6 @@
 /**
  * momentum.js – momentum-score: glidende bilde av treningsperiode (0–100).
- * Vekter kan justeres etter erfaring; pillar-logikk er samlet her.
+ * Styrke: rullerende 7 dager per kategori — 2 økter/uke og ~3 dager mellom er optimalt.
  */
 
 import { KATEGORIER, nutritionGoalG, sleepGoalHours } from './store.js';
@@ -20,46 +20,58 @@ export const PILLAR_WEIGHTS = {
 
 const MAIN_CATEGORIES = KATEGORIER.filter((k) => k.id !== 'valgfri');
 
-function recoveryMultiplier(daysSince) {
-  if (daysSince == null) return 1;
-  if (daysSince <= 1) return 0.25;
-  if (daysSince === 2) return 0.75;
-  return 1;
-}
+const STRENGTH_WEEK_DAYS = 7;
 
-function intensityMultiplier(catSets) {
-  if (!catSets.length) return 1;
-  const rirs = catSets.map((s) => s.rir).filter((r) => r != null && Number.isFinite(Number(r)));
-  if (!rirs.length) return 1;
-  const mean = rirs.reduce((a, b) => a + Number(b), 0) / rirs.length;
-  return Math.min(1.12, 1 + Math.max(0, (3 - mean) * 0.035));
-}
-
-function lastCategoryDateBefore(sets, categoryId, beforeDate) {
-  let last = null;
+/** Antall ganger kategorien er trent (distinkte dager) i vinduet som slutter på date. */
+function trainingDatesForCategoryInWindow(sets, categoryId, endDate, windowDays = STRENGTH_WEEK_DAYS) {
+  const start = addDaysStr(endDate, -(windowDays - 1));
+  const dates = new Set();
   for (const s of sets) {
-    if (s.category !== categoryId || s.date >= beforeDate) continue;
-    if (!last || s.date > last) last = s.date;
+    if (s.category !== categoryId || s.date < start || s.date > endDate) continue;
+    dates.add(s.date);
   }
-  return last;
+  return [...dates].sort();
 }
 
-function setsForCategoryOnDate(sets, categoryId, date) {
-  return sets.filter((s) => s.category === categoryId && s.date === date);
+/** Optimalt ~3 dager mellom to økter; straff for for tett (1–2 dager). */
+function spacingQuality(sortedDates) {
+  if (sortedDates.length < 2) return 1;
+  let total = 0;
+  for (let i = 1; i < sortedDates.length; i++) {
+    const gap = daysBetween(sortedDates[i - 1], sortedDates[i]);
+    if (gap <= 1) total += 0.25;
+    else if (gap === 2) total += 0.75;
+    else if (gap === 3 || gap === 4) total += 1;
+    else total += Math.max(0.55, 1 - (gap - 4) * 0.08);
+  }
+  return total / (sortedDates.length - 1);
 }
 
+/** Størst utbytte ved 2 økter per kategori per uke. */
+function frequencyQuality(sessionDays) {
+  if (sessionDays === 0) return 0;
+  if (sessionDays === 1) return 0.55;
+  if (sessionDays === 2) return 1;
+  return 0.88;
+}
+
+function categoryStrengthScoreRolling(categoryId, date, sets) {
+  const dates = trainingDatesForCategoryInWindow(sets, categoryId, date);
+  if (!dates.length) return 0;
+  return frequencyQuality(dates.length) * spacingQuality(dates);
+}
+
+/**
+ * Styrke-pilar (0–1): snitt over hovedkategorier ut fra siste 7 dager —
+ * 2 treningsdager per kategori og ~3 dager mellom gir høyest score.
+ */
 function strengthDaily(date, sets) {
-  const trained = MAIN_CATEGORIES.filter((cat) => setsForCategoryOnDate(sets, cat.id, date).length);
-  if (!trained.length) return 0;
-
+  if (!MAIN_CATEGORIES.length) return 0;
   let sum = 0;
-  for (const cat of trained) {
-    const last = lastCategoryDateBefore(sets, cat.id, date);
-    const daysSince = last ? daysBetween(last, date) : null;
-    const catSets = setsForCategoryOnDate(sets, cat.id, date);
-    sum += recoveryMultiplier(daysSince) * intensityMultiplier(catSets);
+  for (const cat of MAIN_CATEGORIES) {
+    sum += categoryStrengthScoreRolling(cat.id, date, sets);
   }
-  return Math.min(1, sum / 3.5);
+  return sum / MAIN_CATEGORIES.length;
 }
 
 function proteinDaily(date, proteinByDate, goalG) {
