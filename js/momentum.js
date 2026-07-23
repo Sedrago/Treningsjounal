@@ -1,6 +1,6 @@
 /**
  * momentum.js – momentum-score: glidende bilde av treningsperiode (0–100).
- * Styrke: rullerende 7 dager per kategori — frekvens 75/92/100 % ved 1–3 dager, ~3 dager mellom er optimalt.
+ * Styrke: rullerende 7 dager per kategori — frekvens 75/92/100 % ved 1–3 dager; kalendergap ~3–4 (2–3 hviledager) er optimalt mellom økter.
  */
 
 import { KATEGORIER, nutritionGoalG, sleepGoalHours } from './store.js';
@@ -33,7 +33,7 @@ function trainingDatesForCategoryInWindow(sets, categoryId, endDate, windowDays 
   return [...dates].sort();
 }
 
-/** Optimalt ~3 dager mellom to økter; straff for for tett (1–2 dager). */
+/** Optimalt kalendergap ~3–4 mellom to økter (2–3 hviledager); straff for for tett (gap 1–2). */
 function spacingQuality(sortedDates) {
   if (sortedDates.length < 2) return 1;
   let total = 0;
@@ -63,7 +63,7 @@ function categoryStrengthScoreRolling(categoryId, date, sets) {
 
 /**
  * Styrke-pilar (0–1): snitt over hovedkategorier ut fra siste 7 dager —
- * 3 treningsdager per kategori (siste 7) og ~3 dager mellom gir høyest score.
+ * 3 distinkte treningsdager per kategori (siste 7) og kalendergap ~3–4 mellom øktene gir høyest score.
  */
 function strengthDaily(date, sets) {
   if (!MAIN_CATEGORIES.length) return 0;

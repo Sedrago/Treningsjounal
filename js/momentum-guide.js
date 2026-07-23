@@ -41,17 +41,15 @@ function momentumGuideHtml() {
         <section class="momentum-guide-seksjon">
           <h4>Styrketrening</h4>
           <p>
-            Ser på <strong>siste 7 dager</strong> for hver av syv hovedkategorier
-            (push/pull, knebøy, hoftehengsel, core). Valgfri tilleggsøvelse teller ikke.
-            Per kategori beregnes to ting som <strong>ganges</strong> (0–100 % hver):
-            hvor mange <strong>distinkte treningsdager</strong> i vinduet, og
-            <strong>mellomrom</strong> mellom dem når det er mer enn én dag.
+            Ser på siste 7 dager for hver av syv hovedkategorier (push/pull, knebøy, hoftehengsel, core).
+            Valgfri tilleggsøvelse teller ikke. Per kategori beregnes to ting som ganges (0–100 % hver):
+            hvor mange distinkte treningsdager i vinduet, og mellomrom mellom dem når det er mer enn én dag.
           </p>
           <ul class="momentum-guide-liste">
             <li><strong>Frekvens:</strong> 1 dag 75 %, 2 dager 92 %, 3+ dager 100 % (ingen ekstra over 3).</li>
-            <li><strong>Mellomrom:</strong> for tett (1–2 dager mellom) senker det; ca. 3–4 dager mellom er best når du har flere økter.</li>
-            <li><strong>Praksis:</strong> sikt mot 2–3 økter per kategori per uke med rolig mellomrom — vinduet ruller, så frekvens og mellomrom henger sammen, ikke to separate «maks» hver dag.</li>
-            <li>Styrke-faktoren er <strong>snitt over alle syv kategorier</strong>.</li>
+            <li><strong>Mellomrom (samme kategori):</strong> dagen etter eller annenhver dag trekker ned.</li>
+            <li><strong>Praksis:</strong> sikt mot 2–3 distinkte treningsdager per kategori i løpet av 7 dager.</li>
+            <li>Styrke-faktoren er snitt over alle syv kategorier.</li>
           </ul>
         </section>
 

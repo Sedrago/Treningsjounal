@@ -68,7 +68,7 @@ function collectMomentumSlides({
 
   if ((pillars.strength ?? 0) < 0.5) {
     pushUnique(slides, {
-      text: 'Styrke: sikt mot 2–3 økter per kategori i uken, helst med ca. tre dager mellom.',
+      text: 'Styrke: 2–3 distinkte treningsdager per kategori på 7 dager.',
       href: '#/styrketrening',
     });
   }
