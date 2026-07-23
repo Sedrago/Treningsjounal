@@ -9,7 +9,7 @@ import { computeMomentum } from '../momentum.js';
 import { buildHomeInfoRotation } from '../home-insight.js';
 import { openMomentumGuide, closeMomentumGuide } from '../momentum-guide.js';
 import { momentumChart } from '../charts.js';
-import { renderHomeCarbsLineHtml } from '../nutrition-ui.js';
+import { renderHomeCarbsLineHtml, renderHomeCaloriesLineHtml } from '../nutrition-ui.js';
 import {
   buildMomentumOverlays,
   hasUnreadPartnerSync,
@@ -340,6 +340,7 @@ export async function render(container) {
       ${renderPartnerPanel(partnersForUi, partnerState)}
       ${renderMomentumFactors(momentum.factors)}
       ${renderHomeCarbsLineHtml(nutritionSummary)}
+      ${renderHomeCaloriesLineHtml(nutritionSummary)}
     </section>
 
     <div id="momentum-guide-host"></div>

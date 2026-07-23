@@ -160,6 +160,12 @@ export function fmtMacroG(n) {
   return fmtNum(x, 1);
 }
 
+/** Energi i kcal (heltall). */
+export function fmtKcal(n) {
+  if (n == null || Number.isNaN(Number(n))) return '–';
+  return fmtNum(Math.round(Number(n)), 0);
+}
+
 /** Volum-tall med tusenskille: 12345 → '12 345'. */
 export function fmtVolume(n) {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');

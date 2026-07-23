@@ -50,6 +50,7 @@ export const DEFAULT_SETTINGS = {
   streakMode: 'rolling7',   // 'rolling7' | 'calendar'
   proteinDailyGoalG: '150',
   carbsDailyMaxG: '',       // tom = ingen karbo-tak på hjem
+  caloriesDailyMaxKcal: '', // tom = skjult kaloritak
   sleepDailyGoalHours: '7.5',
 };
 
@@ -1091,15 +1092,31 @@ function roundMacroG(n) {
 export function nutritionGoalG(key, fallback = 0) {
   const raw = getSetting(key);
   if (raw === '' || raw == null) return fallback;
-  const n = Number(raw);
+  const n = Number(String(raw).trim());
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-export function nutritionCarbMaxG() {
-  const raw = getSetting('carbsDailyMaxG');
+function parseNutritionCapSetting(raw) {
   if (raw === '' || raw == null) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const n = Number(String(raw).trim());
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+export function nutritionCarbMaxG() {
+  return parseNutritionCapSetting(getSetting('carbsDailyMaxG'));
+}
+
+export function nutritionCaloriesMaxKcal() {
+  const n = parseNutritionCapSetting(getSetting('caloriesDailyMaxKcal'));
+  return n != null ? Math.round(n) : null;
+}
+
+function roundKcal(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x) || x < 0) return null;
+  const r = Math.round(x);
+  return r > 0 ? r : (x === 0 ? 0 : null);
 }
 
 /** Optimalt søvnmål i timer (ingen bonus over målet). */
@@ -1123,6 +1140,8 @@ export async function saveFoodPreset(preset) {
     name: String(preset.name || '').trim(),
     proteinG: roundMacroG(preset.proteinG),
     carbsG: roundMacroG(preset.carbsG),
+    fatG: preset.fatG == null || preset.fatG === '' ? null : roundMacroG(preset.fatG),
+    kcal: preset.kcal == null || preset.kcal === '' ? null : roundKcal(preset.kcal),
     unitLabel: String(preset.unitLabel || '').trim(),
     sortOrder: preset.sortOrder ?? 0,
     deleted: false,
@@ -1178,6 +1197,8 @@ export function intakeFromPreset(preset, qty, opts = {}) {
     time: opts.time || nowTimeStr(),
     proteinG: roundMacroG(preset.proteinG * q),
     carbsG: roundMacroG((preset.carbsG ?? 0) * q),
+    fatG: preset.fatG != null ? roundMacroG(preset.fatG * q) : null,
+    kcal: preset.kcal != null ? roundKcal(preset.kcal * q) : null,
     qty: q,
     presetId: preset.id,
     note: opts.note || defaultNote,
@@ -1191,6 +1212,8 @@ export async function saveFoodIntake(entry) {
     time: entry.time || nowTimeStr(),
     proteinG: roundMacroG(entry.proteinG),
     carbsG: roundMacroG(entry.carbsG),
+    fatG: entry.fatG == null || entry.fatG === '' ? null : roundMacroG(entry.fatG),
+    kcal: entry.kcal == null || entry.kcal === '' ? null : roundKcal(entry.kcal),
     qty: entry.qty == null ? null : Number(entry.qty),
     presetId: entry.presetId || null,
     note: String(entry.note || '').trim(),
@@ -1249,10 +1272,30 @@ export async function getDailyNutritionSummary(date = todayStr()) {
   const intakes = await getFoodIntakesForDate(date);
   const proteinG = roundMacroG(intakes.reduce((sum, i) => sum + (i.proteinG || 0), 0));
   const carbsG = roundMacroG(intakes.reduce((sum, i) => sum + (i.carbsG || 0), 0));
+
+  let fatSum = 0;
+  let fatCount = 0;
+  let kcalSum = 0;
+  let kcalCount = 0;
+  for (const i of intakes) {
+    if (i.fatG != null && Number.isFinite(Number(i.fatG))) {
+      fatSum += Number(i.fatG);
+      fatCount += 1;
+    }
+    if (i.kcal != null && Number.isFinite(Number(i.kcal))) {
+      kcalSum += Number(i.kcal);
+      kcalCount += 1;
+    }
+  }
+
   return {
     date,
     proteinG,
     carbsG,
+    fatG: fatCount ? roundMacroG(fatSum) : null,
+    kcal: kcalCount ? Math.round(kcalSum) : null,
+    fatPartial: fatCount > 0 && fatCount < intakes.length,
+    kcalPartial: kcalCount > 0 && kcalCount < intakes.length,
     intakeCount: intakes.length,
     intakes,
   };

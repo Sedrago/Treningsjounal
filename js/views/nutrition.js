@@ -5,12 +5,40 @@
 import * as store from '../store.js';
 import { renderNutritionSummaryHtml } from '../nutrition-ui.js';
 import { bindMatvaretabellenSearch } from '../food-table-ui.js';
-import { esc, fmtMacroG, todayStr, toast } from '../utils.js';
+import { esc, fmtMacroG, fmtKcal, todayStr, toast } from '../utils.js';
 
 function presetLabel(p) {
   const unit = p.unitLabel ? ` / ${p.unitLabel}` : '';
   const karbo = p.carbsG ? `, ${fmtMacroG(p.carbsG)} g K` : '';
-  return `${p.name} (${fmtMacroG(p.proteinG)} g P${karbo}${unit})`;
+  const extra = [
+    p.fatG ? `${fmtMacroG(p.fatG)} g F` : '',
+    p.kcal ? `${fmtKcal(p.kcal)} kcal` : '',
+  ].filter(Boolean).join(', ');
+  const tail = extra ? `, ${extra}` : '';
+  return `${p.name} (${fmtMacroG(p.proteinG)} g P${karbo}${tail}${unit})`;
+}
+
+function presetListMacros(p) {
+  let s = `${fmtMacroG(p.proteinG)} g P`;
+  if (p.carbsG) s += `, ${fmtMacroG(p.carbsG)} g K`;
+  if (p.fatG) s += `, ${fmtMacroG(p.fatG)} g F`;
+  if (p.kcal) s += `, ${fmtKcal(p.kcal)} kcal`;
+  return s;
+}
+
+function intakeMacroLine(i) {
+  const parts = [`${fmtMacroG(i.proteinG)} g P`];
+  if (i.carbsG) parts.push(`${fmtMacroG(i.carbsG)} g K`);
+  if (i.fatG) parts.push(`${fmtMacroG(i.fatG)} g F`);
+  if (i.kcal) parts.push(`${fmtKcal(i.kcal)} kcal`);
+  return parts.join(' · ');
+}
+
+function optionalNumInput(id, container) {
+  const raw = container.querySelector(id)?.value?.trim();
+  if (raw === '' || raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function render(container, params, query) {
@@ -76,6 +104,16 @@ export async function render(container, params, query) {
               <input type="number" class="inndata" id="inntak-karbo" min="0" step="0.1" inputmode="decimal">
             </div>
           </div>
+          <div class="skjema-rad">
+            <div class="felt">
+              <label class="felt-navn" for="inntak-fett">Fett (g) <span class="dus">(valgfritt)</span></label>
+              <input type="number" class="inndata" id="inntak-fett" min="0" step="0.1" inputmode="decimal">
+            </div>
+            <div class="felt">
+              <label class="felt-navn" for="inntak-kcal">Kalorier (kcal) <span class="dus">(valgfritt)</span></label>
+              <input type="number" class="inndata" id="inntak-kcal" min="0" step="1" inputmode="numeric">
+            </div>
+          </div>
           <label class="felt-navn" for="inntak-notat">Notat <span class="dus">(valgfritt)</span></label>
           <input type="text" class="inndata" id="inntak-notat" placeholder="F.eks. lunsj">
           <label class="kost-lagre-favoritt">
@@ -99,8 +137,7 @@ export async function render(container, params, query) {
         ${summary.intakes.map((i) => `
           <div class="kort inntak-rad" data-id="${i.id}">
             <div>
-              <strong>${fmtMacroG(i.proteinG)} g P</strong>
-              ${i.carbsG ? `<span class="dus"> · ${fmtMacroG(i.carbsG)} g K</span>` : ''}
+              <strong>${intakeMacroLine(i)}</strong>
               <span class="dus"> · ${esc(i.time || '–')}</span>
               ${i.note ? `<p class="dus liten">${esc(i.note)}</p>` : ''}
             </div>
@@ -113,7 +150,7 @@ export async function render(container, params, query) {
 
     <section class="kort" aria-label="Favoritter" id="inntak-favoritter">
       <h2 class="kort-tittel">Favoritter</h2>
-      <p class="dus liten">Protein og karbo per enhet (f.eks. per egg eller per skive).</p>
+      <p class="dus liten">Protein, karbo og valgfritt fett/kalorier per enhet.</p>
       <form id="preset-skjema" class="kost-preset-skjema">
         <input type="hidden" id="preset-id">
         <label class="felt-navn" for="preset-navn">Navn</label>
@@ -132,6 +169,16 @@ export async function render(container, params, query) {
             <input type="text" class="inndata" id="preset-enhet" placeholder="stk">
           </div>
         </div>
+        <div class="skjema-rad">
+          <div class="felt">
+            <label class="felt-navn" for="preset-fett">Fett (g) <span class="dus">(valgfritt)</span></label>
+            <input type="number" class="inndata" id="preset-fett" min="0" step="0.1" inputmode="decimal">
+          </div>
+          <div class="felt">
+            <label class="felt-navn" for="preset-kcal">Kalorier (kcal) <span class="dus">(valgfritt)</span></label>
+            <input type="number" class="inndata" id="preset-kcal" min="0" step="1" inputmode="numeric">
+          </div>
+        </div>
         <div class="knapp-rad">
           <button type="submit" class="knapp primaer" id="preset-lagre">Lagre favoritt</button>
           <button type="button" class="knapp sekundaer" id="preset-avbryt" hidden>Avbryt</button>
@@ -142,7 +189,7 @@ export async function render(container, params, query) {
           <div class="kort preset-rad" data-id="${p.id}">
             <div>
               <strong>${esc(p.name)}</strong>
-              <span class="dus"> · ${fmtMacroG(p.proteinG)} g P${p.carbsG ? `, ${fmtMacroG(p.carbsG)} g K` : ''}${p.unitLabel ? ` / ${esc(p.unitLabel)}` : ''}</span>
+              <span class="dus"> · ${esc(presetListMacros(p))}${p.unitLabel ? ` / ${esc(p.unitLabel)}` : ''}</span>
             </div>
             <div class="preset-handlinger">
               <button type="button" class="ikon-knapp" data-rediger="${p.id}" aria-label="Rediger favoritt">✎</button>
@@ -206,18 +253,22 @@ export async function render(container, params, query) {
   favCheckbox.addEventListener('change', () => { favFields.hidden = !favCheckbox.checked; });
 
   container.querySelector('#inntak-manuell-lagre').addEventListener('click', async () => {
-    const proteinG = Number(container.querySelector('#inntak-protein').value);
-    const carbsG = Number(container.querySelector('#inntak-karbo').value) || 0;
-    if (!Number.isFinite(proteinG) && !carbsG) {
-      toast('Oppgi protein eller karbo', 'feil');
+    const proteinG = optionalNumInput('#inntak-protein', container);
+    const carbsG = optionalNumInput('#inntak-karbo', container) ?? 0;
+    const fatG = optionalNumInput('#inntak-fett', container);
+    const kcal = optionalNumInput('#inntak-kcal', container);
+    if (proteinG == null && !carbsG && fatG == null && kcal == null) {
+      toast('Oppgi minst én næringsverdi', 'feil');
       return;
     }
     const d = container.querySelector('#inntak-dato').value;
     const note = container.querySelector('#inntak-notat').value.trim();
     await store.saveFoodIntake({
       date: d,
-      proteinG: proteinG || 0,
+      proteinG: proteinG ?? 0,
       carbsG,
+      fatG,
+      kcal,
       note,
     });
     if (favCheckbox.checked) {
@@ -226,8 +277,10 @@ export async function render(container, params, query) {
         || 'Favoritt';
       await store.saveFoodPreset({
         name,
-        proteinG: proteinG || 0,
+        proteinG: proteinG ?? 0,
         carbsG,
+        fatG,
+        kcal,
         unitLabel: container.querySelector('#inntak-favoritt-enhet').value.trim(),
       });
       toast('Inntak og favoritt lagret', 'suksess');
@@ -260,6 +313,8 @@ export async function render(container, params, query) {
       name: container.querySelector('#preset-navn').value,
       proteinG: container.querySelector('#preset-protein').value,
       carbsG: container.querySelector('#preset-karbo').value,
+      fatG: optionalNumInput('#preset-fett', container),
+      kcal: optionalNumInput('#preset-kcal', container),
       unitLabel: container.querySelector('#preset-enhet').value,
     });
     toast('Favoritt lagret', 'suksess');
@@ -276,6 +331,8 @@ export async function render(container, params, query) {
       container.querySelector('#preset-navn').value = p.name;
       container.querySelector('#preset-protein').value = p.proteinG;
       container.querySelector('#preset-karbo').value = p.carbsG ?? 0;
+      container.querySelector('#preset-fett').value = p.fatG ?? '';
+      container.querySelector('#preset-kcal').value = p.kcal ?? '';
       container.querySelector('#preset-enhet').value = p.unitLabel || '';
       presetCancel.hidden = false;
       container.querySelector('#inntak-favoritter').scrollIntoView({ behavior: 'smooth' });

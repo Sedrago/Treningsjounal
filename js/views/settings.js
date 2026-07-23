@@ -120,7 +120,11 @@ export async function render(container) {
         </div>
         <div class="felt">
           <label class="felt-navn" for="s-karbo-tak">Karbo-tak (g) <span class="dus">(tom = skjult)</span></label>
-          <input type="number" class="inndata" id="s-karbo-tak" value="${esc(s('carbsDailyMaxG'))}" min="0" max="2000" step="1" inputmode="numeric" placeholder="–">
+          <input type="text" class="inndata" id="s-karbo-tak" value="${esc(s('carbsDailyMaxG'))}" inputmode="numeric" autocomplete="off" placeholder="–">
+        </div>
+        <div class="felt">
+          <label class="felt-navn" for="s-kalori-tak">Kaloritak (kcal) <span class="dus">(tom = skjult)</span></label>
+          <input type="text" class="inndata" id="s-kalori-tak" value="${esc(s('caloriesDailyMaxKcal'))}" inputmode="numeric" autocomplete="off" placeholder="–">
         </div>
       </div>
       <label class="felt-navn" for="s-sovn-mal">Optimalt søvnmål (timer)</label>
@@ -270,10 +274,18 @@ export async function render(container) {
   bind('#s-streak', 'streakMode');
   bind('#s-protein-mal', 'proteinDailyGoalG');
   bind('#s-sovn-mal', 'sleepDailyGoalHours');
-  container.querySelector('#s-karbo-tak').addEventListener('change', async (e) => {
-    const v = e.target.value.trim();
-    await store.setSetting('carbsDailyMaxG', v === '' ? '' : v);
-  });
+  const saveCapSetting = async (key, el) => {
+    const v = el.value.trim();
+    await store.setSetting(key, v === '' ? '' : v);
+  };
+  const karboEl = container.querySelector('#s-karbo-tak');
+  const kaloriEl = container.querySelector('#s-kalori-tak');
+  for (const [el, key] of [[karboEl, 'carbsDailyMaxG'], [kaloriEl, 'caloriesDailyMaxKcal']]) {
+    if (!el) continue;
+    const save = () => saveCapSetting(key, el);
+    el.addEventListener('change', save);
+    el.addEventListener('input', save);
+  }
 
   // Eksport.
   container.querySelector('#eksport-json').addEventListener('click', () => ie.exportJson());

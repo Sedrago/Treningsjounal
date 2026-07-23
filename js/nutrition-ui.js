@@ -3,17 +3,24 @@
  */
 
 import * as store from './store.js';
-import { esc, fmtMacroG, todayStr } from './utils.js';
+import { esc, fmtMacroG, fmtKcal, todayStr } from './utils.js';
 
-function progressBar(label, current, goal, { warnOver = false, unit = 'g' } = {}) {
+function formatProgressStatus(current, target, { unit = 'g', fmt = fmtMacroG, isMax = false } = {}) {
+  if (!target || target <= 0) return `${fmt(current)} ${unit}`;
+  const cur = Number(current) || 0;
+  const diff = cur - target;
+  if (diff > 0) {
+    const overLabel = isMax ? 'over' : 'over mål';
+    return `${fmt(cur)} / ${fmt(target)} ${unit} (+${fmt(diff)} ${overLabel})`;
+  }
+  const left = target - cur;
+  return `${fmt(cur)} / ${fmt(target)} ${unit} (${fmt(left)} igjen)`;
+}
+
+function progressBar(label, current, goal, { isMax = false, unit = 'g', fmt = fmtMacroG } = {}) {
   const pct = goal > 0 ? Math.min(100, Math.round((current / goal) * 100)) : 0;
-  const over = warnOver && goal > 0 && current > goal;
-  const remaining = goal > 0 ? Math.max(0, goal - current) : null;
-  const status = over
-    ? `${fmtMacroG(current)} / ${fmtMacroG(goal)} ${unit} (over)`
-    : remaining != null
-      ? `${fmtMacroG(current)} / ${fmtMacroG(goal)} ${unit} (${fmtMacroG(remaining)} igjen)`
-      : `${fmtMacroG(current)} ${unit}`;
+  const over = goal > 0 && current > goal;
+  const status = formatProgressStatus(current, goal, { unit, fmt, isMax });
   return `
     <div class="kost-fremdrift${over ? ' kost-fremdrift--advarsel' : ''}">
       <div class="kost-fremdrift-hode">
@@ -26,44 +33,129 @@ function progressBar(label, current, goal, { warnOver = false, unit = 'g' } = {}
     </div>`;
 }
 
-export function renderNutritionSummaryHtml(summary) {
-  const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
-  const carbMax = store.nutritionCarbMaxG();
+function homeCapLineHtml({ label, current, cap, classBase, ariaLabel }) {
+  if (cap == null || cap <= 0) return '';
+  const cur = Number(current) || 0;
+  if (cur <= 0) return '';
+
+  const pct = Math.min(100, Math.round((cur / cap) * 100));
+  const over = cur > cap;
+  const unit = label === 'Kalorier' ? 'kcal' : 'g';
+  const fmt = label === 'Kalorier' ? fmtKcal : fmtMacroG;
+  const status = formatProgressStatus(cur, cap, { unit, fmt, isMax: true });
 
   return `
-    ${progressBar('Protein', summary.proteinG, proteinGoal)}
-    ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { warnOver: true }) : ''}`;
-}
-
-/** Karbo-linje under momentum-faktorer; tom når ingenting er logget i dag. */
-export function renderHomeCarbsLineHtml(summary) {
-  const carbsG = summary?.carbsG ?? 0;
-  if (carbsG <= 0) return '';
-
-  const carbMax = store.nutritionCarbMaxG();
-  const pct = carbMax != null && carbMax > 0
-    ? Math.min(100, Math.round((carbsG / carbMax) * 100))
-    : 100;
-  const over = carbMax != null && carbMax > 0 && carbsG > carbMax;
-  const status = carbMax != null
-    ? `${fmtMacroG(carbsG)} / ${fmtMacroG(carbMax)} g${over ? ' (over)' : ''}`
-    : `${fmtMacroG(carbsG)} g`;
-
-  return `
-    <div class="momentum-karbo${over ? ' momentum-karbo--advarsel' : ''}" aria-label="Karbohydrater i dag">
-      <div class="momentum-karbo-hode">
-        <span class="momentum-karbo-etikett">Karbo</span>
-        <span class="momentum-karbo-status dus">${status}</span>
+    <div class="${classBase}${over ? ` ${classBase}--advarsel` : ''}" aria-label="${esc(ariaLabel)}">
+      <div class="${classBase}-hode">
+        <span class="${classBase}-etikett">${esc(label)}</span>
+        <span class="${classBase}-status dus">${status}</span>
       </div>
-      <div class="momentum-karbo-spor" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Karbo">
-        <div class="momentum-karbo-bar" style="width:${pct}%"></div>
+      <div class="${classBase}-spor" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${esc(label)}">
+        <div class="${classBase}-bar" style="width:${pct}%"></div>
       </div>
     </div>`;
 }
 
+export function renderNutritionSummaryHtml(summary) {
+  const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
+  const carbMax = store.nutritionCarbMaxG();
+  const kcalMax = store.nutritionCaloriesMaxKcal();
+
+  return `
+    ${progressBar('Protein', summary.proteinG, proteinGoal, { isMax: false })}
+    ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { isMax: true }) : ''}
+    ${kcalMax != null ? progressBar('Kalorier', summary.kcal ?? 0, kcalMax, { isMax: true, unit: 'kcal', fmt: fmtKcal }) : ''}
+    ${renderDailyNutritionTableHtml(summary)}`;
+}
+
+export function renderDailyNutritionTableHtml(summary) {
+  const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
+  const carbMax = store.nutritionCarbMaxG();
+  const kcalMax = store.nutritionCaloriesMaxKcal();
+
+  const goalProtein = `${fmtMacroG(proteinGoal)} g mål`;
+  const goalCarbs = carbMax != null ? `${fmtMacroG(carbMax)} g max` : '–';
+  const goalFat = '–';
+  const goalKcal = kcalMax != null ? `${fmtKcal(kcalMax)} max` : '–';
+
+  const fatVal = summary.fatG != null ? `${fmtMacroG(summary.fatG)} g` : '–';
+  const kcalVal = summary.kcal != null ? `${fmtKcal(summary.kcal)} kcal` : '–';
+  const fatCell = summary.fatG != null && summary.fatPartial
+    ? `${fmtMacroG(summary.fatG)} g*`
+    : fatVal;
+  const kcalCell = summary.kcal != null && summary.kcalPartial
+    ? `${fmtKcal(summary.kcal)} kcal*`
+    : kcalVal;
+
+  const footnote = (summary.fatPartial || summary.kcalPartial)
+    ? '<p class="dus liten kost-tabell-fotnote">* Delvis — fett/energi telles bare for inntak der det er registrert.</p>'
+    : '';
+
+  return `
+    <div class="kost-tabell-wrap" aria-label="Næringstabell for dagen">
+      <h3 class="kost-tabell-tittel">Næringstabell</h3>
+      <table class="kost-tabell">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">Sum</th>
+            <th scope="col">Mål / tak</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Protein</th>
+            <td>${fmtMacroG(summary.proteinG)} g</td>
+            <td class="dus">${goalProtein}</td>
+          </tr>
+          <tr>
+            <th scope="row">Karbo</th>
+            <td>${fmtMacroG(summary.carbsG)} g</td>
+            <td class="dus">${goalCarbs}</td>
+          </tr>
+          <tr>
+            <th scope="row">Fett</th>
+            <td>${fatCell}</td>
+            <td class="dus">${goalFat}</td>
+          </tr>
+          <tr>
+            <th scope="row">Energi</th>
+            <td>${kcalCell}</td>
+            <td class="dus">${goalKcal}</td>
+          </tr>
+        </tbody>
+      </table>
+      ${footnote}
+    </div>`;
+}
+
+/** Karbo-linje under momentum-faktorer; tom når ingenting er logget i dag. */
+export function renderHomeCarbsLineHtml(summary) {
+  return homeCapLineHtml({
+    label: 'Karbo',
+    current: summary?.carbsG ?? 0,
+    cap: store.nutritionCarbMaxG(),
+    classBase: 'momentum-karbo',
+    ariaLabel: 'Karbohydrater i dag',
+  });
+}
+
+/** Kalori-linje på hjem når kaloritak er satt og noe er logget. */
+export function renderHomeCaloriesLineHtml(summary) {
+  const cap = store.nutritionCaloriesMaxKcal();
+  if (cap == null) return '';
+  return homeCapLineHtml({
+    label: 'Kalorier',
+    current: summary?.kcal ?? 0,
+    cap,
+    classBase: 'momentum-kcal',
+    ariaLabel: 'Kalorier i dag',
+  });
+}
+
 /** @deprecated – bruk renderHomeCarbsLineHtml på hjem */
 export function renderHomeMacroBarsHtml(summary) {
-  return renderHomeCarbsLineHtml(summary);
+  return renderHomeCarbsLineHtml(summary) + renderHomeCaloriesLineHtml(summary);
 }
 
 /** @deprecated – bruk renderHomeCarbsLineHtml på hjem */
@@ -82,5 +174,5 @@ export async function mountHomeNutrition(container) {
   const summary = await store.getDailyNutritionSummary(date);
   const host = container.querySelector('#kost-hjem-innhold');
   if (!host) return;
-  host.innerHTML = renderHomeCarbsLineHtml(summary);
+  host.innerHTML = renderHomeCarbsLineHtml(summary) + renderHomeCaloriesLineHtml(summary);
 }

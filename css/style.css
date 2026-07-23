@@ -617,6 +617,41 @@ select.inndata { appearance: none; }
 .momentum-karbo--advarsel .momentum-karbo-etikett { color: var(--advarsel); }
 .momentum-karbo--advarsel .momentum-karbo-bar { background: var(--advarsel); }
 
+.momentum-kcal {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--kant);
+}
+.momentum-kcal-hode {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.momentum-kcal-etikett {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--aksent-dyp);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.momentum-kcal-status { font-size: 0.82rem; }
+.momentum-kcal-spor {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--flate-2);
+  overflow: hidden;
+}
+.momentum-kcal-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--aksent-dyp), var(--aksent));
+}
+.momentum-kcal--advarsel .momentum-kcal-etikett { color: var(--advarsel); }
+.momentum-kcal--advarsel .momentum-kcal-bar { background: var(--advarsel); }
+
 .hjem-info {
   margin: 0 0 14px;
   padding: 10px 12px;
@@ -2857,6 +2892,41 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 }
 .kost-fremdrift--advarsel .kost-fremdrift-bar { background: var(--advarsel, #e6a817); }
 .kost-fremdrift--advarsel .kost-fremdrift-status { color: var(--advarsel-tekst, #e6a817); }
+
+.kost-tabell-wrap {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--kant);
+}
+.kost-tabell-tittel {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.kost-tabell {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.kost-tabell th,
+.kost-tabell td {
+  padding: 8px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--kant);
+  vertical-align: top;
+}
+.kost-tabell thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dus);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.kost-tabell tbody th[scope="row"] {
+  font-weight: 600;
+  width: 28%;
+}
+.kost-tabell-fotnote { margin: 8px 0 0; }
 
 .kost-laktat {
   display: flex;

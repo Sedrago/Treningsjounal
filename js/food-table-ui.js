@@ -104,6 +104,8 @@ function openPortionSheet(host, food, { date, onSaved }) {
       date,
       proteinG: m.proteinG,
       carbsG: m.carbsG,
+      fatG: m.fatG != null && Number.isFinite(m.fatG) ? m.fatG : null,
+      kcal: m.kcal != null && Number.isFinite(m.kcal) ? m.kcal : null,
       note: formatIntakeNote(food.foodName, amount, unit),
     });
     close();
