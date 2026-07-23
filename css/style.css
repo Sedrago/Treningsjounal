@@ -2730,6 +2730,12 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .toast.vis { opacity: 1; transform: none; }
 .toast-suksess { border-color: var(--aksent); }
 .toast-feil { border-color: var(--fare); color: var(--fare); }
+.toast-venter { border-color: var(--aksent-dyp, var(--aksent)); }
+
+.handling-status--jobber {
+  color: var(--aksent-dyp, var(--aksent));
+  font-weight: 600;
+}
 
 /* ---------- Hviletimer ---------- */
 

@@ -121,7 +121,7 @@ function ensureSheetSchema_(sheet, sheetName) {
     return;
   }
 
-  // Generisk: legg til manglende kolonner på slutten.
+  // Generisk: legg til manglende kolonner på slutten (kun enkle utvidelser).
   if (have >= expected.length) return;
   for (var c = have + 1; c <= expected.length; c++) {
     sheet.getRange(1, c).setValue(expected[c - 1]);

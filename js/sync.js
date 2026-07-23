@@ -37,9 +37,27 @@ async function notify() {
   listeners.forEach((fn) => fn(state));
 }
 
+async function waitForSyncIdle(maxMs = 60000) {
+  const start = Date.now();
+  while (syncing && Date.now() - start < maxMs) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return !syncing;
+}
+
 /** Sender køen til serveren. Oppdaterer ikke lastSync (kun opplasting). */
 export async function flush() {
-  if (!api.isConfigured() || !navigator.onLine || syncing) return false;
+  if (!api.isConfigured()) {
+    state.lastError = 'Lim inn Web App-URL og API-nøkkel (eller trykk Test tilkobling)';
+    notify();
+    return false;
+  }
+  if (!navigator.onLine) {
+    state.lastError = 'Ingen nettforbindelse';
+    notify();
+    return false;
+  }
+  if (syncing) return false;
   const queue = await db.getQueue();
   if (!queue.length) return true;
   syncing = true;
@@ -64,7 +82,11 @@ export async function flush() {
 export async function pull() {
   if (!api.isConfigured() || !navigator.onLine || syncing) return false;
   const pendingCount = await db.queueCount();
-  if (pendingCount > 0) return false;
+  if (pendingCount > 0) {
+    state.lastError = `${pendingCount} lokale endringer venter – sendes først neste gang`;
+    notify();
+    return false;
+  }
   syncing = true;
   try {
     const data = await api.pullAll();
@@ -110,9 +132,31 @@ export async function pull() {
 
 /** Full synk: send kø, hent deretter ferske data (manuell knapp). */
 export async function fullSync() {
+  if (!await waitForSyncIdle()) {
+    state.lastError = 'Synkronisering pågår allerede – prøv igjen om et øyeblikk';
+    notify();
+    return false;
+  }
+
   const flushed = await flush();
-  if (!flushed) return false;
+  if (!flushed) {
+    if (!state.lastError) state.lastError = 'Kunne ikke sende endringer til server';
+    notify();
+    return false;
+  }
+
+  const pendingAfterFlush = await db.queueCount();
+  if (pendingAfterFlush > 0) {
+    state.lastError = `${pendingAfterFlush} endringer ble ikke sendt`;
+    notify();
+    return false;
+  }
+
   const pulled = await pull();
+  if (!pulled && !state.lastError) {
+    state.lastError = 'Kunne ikke hente data fra server';
+    notify();
+  }
   return pulled && !state.lastError;
 }
 

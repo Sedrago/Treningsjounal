@@ -294,3 +294,59 @@ export function toast(message, type = 'info') {
     setTimeout(() => el.remove(), 300);
   }, 2600);
 }
+
+/** Toast som vises til dismiss() kalles (async arbeid). */
+export function toastPending(message, type = 'info') {
+  let host = document.getElementById('toast-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'toast-host';
+    document.body.appendChild(host);
+  }
+  const el = document.createElement('div');
+  el.className = `toast toast-${type} toast-venter`;
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
+  el.textContent = message;
+  host.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('vis'));
+  return () => {
+    el.classList.remove('vis');
+    setTimeout(() => el.remove(), 300);
+  };
+}
+
+/**
+ * Deaktiverer knapp, valgfri statuslinje og pending-toast mens async arbeid kjører.
+ * @template T
+ * @param {HTMLElement | null} button
+ * @param {{ busyLabel?: string, pendingToast?: string, statusEl?: HTMLElement, statusBusy?: string, work: () => Promise<T> }} opts
+ * @returns {Promise<T | undefined>}
+ */
+export async function withActionFeedback(button, opts) {
+  if (button?.disabled) return undefined;
+  const prevLabel = button?.textContent ?? '';
+  if (button) {
+    button.disabled = true;
+    if (opts.busyLabel) button.textContent = opts.busyLabel;
+    button.setAttribute('aria-busy', 'true');
+  }
+  const dismissToast = opts.pendingToast ? toastPending(opts.pendingToast) : null;
+  if (opts.statusEl && opts.statusBusy) {
+    opts.statusEl.textContent = opts.statusBusy;
+    opts.statusEl.classList.add('handling-status--jobber');
+  }
+  try {
+    return await opts.work();
+  } finally {
+    dismissToast?.();
+    if (button) {
+      button.disabled = false;
+      button.textContent = prevLabel;
+      button.removeAttribute('aria-busy');
+    }
+    if (opts.statusEl) {
+      opts.statusEl.classList.remove('handling-status--jobber');
+    }
+  }
+}

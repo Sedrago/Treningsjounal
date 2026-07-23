@@ -9,7 +9,7 @@ import * as setupShare from '../setup-share.js';
 import * as sync from '../sync.js';
 import * as ie from '../importexport.js';
 import { effortPillOptions } from '../pickers.js';
-import { esc, toast } from '../utils.js';
+import { esc, toast, withActionFeedback, toastPending } from '../utils.js';
 import { applyTheme } from '../app.js';
 
 export async function render(container) {
@@ -185,41 +185,67 @@ export async function render(container) {
   // Tilkobling.
   container.querySelector('#api-url').addEventListener('change', (e) => api.setApiUrl(e.target.value));
   container.querySelector('#api-key').addEventListener('change', (e) => api.setApiKey(e.target.value));
-  container.querySelector('#test-api').addEventListener('click', async (e) => {
+  container.querySelector('#api-url').addEventListener('input', (e) => api.setApiUrl(e.target.value));
+  container.querySelector('#api-key').addEventListener('input', (e) => api.setApiKey(e.target.value));
+
+  const persistApiCredentials = () => {
     api.setApiUrl(container.querySelector('#api-url').value);
     api.setApiKey(container.querySelector('#api-key').value);
-    e.target.disabled = true;
-    try {
-      await api.ping();
-      toast('Tilkoblingen fungerer!', 'suksess');
-    } catch (err) {
+  };
+
+  container.querySelector('#test-api').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    await withActionFeedback(btn, {
+      busyLabel: 'Tester…',
+      pendingToast: 'Tester tilkobling…',
+      statusEl,
+      statusBusy: 'Tester tilkobling til Google Sheets…',
+      work: async () => {
+        persistApiCredentials();
+        await api.ping();
+        toast('Tilkoblingen fungerer!', 'suksess');
+        updateStatus();
+      },
+    }).catch((err) => {
       toast(`Feil: ${err.message}`, 'feil');
-    } finally {
-      e.target.disabled = false;
-    }
+      updateStatus();
+    });
   });
   container.querySelector('#relay-url').addEventListener('change', (e) => relay.setRelayUrl(e.target.value));
   container.querySelector('#relay-key').addEventListener('change', (e) => relay.setRelayPublishKey(e.target.value));
   container.querySelector('#test-relay').addEventListener('click', async (e) => {
-    relay.setRelayUrl(container.querySelector('#relay-url').value);
-    relay.setRelayPublishKey(container.querySelector('#relay-key').value);
-    e.target.disabled = true;
-    try {
-      await relay.relayPing();
-      toast('Relay fungerer!', 'suksess');
-    } catch (err) {
+    const btn = e.currentTarget;
+    await withActionFeedback(btn, {
+      busyLabel: 'Tester…',
+      pendingToast: 'Tester relay…',
+      work: async () => {
+        relay.setRelayUrl(container.querySelector('#relay-url').value);
+        relay.setRelayPublishKey(container.querySelector('#relay-key').value);
+        await relay.relayPing();
+        toast('Relay fungerer!', 'suksess');
+      },
+    }).catch((err) => {
       toast(`Feil: ${err.message}`, 'feil');
-    } finally {
-      e.target.disabled = false;
-    }
+    });
   });
 
   container.querySelector('#synk-naa').addEventListener('click', async (e) => {
-    e.target.disabled = true;
-    const ok = await sync.fullSync();
-    toast(ok ? 'Synkronisert' : `Synkronisering feilet: ${sync.state.lastError}`, ok ? 'suksess' : 'feil');
-    e.target.disabled = false;
-    updateStatus();
+    const btn = e.currentTarget;
+    await withActionFeedback(btn, {
+      busyLabel: 'Synkroniserer…',
+      pendingToast: 'Synkroniserer…',
+      statusEl,
+      statusBusy: 'Synkroniserer med Google Sheets…',
+      work: async () => {
+        persistApiCredentials();
+        const ok = await sync.fullSync();
+        toast(
+          ok ? 'Synkronisert' : `Synkronisering feilet: ${sync.state.lastError}`,
+          ok ? 'suksess' : 'feil',
+        );
+        updateStatus();
+      },
+    });
   });
 
   const arkHost = container.querySelector('#innstillinger-ark-vert');
@@ -235,26 +261,36 @@ export async function render(container) {
     }
   });
 
-  container.querySelector('#setup-import-btn')?.addEventListener('click', async () => {
+  container.querySelector('#setup-import-btn')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
     const text = container.querySelector('#setup-import-kode').value.trim();
     if (!text) {
       toast('Lim inn oppsettskode først', 'feil');
       return;
     }
-    try {
-      const data = setupShare.parseSetupShareCode(text);
-      if (!confirm('Koble appen til det mottatte regnearket? Eksisterende tilkobling erstattes.')) return;
-      await setupShare.applySetupPayload(data);
-      container.querySelector('#api-url').value = api.getApiUrl();
-      container.querySelector('#api-key').value = api.getApiKey();
-      if (data.relayUrl) container.querySelector('#relay-url').value = relay.getRelayUrl();
-      toast('Oppsett importert og tilkobling OK', 'suksess');
-      updateStatus();
-      await sync.fullSync();
-      updateStatus();
-    } catch (err) {
+    await withActionFeedback(btn, {
+      busyLabel: 'Importerer…',
+      pendingToast: 'Importerer oppsett…',
+      statusEl,
+      statusBusy: 'Importerer oppsett og synkroniserer…',
+      work: async () => {
+        const data = setupShare.parseSetupShareCode(text);
+        if (!confirm('Koble appen til det mottatte regnearket? Eksisterende tilkobling erstattes.')) {
+          return;
+        }
+        await setupShare.applySetupPayload(data);
+        container.querySelector('#api-url').value = api.getApiUrl();
+        container.querySelector('#api-key').value = api.getApiKey();
+        if (data.relayUrl) container.querySelector('#relay-url').value = relay.getRelayUrl();
+        toast('Oppsett importert — synkroniserer…', 'info');
+        const ok = await sync.fullSync();
+        toast(ok ? 'Oppsett klart og synkronisert' : `Synk feilet: ${sync.state.lastError}`, ok ? 'suksess' : 'feil');
+        updateStatus();
+      },
+    }).catch((err) => {
       toast(err.message || 'Import feilet', 'feil');
-    }
+      updateStatus();
+    });
   });
 
   // Preferanser – lagres umiddelbart.
@@ -297,6 +333,9 @@ export async function render(container) {
   container.querySelector('#import-fil').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const input = e.target;
+    input.disabled = true;
+    const dismiss = toastPending(`Importerer ${file.name}…`);
     try {
       const text = await file.text();
       const count = file.name.endsWith('.json')
@@ -305,8 +344,11 @@ export async function render(container) {
       toast(`Importerte ${count} rader`, 'suksess');
     } catch (err) {
       toast(`Import feilet: ${err.message}`, 'feil');
+    } finally {
+      dismiss();
+      input.disabled = false;
+      input.value = '';
     }
-    e.target.value = '';
   });
 
   // Slett lokale data.
