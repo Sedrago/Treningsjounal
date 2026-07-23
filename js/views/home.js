@@ -7,7 +7,7 @@ import * as api from '../api.js';
 import * as sync from '../sync.js';
 import { computeMomentum } from '../momentum.js';
 import { buildHomeInfoRotation } from '../home-insight.js';
-import { openMomentumGuide, closeMomentumGuide } from '../momentum-guide.js';
+import { openMomentumGuide, closeMomentumGuide, isMomentumGuideOpen } from '../momentum-guide.js';
 import { momentumChart } from '../charts.js';
 import { renderHomeCarbsLineHtml, renderHomeCaloriesLineHtml } from '../nutrition-ui.js';
 import {
@@ -273,9 +273,12 @@ function mountPartnerMomentumUi(container, labeledSeries, initialState, partnerU
   return { setPartnerData };
 }
 
-export async function render(container) {
+export async function render(container, params, query, options = {}) {
   clearHomeInsightRotator(container);
-  closeMomentumGuide(container.querySelector('#momentum-guide-host'));
+  const reopenGuide = Boolean(options.preserveMomentumGuide && isMomentumGuideOpen());
+  if (!reopenGuide) {
+    closeMomentumGuide(container.querySelector('#momentum-guide-host'));
+  }
 
   const [
     sets,
@@ -361,6 +364,14 @@ export async function render(container) {
 
   const partnerUi = mountPartnerMomentumUi(container, labeledSeries, partnerState, partnerUsernames);
   mountMomentumGuideUi(container);
+  if (reopenGuide) {
+    const host = container.querySelector('#momentum-guide-host');
+    const infoBtn = container.querySelector('#momentum-info');
+    openMomentumGuide(host, {
+      onClose: () => infoBtn?.setAttribute('aria-expanded', 'false'),
+    });
+    infoBtn?.setAttribute('aria-expanded', 'true');
+  }
   mountHomeInsightRotator(container, infoSlides);
 
   runPartnerMomentumSyncInBackground(momentum.series, ({ state, partnerUsernames: names }) => {

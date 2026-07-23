@@ -7,6 +7,8 @@ function pctWeight(key) {
   return Math.round((PILLAR_WEIGHTS[key] ?? 0) * 100);
 }
 
+let guideOpen = false;
+
 function momentumGuideHtml() {
   const wStrength = pctWeight('strength');
   const wProtein = pctWeight('protein');
@@ -100,9 +102,11 @@ function momentumGuideHtml() {
  */
 export function openMomentumGuide(host, opts = {}) {
   if (!host) return;
+  guideOpen = true;
   host.innerHTML = momentumGuideHtml();
 
   const close = () => {
+    guideOpen = false;
     host.innerHTML = '';
     opts.onClose?.();
   };
@@ -116,5 +120,11 @@ export function openMomentumGuide(host, opts = {}) {
 
 /** @param {HTMLElement} host */
 export function closeMomentumGuide(host) {
+  guideOpen = false;
   if (host?.innerHTML) host.innerHTML = '';
+}
+
+/** Om momentum-forklaringen var åpen før bakgrunns-oppdatering av hjem. */
+export function isMomentumGuideOpen() {
+  return guideOpen;
 }

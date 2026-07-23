@@ -91,6 +91,37 @@ function parseHash() {
   return { route, params: segments.slice(1), query };
 }
 
+/** Full re-render ødelegger påbegynte skjemaer (søvn, inntak, økt, …). */
+const ROUTES_PRESERVE_ON_BACKGROUND_UPDATE = new Set([
+  'sovn',
+  'aerob',
+  'anaerob',
+  'kroppsvekt',
+  'inntak',
+  'folelse',
+  'styrke',
+  'logg',
+  'rediger-okt',
+  'innstillinger',
+  'programmer',
+  'ovelser',
+  'bibliotek',
+  'program',
+  'innboks',
+  'oppsett',
+]);
+
+function shouldRerenderOnBackgroundUpdate() {
+  const { route } = parseHash();
+  return !ROUTES_PRESERVE_ON_BACKGROUND_UPDATE.has(route);
+}
+
+async function refreshAfterRemoteDataUpdate() {
+  await afterDataMaintenance();
+  if (!shouldRerenderOnBackgroundUpdate()) return;
+  await renderRoute({ preserveScroll: true, preserveMomentumGuide: true });
+}
+
 async function applyStarterPackIfNeeded() {
   const entries = getStarterPackEntries();
   const added = await store.ensureStarterPackForExistingUser(entries);
@@ -119,7 +150,7 @@ async function renderRoute(options = {}) {
     window.scrollTo(0, 0);
   }
   try {
-    await renderFn(main, params, query);
+    await renderFn(main, params, query, options);
     await maybeShowMoodPrompt(route);
   } catch (err) {
     console.error(err);
@@ -173,8 +204,8 @@ async function main() {
   setupSyncBadge();
 
   window.addEventListener('hashchange', renderRoute);
-  window.addEventListener('content-updated', () => afterDataMaintenance().then(() => renderRoute()));
-  window.addEventListener('sync-complete', () => afterDataMaintenance().then(() => renderRoute()));
+  window.addEventListener('content-updated', () => refreshAfterRemoteDataUpdate());
+  window.addEventListener('sync-complete', () => refreshAfterRemoteDataUpdate());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       checkContentUpdate();
@@ -192,10 +223,7 @@ async function main() {
 
   sync.init();
   initContent({ force: false }).then(async (ok) => {
-    if (ok) {
-      await afterDataMaintenance();
-      renderRoute();
-    }
+    if (ok) await refreshAfterRemoteDataUpdate();
   });
 
   // Førstegangsbruk: pek mot innstillinger hvis tilkobling mangler.
