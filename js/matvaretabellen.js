@@ -15,7 +15,7 @@ const META_FETCHED = 'matvaretabellenFetchedAt';
 
 /** @type {Map<string, object> | null} */
 let byId = null;
-/** @type {{ id: string, name: string, norm: string }[] | null} */
+/** @type {{ id: string, name: string, nameNorm: string, keywordsNorm: string }[] | null} */
 let searchRows = null;
 let loadPromise = null;
 
@@ -34,6 +34,65 @@ function constituentQty(food, nutrientId) {
   return row ? Number(row.quantity) : 0;
 }
 
+function firstSegmentNorm(name) {
+  const seg = String(name || '').split(',')[0] || '';
+  return normalizeSearch(seg);
+}
+
+/** Treff på produktnavn (første ledd), ikke tilfeldig delstreng som «melk» i «melkepålegg». */
+function segmentMatchesWord(segmentNorm, word) {
+  if (!word) return false;
+  if (segmentNorm === word) return true;
+  const tokens = segmentNorm.split(/[^a-z0-9æøå]+/).filter(Boolean);
+  return tokens.some((t) => {
+    if (t === word) return true;
+    if (t.endsWith(word) && t.length <= word.length + 10) return true;
+    return false;
+  });
+}
+
+function firstSegmentPrefixBonus(first, fullQuery) {
+  if (first === fullQuery) return 70;
+  const tokens = first.split(/[^a-z0-9æøå]+/).filter(Boolean);
+  if (tokens[0] === fullQuery) return 70;
+  if (tokens[0]?.endsWith(fullQuery) && tokens[0].length <= fullQuery.length + 10) return 55;
+  return 0;
+}
+
+function searchScore(name, keywordsNorm, words, fullQuery) {
+  const nameNorm = normalizeSearch(name);
+  const haystack = `${nameNorm} ${keywordsNorm}`.trim();
+  if (!words.every((w) => haystack.includes(w))) return -1;
+
+  const first = firstSegmentNorm(name);
+  let score = 0;
+
+  if (words.every((w) => segmentMatchesWord(first, w))) {
+    score += 100;
+  } else if (words.every((w) => first.includes(w))) {
+    score += 55;
+  } else {
+    score += 18;
+  }
+
+  score += firstSegmentPrefixBonus(first, fullQuery);
+  if (nameNorm.startsWith(fullQuery) && !firstSegmentPrefixBonus(first, fullQuery)) score += 25;
+
+  for (const w of words) {
+    if (segmentMatchesWord(first, w)) score += 35;
+    else if (first.includes(w)) score += 12;
+    else if (nameNorm.includes(w)) score += 4;
+  }
+
+  const commas = (name.match(/,/g) || []).length;
+  if (commas >= 2 && !words.every((w) => first.includes(w))) score -= 28;
+  if (/hjemmebakt|restaurant|fastfood|kantine/i.test(name)) score -= 35;
+  if (/,\s*med\s+/i.test(name) && !words.every((w) => first.includes(w))) score -= 40;
+
+  score -= Math.min(35, Math.floor(name.length / 6));
+  return score;
+}
+
 function buildIndexes(foods) {
   byId = new Map();
   searchRows = [];
@@ -44,10 +103,10 @@ function buildIndexes(foods) {
     searchRows.push({
       id,
       name: f.foodName || '',
-      norm: normalizeSearch(`${f.foodName || ''} ${(f.searchKeywords || []).join(' ')}`),
+      nameNorm: normalizeSearch(f.foodName || ''),
+      keywordsNorm: normalizeSearch((f.searchKeywords || []).join(' ')),
     });
   }
-  searchRows.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 }
 
 async function fetchAndCacheFoods() {
@@ -98,13 +157,14 @@ export function searchFoods(query, limit = 25) {
   const q = normalizeSearch(query);
   if (q.length < 2) return [];
   const words = q.split(/\s+/).filter(Boolean);
-  const out = [];
+  const ranked = [];
   for (const row of searchRows) {
-    if (!words.every((w) => row.norm.includes(w))) continue;
-    out.push({ id: row.id, name: row.name });
-    if (out.length >= limit) break;
+    const score = searchScore(row.name, row.keywordsNorm, words, q);
+    if (score < 0) continue;
+    ranked.push({ id: row.id, name: row.name, score });
   }
-  return out;
+  ranked.sort((a, b) => b.score - a.score || a.name.length - b.name.length || a.name.localeCompare(b.name, 'nb'));
+  return ranked.slice(0, limit).map(({ id, name }) => ({ id, name }));
 }
 
 /** Gram per 1 enhet (glass = 2 dl med mindre tabellen har glass-porsjon). */

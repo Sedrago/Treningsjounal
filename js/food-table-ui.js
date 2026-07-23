@@ -139,9 +139,11 @@ export function bindMatvaretabellenSearch(container, opts) {
       setStatus('Kunne ikke laste Matvaretabellen. Sjekk nett.');
     });
 
-  const renderResults = (items) => {
+  const renderResults = (items, query) => {
     if (!items.length) {
-      resultsHost.innerHTML = '<p class="dus liten">Ingen treff.</p>';
+      resultsHost.innerHTML = `
+        <p class="dus liten">Ingen treff i Matvaretabellen for «${esc(query)}».</p>
+        <p class="dus liten">Mange tilskudd (f.eks. proteinpulver) finnes ikke her. Prøv «helmelk», «egg» eller manuell registrering under «Logg inntak».</p>`;
       return;
     }
     resultsHost.innerHTML = items.map((it) => `
@@ -170,7 +172,7 @@ export function bindMatvaretabellenSearch(container, opts) {
       resultsHost.innerHTML = '';
       return;
     }
-    renderResults(searchFoods(q));
+    renderResults(searchFoods(q), q);
   }, 180);
 
   input.addEventListener('input', onSearch);
