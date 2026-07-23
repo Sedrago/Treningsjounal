@@ -3017,6 +3017,87 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 #matvare-ark-vert .ark-bakgrunn { z-index: 110; }
 #matvare-ark-vert .ark { z-index: 111; }
 
+.inntak-metode-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dus);
+  margin-left: 2px;
+}
+.inntak-ai-fotnote {
+  margin: -4px 16px 12px;
+  padding: 0 4px;
+}
+
+.meal-ai-tekst { margin-bottom: 10px; resize: vertical; min-height: 4.5rem; }
+
+.inntak-metode-tittel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.inntak-metode-nr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  background: var(--aksent);
+  color: var(--aksent-tekst);
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.meal-brand-label { margin: 0 0 6px; font-size: 1rem; }
+
+.matvare-meal-ark { max-height: 90vh; }
+
+.meal-bekreft-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+.meal-bekreft-rad {
+  padding: 10px 12px;
+  border: 1px solid var(--kort-kant, rgba(255,255,255,0.08));
+  border-radius: var(--radius);
+  background: var(--flate-2);
+}
+.meal-bekreft-rad--mangler { border-color: var(--feil, #c44); }
+.meal-bekreft-rad--ai { border-color: var(--dus, rgba(255,255,255,0.25)); }
+.meal-rad-makro--ai { font-style: italic; }
+.meal-bekreft-rad-hode {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.meal-food-valg { flex: 1; min-width: 0; margin: 0; }
+.meal-endre-knapp { flex-shrink: 0; }
+.meal-bekreft-mengde { margin-top: 4px; }
+.meal-rad-makro { margin: 6px 0 0; }
+.meal-bekreft-sum {
+  margin: 12px 0 16px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+#meal-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  pointer-events: none;
+}
+#meal-edit-overlay .ark-bakgrunn,
+#meal-edit-overlay .ark {
+  pointer-events: auto;
+}
+#meal-edit-overlay .ark-bakgrunn { z-index: 120; }
+#meal-edit-overlay .ark { z-index: 121; }
+
 .matvare-sok-treff {
   display: flex;
   flex-direction: column;

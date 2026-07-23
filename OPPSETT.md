@@ -119,6 +119,12 @@ Versjon: Ny versjon → Distribuer**. URL-en forblir den samme.
 - **«Ugyldig API-nøkkel»** – sjekk at nøkkelen i appen er identisk med verdien
   for `apiKey` i Settings-arket.
 - **«Oppsett mangler»** – kjør `kjorOppsett` i Apps Script (del 1, steg 5).
+- **«Du har ikke tillatelse til å kalle UrlFetchApp.fetch»** (Spør AI / OpenAI):
+  1. Fyll inn `openAiApiKey` i Settings-arket.
+  2. I Apps Script: velg **`testOpenAiTilkobling`** i nedtrekksmenyen og trykk **Kjør**.
+  3. Godta tilgang til **eksterne tjenester** når Google spør (samme Google-konto som eier regnearket).
+  4. Sjekk at Web App er **Utfør som: Meg** (del 2, steg 3).
+  5. **Distribuer → Ny versjon** etter godkjenning.
 - **Ingen øvelser i kategoriene** – gå til **Øvelser** og trykk
   **Legg til startpakke** (28 grunnleggende øvelser), eller velg enkeltvis fra katalogen.
 

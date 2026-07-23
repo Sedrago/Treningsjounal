@@ -326,6 +326,14 @@ function getSettingValue_(key) {
   return null;
 }
 
+function hasSettingKey_(key) {
+  var rows = readAll_('Settings');
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].key === key) return true;
+  }
+  return false;
+}
+
 // =============================================================================
 // API
 // =============================================================================
@@ -407,6 +415,14 @@ function route_(action, payload) {
       return pullAll_();
     case 'push':
       return pushOps_(payload.ops || []);
+    case 'nutritionStructure':
+      return nutritionStructure_(payload.text);
+    case 'nutritionPickFood':
+      return nutritionPickFood_(payload);
+    case 'nutritionSuggestSearch':
+      return nutritionSuggestSearch_(payload);
+    case 'nutritionBrandEstimate':
+      return nutritionBrandEstimate_(payload.text);
     default:
       throw new Error('Ukjent handling: ' + action);
   }
@@ -415,7 +431,7 @@ function route_(action, payload) {
 function pullAll_() {
   var settings = {};
   readAll_('Settings').forEach(function (row) {
-    if (row.key !== 'apiKey') settings[row.key] = row.value;
+    if (row.key !== 'apiKey' && row.key !== 'openAiApiKey') settings[row.key] = row.value;
   });
   return {
     exercises: readAll_('Exercises'),
@@ -449,6 +465,176 @@ function pushOps_(ops) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// =============================================================================
+// OpenAI – næring (nøkkel kun i Settings: openAiApiKey)
+// =============================================================================
+
+function getOpenAiApiKey_() {
+  var key = getSettingValue_('openAiApiKey');
+  if (!key || !String(key).trim()) {
+    throw new Error('Smart oppslag i Inntak er ikke satt opp i regnearket.');
+  }
+  return String(key).trim();
+}
+
+function callOpenAiJson_(systemPrompt, userPrompt, options) {
+  options = options || {};
+  var apiKey = getOpenAiApiKey_();
+  var body = {
+    model: options.model || 'gpt-4o-mini',
+    temperature: options.temperature != null ? options.temperature : 0.2,
+    max_tokens: options.maxTokens != null ? options.maxTokens : 1200,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  };
+  var res = UrlFetchApp.fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + apiKey },
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true,
+  });
+  var code = res.getResponseCode();
+  var text = res.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error('Smart oppslag feilet (' + code + ').');
+  }
+  var parsed = JSON.parse(text);
+  var content = parsed.choices && parsed.choices[0] && parsed.choices[0].message
+    ? parsed.choices[0].message.content
+    : '';
+  if (!content) throw new Error('Tomt svar fra smart oppslag.');
+  return JSON.parse(content);
+}
+
+var NUTRITION_STRUCTURE_SYSTEM_ = ''
+  + 'Du strukturerer norske måltidsbeskrivelser til oppslag i Matvaretabellen. '
+  + 'Svar KUN med JSON. Ikke oppgi protein, karbohydrater, fett eller kcal. '
+  + 'Enheter: glass, dl, g, stk. '
+  + 'Format: {"lines":[{"raw":"…","query":"søkeord","amount":2,"unit":"glass"} '
+  + 'eller {"raw":"…","parts":[{"query":"…","amount":3,"unit":"stk"},…]}]}. '
+  + 'query = kort norsk matvarenavn for søk i Matvaretabellen — bruk korrekt bokmåls stavemåte '
+  + '(f.eks. peanuttsmør, ikke peanutsmør; yoghurt, ikke joghurt). '
+  + 'Ved pålegg uten mengde: amount i gram, "assumed":true, "assumptionNote":"…". '
+  + 'Del sammensatte måltider i parts (brød + pålegg).';
+
+function nutritionStructure_(text) {
+  if (!text || !String(text).trim()) throw new Error('Tom måltidstekst');
+  var user = String(text).trim();
+  if (user.length > 2000) throw new Error('Teksten er for lang (maks 2000 tegn)');
+  var json = callOpenAiJson_(NUTRITION_STRUCTURE_SYSTEM_, user);
+  if (!json.lines || !json.lines.length) throw new Error('Kunne ikke dele opp beskrivelsen.');
+  return { lines: json.lines };
+}
+
+var NUTRITION_PICK_SYSTEM_ = ''
+  + 'Velg best foodId fra kandidatliste for Matvaretabellen (Norge). '
+  + 'Svar JSON: {"foodId":"…","reason":"kort"} eller {"foodId":null,"reason":"…"} '
+  + 'hvis ingen passer.';
+
+function nutritionPickFood_(payload) {
+  var raw = payload.raw || '';
+  var query = payload.query || '';
+  var candidates = payload.candidates || [];
+  if (!candidates.length) return { foodId: null, reason: 'Ingen kandidater' };
+  if (candidates.length === 1) {
+    return { foodId: String(candidates[0].id), reason: 'Eneste treff' };
+  }
+  var list = candidates.slice(0, 8).map(function (c, i) {
+    return (i + 1) + '. id=' + c.id + ' — ' + c.name;
+  }).join('\n');
+  var user = 'Måltidslinje: ' + raw + '\nSøk: ' + query + '\n\nKandidater:\n' + list;
+  var json = callOpenAiJson_(NUTRITION_PICK_SYSTEM_, user);
+  return {
+    foodId: json.foodId != null ? String(json.foodId) : null,
+    reason: json.reason || '',
+  };
+}
+
+var NUTRITION_SUGGEST_SYSTEM_ = ''
+  + 'Linjer uten treff i Matvaretabellen (Norge). For hver linje: '
+  + 'searchQuery = kort søkeord med korrekt norsk stavemåte (rett skrivefeil i query). '
+  + 'hint = én kort setning til brukeren. '
+  + 'estimate = null hvis varen sannsynligvis finnes i Matvaretabellen etter searchQuery. '
+  + 'Ellers estimate = { proteinG, carbsG, fatG, kcal } for oppgitt amount og unit '
+  + '(typisk produkt/merke når nevnt; ellers et rimelig generisk norske marked-estimat). '
+  + 'Bruk estimate for proteinpulver, kosttilskudd og spesifikke merkevarer som ikke er i tabellen. '
+  + 'Svar JSON: {"items":[{"id":"…","searchQuery":"…","hint":"…","estimate":null eller {...}}]}. '
+  + 'Behold id fra input uendret.';
+
+function parseMacroEstimate_(est) {
+  if (!est || typeof est !== 'object') return null;
+  var proteinG = Number(est.proteinG);
+  var carbsG = Number(est.carbsG);
+  var fatG = est.fatG != null && est.fatG !== '' ? Number(est.fatG) : null;
+  var kcal = est.kcal != null && est.kcal !== '' ? Number(est.kcal) : null;
+  var has = (Number.isFinite(proteinG) && proteinG > 0)
+    || (Number.isFinite(carbsG) && carbsG > 0)
+    || (fatG != null && Number.isFinite(fatG) && fatG > 0)
+    || (kcal != null && Number.isFinite(kcal) && kcal > 0);
+  if (!has) return null;
+  return {
+    proteinG: Number.isFinite(proteinG) ? proteinG : 0,
+    carbsG: Number.isFinite(carbsG) ? carbsG : 0,
+    fatG: fatG != null && Number.isFinite(fatG) ? fatG : null,
+    kcal: kcal != null && Number.isFinite(kcal) ? kcal : null,
+  };
+}
+
+function nutritionSuggestSearch_(payload) {
+  var lines = payload.lines || [];
+  if (!lines.length) return { items: [] };
+  var user = lines.map(function (l) {
+    return 'id=' + l.id + ' | raw: ' + (l.raw || '') + ' | query: ' + (l.query || '')
+      + ' | amount: ' + (l.amount != null ? l.amount : '')
+      + ' | unit: ' + (l.unit || '');
+  }).join('\n');
+  var json = callOpenAiJson_(NUTRITION_SUGGEST_SYSTEM_, user);
+  var items = json.items || [];
+  return {
+    items: items.map(function (it) {
+      return {
+        id: String(it.id != null ? it.id : ''),
+        searchQuery: it.searchQuery != null ? String(it.searchQuery).trim() : '',
+        hint: it.hint != null ? String(it.hint).trim() : '',
+        estimate: parseMacroEstimate_(it.estimate),
+      };
+    }),
+  };
+}
+
+var NUTRITION_BRAND_SYSTEM_ = ''
+  + 'Åpent søk: estimer næring for hele retter/porsjoner uten Matvaretabellen-oppslag. '
+  + 'Typisk: «en tallerken lapskaus», «fårikål middag», fastfood-meny, kaférett. '
+  + 'Ikke ingrediensliste — anta normal porsjon (tallerken/skål) og nevn antakelse i hint. '
+  + 'Bruk realistiske tall (menyer Norge der relevant). Svar KUN JSON. '
+  + 'Format: {"items":[{"label":"kort navn","proteinG":0,"carbsG":0,"fatG":0,"kcal":0,'
+  + '"hint":"porsjon/antakelse/kilde"}]}. '
+  + 'Én rett kan være én item; fastfood-combo deles i burger + pommes + drikk (riktig størrelse). '
+  + 'Alle items må ha kcal.';
+
+function nutritionBrandEstimate_(text) {
+  if (!text || !String(text).trim()) throw new Error('Tom beskrivelse');
+  var user = String(text).trim();
+  if (user.length > 500) throw new Error('Teksten er for lang (maks 500 tegn)');
+  var json = callOpenAiJson_(NUTRITION_BRAND_SYSTEM_, user, { maxTokens: 1800, temperature: 0.25 });
+  var items = json.items || [];
+  if (!items.length) throw new Error('Kunne ikke estimere næring.');
+  var mapped = items.map(function (it) {
+    var est = parseMacroEstimate_(it.estimate || it);
+    return {
+      label: it.label != null ? String(it.label).trim() : '',
+      hint: it.hint != null ? String(it.hint).trim() : '',
+      estimate: est,
+    };
+  }).filter(function (it) { return it.label && it.estimate; });
+  if (!mapped.length) throw new Error('Kunne ikke estimere næring.');
+  return { items: mapped };
 }
 
 // =============================================================================
@@ -514,6 +700,10 @@ function kjorOppsett() {
     upsert_('Settings', { key: 'apiKey', value: apiKey });
   }
 
+  if (!hasSettingKey_('openAiApiKey')) {
+    upsert_('Settings', { key: 'openAiApiKey', value: '' });
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ['Sheet1', 'Ark1', 'Ark 1'].forEach(function (name) {
     var sheet = ss.getSheetByName(name);
@@ -524,7 +714,24 @@ function kjorOppsett() {
 
   var message = 'Oppsett fullført!\n\nAPI-nøkkelen din (lim inn i appen):\n\n' + apiKey
     + '\n\nDu finner den også i Settings-arket.'
+    + '\n\nFor assistert oppslag og åpent søk i Inntak: fyll inn nøkkel i value på raden for smart oppslag (Settings-arket).'
     + '\n\nØvelser velges i appen under Øvelser (startpakke eller fra katalogen).';
+  try {
+    SpreadsheetApp.getUi().alert(message);
+  } catch (e) {
+    Logger.log(message);
+  }
+}
+
+/**
+ * Kjør én gang fra Apps Script-editoren (Kjør-knappen) etter at openAiApiKey er satt.
+ * Utløser Google-dialog for «Koble til ekstern tjeneste» (UrlFetchApp / OpenAI).
+ * Webapp må kjøre som «Meg» – da gjelder samme godkjenning når appen kaller Spør AI.
+ */
+function testOpenAiTilkobling() {
+  var result = nutritionStructure_('1 glass vann');
+  var n = result.lines ? result.lines.length : 0;
+  var message = 'Smart oppslag OK.\n\nTest returnerte ' + n + ' matvarelinje(r).';
   try {
     SpreadsheetApp.getUi().alert(message);
   } catch (e) {

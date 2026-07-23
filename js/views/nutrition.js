@@ -5,6 +5,7 @@
 import * as store from '../store.js';
 import { renderNutritionSummaryHtml } from '../nutrition-ui.js';
 import { bindMatvaretabellenSearch } from '../food-table-ui.js';
+import { bindAssistertOppslag, bindApentSokMeal } from '../meal-ai-ui.js';
 import { esc, fmtMacroG, fmtKcal, todayStr, toast } from '../utils.js';
 
 function presetLabel(p) {
@@ -65,17 +66,9 @@ export async function render(container, params, query) {
       <div id="inntak-oppsummering">${renderNutritionSummaryHtml(summary)}</div>
     </section>
 
-    <section class="kort" aria-label="Matvaretabellen">
-      <h2 class="kort-tittel">Matvaretabellen</h2>
-      <p class="dus liten">Søk, velg matvare, mengde og enhet (g, dl eller glass).</p>
-      <label class="felt-navn" for="matvare-sok">Søk matvare</label>
-      <input type="search" class="inndata" id="matvare-sok" placeholder="F.eks. melk" autocomplete="off">
-      <p class="dus liten" id="matvare-sok-status"></p>
-      <div id="matvare-sok-treff" class="matvare-sok-treff"></div>
-    </section>
-
-    <section class="kort" aria-label="Logg inntak">
-      <h2 class="kort-tittel">Logg inntak</h2>
+    <section class="kort inntak-metode" aria-label="Lagret favoritt">
+      <h2 class="kort-tittel inntak-metode-tittel"><span class="inntak-metode-nr">1</span> Lagret favoritt</h2>
+      <p class="dus liten">Velg favoritt og antall.</p>
       <label class="felt-navn" for="inntak-preset">Favoritt</label>
       <select class="inndata" id="inntak-preset">
         <option value="">Velg favoritt …</option>
@@ -89,46 +82,74 @@ export async function render(container, params, query) {
         <input type="number" class="inndata kost-qty-input" id="inntak-qty" value="1" min="0.25" step="0.25" inputmode="decimal">
       </div>
       <button type="button" class="knapp primaer bred" id="inntak-legg-til" ${presets.length ? '' : 'disabled'}>Legg til</button>
-      ${presets.length ? '' : '<p class="dus liten">Lag en favoritt nedenfor, eller bruk manuell registrering.</p>'}
+      ${presets.length ? '' : '<p class="dus liten">Opprett favoritter nederst på siden, eller bruk manuell registrering.</p>'}
+    </section>
 
-      <details class="kost-manuell" id="inntak-manuell">
-        <summary>Manuell registrering</summary>
-        <div class="kost-manuell-innhold">
-          <div class="skjema-rad">
-            <div class="felt">
-              <label class="felt-navn" for="inntak-protein">Protein (g)</label>
-              <input type="number" class="inndata" id="inntak-protein" min="0" step="0.1" inputmode="decimal">
-            </div>
-            <div class="felt">
-              <label class="felt-navn" for="inntak-karbo">Karbo (g)</label>
-              <input type="number" class="inndata" id="inntak-karbo" min="0" step="0.1" inputmode="decimal">
-            </div>
+    <section class="kort inntak-metode" aria-label="Oppslag">
+      <h2 class="kort-tittel inntak-metode-tittel"><span class="inntak-metode-nr">2</span> Oppslag</h2>
+      <p class="dus liten">Matvaretabellen — mest presist når varen finnes. Søk, velg matvare, mengde og enhet.</p>
+      <label class="felt-navn" for="matvare-sok">Søk matvare</label>
+      <input type="search" class="inndata" id="matvare-sok" placeholder="F.eks. melk, egg, havregryn" autocomplete="off">
+      <p class="dus liten" id="matvare-sok-status"></p>
+      <div id="matvare-sok-treff" class="matvare-sok-treff"></div>
+    </section>
+
+    <section class="kort inntak-metode" aria-label="Assistert oppslag">
+      <h2 class="kort-tittel inntak-metode-tittel"><span class="inntak-metode-nr">3</span> Assistert oppslag</h2>
+      <p class="dus liten">Beskriv det du spiste med enkeltdele — vi deler opp og slår opp i Matvaretabellen. Ved manglende treff: forslag til søk og enkle estimater.</p>
+      <label class="felt-navn" for="assistert-oppslag-tekst">Beskrivelse</label>
+      <textarea class="inndata meal-ai-tekst" id="assistert-oppslag-tekst" rows="3"
+        placeholder="F.eks. 2 egg, brødskive med smør og 1 dl melk"></textarea>
+      <button type="button" class="knapp sekundaer bred" id="assistert-oppslag-knapp">Slå opp</button>
+    </section>
+
+    <section class="kort inntak-metode" aria-label="Åpent søk">
+      <h2 class="kort-tittel inntak-metode-tittel"><span class="inntak-metode-nr">4</span> Åpent søk <span class="inntak-metode-tag">upresist</span></h2>
+      <p class="dus liten">Hele retter og porsjoner — ikke ingrediensliste. F.eks. tallerken lapskaus, lunsj på kafé, McKylling-meny. Automatisk estimat, ikke Matvaretabellen.</p>
+      <label class="felt-navn" for="apent-sok-tekst">Rett eller måltid</label>
+      <textarea class="inndata meal-ai-tekst" id="apent-sok-tekst" rows="2"
+        placeholder="F.eks. en tallerken lapskaus"></textarea>
+      <button type="button" class="knapp sekundaer bred" id="apent-sok-knapp">Få forslag</button>
+    </section>
+
+    <section class="kort inntak-metode" aria-label="Manuell registrering">
+      <h2 class="kort-tittel inntak-metode-tittel"><span class="inntak-metode-nr">5</span> Manuell registrering</h2>
+      <p class="dus liten">Skriv inn makroer direkte.</p>
+      <div class="kost-manuell-innhold">
+        <div class="skjema-rad">
+          <div class="felt">
+            <label class="felt-navn" for="inntak-protein">Protein (g)</label>
+            <input type="number" class="inndata" id="inntak-protein" min="0" step="0.1" inputmode="decimal">
           </div>
-          <div class="skjema-rad">
-            <div class="felt">
-              <label class="felt-navn" for="inntak-fett">Fett (g) <span class="dus">(valgfritt)</span></label>
-              <input type="number" class="inndata" id="inntak-fett" min="0" step="0.1" inputmode="decimal">
-            </div>
-            <div class="felt">
-              <label class="felt-navn" for="inntak-kcal">Kalorier (kcal) <span class="dus">(valgfritt)</span></label>
-              <input type="number" class="inndata" id="inntak-kcal" min="0" step="1" inputmode="numeric">
-            </div>
+          <div class="felt">
+            <label class="felt-navn" for="inntak-karbo">Karbo (g)</label>
+            <input type="number" class="inndata" id="inntak-karbo" min="0" step="0.1" inputmode="decimal">
           </div>
-          <label class="felt-navn" for="inntak-notat">Notat <span class="dus">(valgfritt)</span></label>
-          <input type="text" class="inndata" id="inntak-notat" placeholder="F.eks. lunsj">
-          <label class="kost-lagre-favoritt">
-            <input type="checkbox" id="inntak-lagre-favoritt">
-            Lagre som favoritt
-          </label>
-          <div id="inntak-favoritt-felt" hidden>
-            <label class="felt-navn" for="inntak-favoritt-navn">Favorittnavn</label>
-            <input type="text" class="inndata" id="inntak-favoritt-navn" placeholder="F.eks. Egg">
-            <label class="felt-navn" for="inntak-favoritt-enhet">Enhet <span class="dus">(valgfritt)</span></label>
-            <input type="text" class="inndata" id="inntak-favoritt-enhet" placeholder="stk">
-          </div>
-          <button type="button" class="knapp sekundaer bred" id="inntak-manuell-lagre">Lagre manuelt</button>
         </div>
-      </details>
+        <div class="skjema-rad">
+          <div class="felt">
+            <label class="felt-navn" for="inntak-fett">Fett (g) <span class="dus">(valgfritt)</span></label>
+            <input type="number" class="inndata" id="inntak-fett" min="0" step="0.1" inputmode="decimal">
+          </div>
+          <div class="felt">
+            <label class="felt-navn" for="inntak-kcal">Kalorier (kcal) <span class="dus">(valgfritt)</span></label>
+            <input type="number" class="inndata" id="inntak-kcal" min="0" step="1" inputmode="numeric">
+          </div>
+        </div>
+        <label class="felt-navn" for="inntak-notat">Notat <span class="dus">(valgfritt)</span></label>
+        <input type="text" class="inndata" id="inntak-notat" placeholder="F.eks. lunsj">
+        <label class="kost-lagre-favoritt">
+          <input type="checkbox" id="inntak-lagre-favoritt">
+          Lagre som favoritt
+        </label>
+        <div id="inntak-favoritt-felt" hidden>
+          <label class="felt-navn" for="inntak-favoritt-navn">Favorittnavn</label>
+          <input type="text" class="inndata" id="inntak-favoritt-navn" placeholder="F.eks. Egg">
+          <label class="felt-navn" for="inntak-favoritt-enhet">Enhet <span class="dus">(valgfritt)</span></label>
+          <input type="text" class="inndata" id="inntak-favoritt-enhet" placeholder="stk">
+        </div>
+        <button type="button" class="knapp sekundaer bred" id="inntak-manuell-lagre">Lagre</button>
+      </div>
     </section>
 
     <section class="kort" aria-label="Dagens inntak">
@@ -148,8 +169,8 @@ export async function render(container, params, query) {
 
     <div id="matvare-ark-vert"></div>
 
-    <section class="kort" aria-label="Favoritter" id="inntak-favoritter">
-      <h2 class="kort-tittel">Favoritter</h2>
+    <section class="kort" aria-label="Administrer favoritter" id="inntak-favoritter">
+      <h2 class="kort-tittel">Administrer favoritter</h2>
       <p class="dus liten">Protein, karbo og valgfritt fett/kalorier per enhet.</p>
       <form id="preset-skjema" class="kost-preset-skjema">
         <input type="hidden" id="preset-id">
@@ -214,6 +235,18 @@ export async function render(container, params, query) {
   });
 
   bindMatvaretabellenSearch(container, {
+    sheetHost: container.querySelector('#matvare-ark-vert'),
+    getDate: () => container.querySelector('#inntak-dato')?.value || date,
+    onSaved: reload,
+  });
+
+  bindAssistertOppslag(container, {
+    sheetHost: container.querySelector('#matvare-ark-vert'),
+    getDate: () => container.querySelector('#inntak-dato')?.value || date,
+    onSaved: reload,
+  });
+
+  bindApentSokMeal(container, {
     sheetHost: container.querySelector('#matvare-ark-vert'),
     getDate: () => container.querySelector('#inntak-dato')?.value || date,
     onSaved: reload,

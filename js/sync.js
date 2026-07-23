@@ -103,7 +103,7 @@ export async function pull() {
     await db.replaceAll('plans', data.plans || []);
     const settings = data.settings || {};
     for (const [key, value] of Object.entries(settings)) {
-      if (key === 'apiKey') continue;
+      if (key === 'apiKey' || key === 'openAiApiKey') continue;
       await db.put('settings', { key, value });
     }
     const { initSettings } = await import('./store.js');

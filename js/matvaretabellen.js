@@ -153,6 +153,10 @@ export function getFoodById(foodId) {
  * @returns {{ id: string, name: string }[]}
  */
 export function searchFoods(query, limit = 25) {
+  return searchFoodsRanked(query, limit).map(({ id, name }) => ({ id, name }));
+}
+
+export function searchFoodsRanked(query, limit = 25) {
   if (!searchRows) return [];
   const q = normalizeSearch(query);
   if (q.length < 2) return [];
@@ -164,7 +168,7 @@ export function searchFoods(query, limit = 25) {
     ranked.push({ id: row.id, name: row.name, score });
   }
   ranked.sort((a, b) => b.score - a.score || a.name.length - b.name.length || a.name.localeCompare(b.name, 'nb'));
-  return ranked.slice(0, limit).map(({ id, name }) => ({ id, name }));
+  return ranked.slice(0, limit);
 }
 
 /** Gram per 1 enhet (glass = 2 dl med mindre tabellen har glass-porsjon). */
@@ -177,6 +181,12 @@ export function gramsPerUnit(food, unit) {
     if (glass?.quantity) return Number(glass.quantity);
     return 200;
   }
+  if (unit === 'stk' || unit === 'skive') {
+    const portions = food?.portions || [];
+    const stk = portions.find((p) => /stk|skive|stykk|brød/i.test(p.portionName || '') && p.unit === 'g');
+    if (stk?.quantity) return Number(stk.quantity);
+    return 35;
+  }
   return 100;
 }
 
@@ -184,14 +194,23 @@ export function unitLabel(unit) {
   if (unit === 'g') return 'g';
   if (unit === 'dl') return 'dl';
   if (unit === 'glass') return 'glass';
+  if (unit === 'stk' || unit === 'skive') return 'stk';
   return unit;
 }
 
 export function portionHint(unit) {
   if (unit === 'glass') return '1 glass = 2 dl (200 g) med mindre tabellen angir annet';
   if (unit === 'dl') return '1 dl ≈ 100 g';
+  if (unit === 'stk' || unit === 'skive') return '1 stk fra tabellens porsjon, ellers ca. 35 g';
   return '';
 }
+
+export const MATVARE_UNITS = [
+  { id: 'g', label: 'g' },
+  { id: 'dl', label: 'dl' },
+  { id: 'glass', label: 'glass' },
+  { id: 'stk', label: 'stk' },
+];
 
 /** @returns {{ proteinG, carbsG, fatG, kcal, grams }} */
 export function macrosForPortion(food, amount, unit) {

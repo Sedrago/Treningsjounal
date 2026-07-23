@@ -10,14 +10,11 @@ import {
   macrosForPortion,
   formatIntakeNote,
   portionHint,
+  MATVARE_UNITS,
 } from './matvaretabellen.js';
 import { esc, fmtMacroG, toast } from './utils.js';
 
-const UNITS = [
-  { id: 'g', label: 'g' },
-  { id: 'dl', label: 'dl' },
-  { id: 'glass', label: 'glass' },
-];
+const UNITS = MATVARE_UNITS;
 
 function debounce(fn, ms) {
   let t;
