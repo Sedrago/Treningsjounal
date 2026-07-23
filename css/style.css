@@ -2938,6 +2938,34 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .preset-handlinger { display: flex; gap: 4px; flex-shrink: 0; }
 .kost-preset-skjema { margin-bottom: 12px; }
 
+#matvare-ark-vert .ark-bakgrunn { z-index: 110; }
+#matvare-ark-vert .ark { z-index: 111; }
+
+.matvare-sok-treff {
+  display: flex;
+  flex-direction: column;
+  max-height: min(40vh, 280px);
+  overflow-y: auto;
+  margin-top: 4px;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius);
+  background: var(--flate-2);
+}
+.matvare-sok-treff .matvare-treff-rad:last-child { border-bottom: none; }
+
+.matvare-enhet-rad {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.matvare-preview {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 10px 0 14px;
+  line-height: 1.4;
+}
+
 .anaerob-intro { margin: 0 0 12px; }
 .anaerob-dato-laktat { margin-top: 12px; }
 .anaerob-laktat { margin-top: 0; border-top: none; padding-top: 0; }

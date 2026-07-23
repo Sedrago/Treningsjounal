@@ -4,6 +4,7 @@
 
 import * as store from '../store.js';
 import { renderNutritionSummaryHtml } from '../nutrition-ui.js';
+import { bindMatvaretabellenSearch } from '../food-table-ui.js';
 import { esc, fmtMacroG, todayStr, toast } from '../utils.js';
 
 function presetLabel(p) {
@@ -34,6 +35,15 @@ export async function render(container, params, query) {
         </div>
       </div>
       <div id="inntak-oppsummering">${renderNutritionSummaryHtml(summary)}</div>
+    </section>
+
+    <section class="kort" aria-label="Matvaretabellen">
+      <h2 class="kort-tittel">Matvaretabellen</h2>
+      <p class="dus liten">Søk, velg matvare, mengde og enhet (g, dl eller glass).</p>
+      <label class="felt-navn" for="matvare-sok">Søk matvare</label>
+      <input type="search" class="inndata" id="matvare-sok" placeholder="F.eks. melk" autocomplete="off">
+      <p class="dus liten" id="matvare-sok-status"></p>
+      <div id="matvare-sok-treff" class="matvare-sok-treff"></div>
     </section>
 
     <section class="kort" aria-label="Logg inntak">
@@ -99,6 +109,8 @@ export async function render(container, params, query) {
       </div>
     </section>
 
+    <div id="matvare-ark-vert"></div>
+
     <section class="kort" aria-label="Favoritter" id="inntak-favoritter">
       <h2 class="kort-tittel">Favoritter</h2>
       <p class="dus liten">Protein og karbo per enhet (f.eks. per egg eller per skive).</p>
@@ -152,6 +164,12 @@ export async function render(container, params, query) {
   container.querySelector('#inntak-dato').addEventListener('change', () => {
     const d = container.querySelector('#inntak-dato').value;
     location.hash = d === todayStr() ? '#/inntak' : `#/inntak?date=${d}`;
+  });
+
+  bindMatvaretabellenSearch(container, {
+    sheetHost: container.querySelector('#matvare-ark-vert'),
+    getDate: () => container.querySelector('#inntak-dato')?.value || date,
+    onSaved: reload,
   });
 
   let selectedQty = 1;
