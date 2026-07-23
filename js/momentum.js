@@ -176,16 +176,18 @@ export const MOMENTUM_FACTORS = [
   { id: 'lactate', label: 'Anaerob', href: '#/anaerob' },
 ];
 
-function buildFactors(pillars, { date, sets }) {
+function buildFactors(pillars, { date, sets, strengthSessionCompletedToday = false }) {
   return MOMENTUM_FACTORS.map((f) => {
     const raw = f.id === 'strength'
-      ? strengthUiDaily(date, sets)
+      ? (strengthSessionCompletedToday ? 1 : strengthUiDaily(date, sets))
       : (pillars[f.id] ?? 0);
     const pct = Math.round(Math.min(100, Math.max(0, raw * 100)));
     return {
       ...f,
       pct,
-      status: pillarStatusText(pct),
+      status: f.id === 'strength' && strengthSessionCompletedToday
+        ? 'Økt avsluttet i dag'
+        : pillarStatusText(pct),
     };
   });
 }
@@ -234,6 +236,10 @@ function indexLactateByDate(rows) {
 export function computeMomentum(input) {
   const today = todayStr();
   const sets = input.sets || [];
+  const strengthSessionCompletedToday = Boolean(
+    input.strengthSessionCompletedToday
+    && sets.some((s) => s.date === today),
+  );
   const ctx = {
     sets,
     proteinByDate: indexProteinByDate(input.foodIntakes),
@@ -267,7 +273,11 @@ export function computeMomentum(input) {
   }));
 
   const todayEntry = dailyScores.get(today) || computeDailyScore(today, ctx);
-  const factors = buildFactors(todayEntry.pillars, { date: today, sets });
+  const factors = buildFactors(todayEntry.pillars, {
+    date: today,
+    sets,
+    strengthSessionCompletedToday,
+  });
 
   const change = series.length >= 2
     ? series[series.length - 1].value - series[series.length - 2].value

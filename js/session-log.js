@@ -82,7 +82,16 @@ export function bindCompletedSetsList(container, { onDelete }) {
   });
 }
 
-function buildDraft(exercise, setNumber, persisted, template, planItem) {
+function applySetFields(draft, src, { includeComment = false } = {}) {
+  if (!src) return;
+  if (src.weight != null) draft.weight = src.weight;
+  if (src.reps != null) draft.reps = src.reps;
+  if (src.durationSec != null) draft.durationSec = src.durationSec;
+  if (src.rir != null) draft.rir = src.rir;
+  if (includeComment && src.comment) draft.comment = src.comment;
+}
+
+function buildDraft(exercise, setNumber, persisted, template) {
   const defs = store.logDefaults();
   const logMode = store.logModeOf(exercise);
   const draft = {
@@ -96,21 +105,18 @@ function buildDraft(exercise, setNumber, persisted, template, planItem) {
     id: persisted?.id,
     workoutId: persisted?.workoutId,
   };
-  const src = persisted || template;
-  if (src) {
-    draft.weight = src.weight ?? null;
-    draft.reps = src.reps ?? null;
-    draft.durationSec = src.durationSec ?? null;
-    draft.rir = src.rir ?? draft.rir;
-    draft.comment = src.comment || '';
-  } else if (planItem) {
-    if (planItem.suggestedReps != null) draft.reps = planItem.suggestedReps;
-    if (planItem.suggestedWeightKg != null && logMode === 'weight') {
-      draft.weight = planItem.suggestedWeightKg;
-    }
-  }
-  if (draft.reps == null) draft.reps = store.repMidpoint(exercise);
-  if (draft.weight == null && logMode === 'weight') draft.weight = defs.weightKg;
+
+  // 1) Utgangspunkt fra innstillinger
+  draft.reps = defs.reps;
+  if (logMode === 'weight') draft.weight = defs.weightKg;
+
+  // 2) Kopier fra forrige lagrede sett (samme øvelse i dagens økt)
+  applySetFields(draft, template);
+
+  // 3) Eksisterende data for dette settnummeret vinner
+  applySetFields(draft, persisted, { includeComment: true });
+  if (persisted?.comment != null) draft.comment = persisted.comment;
+
   draft.rir = rirToEffort(draft.rir);
   return draft;
 }
@@ -219,7 +225,7 @@ export async function mountSetLogger(host, {
   let showWeight = logMode === 'weight'
     || (logMode === 'bodyweight' && persistedSet?.weight != null);
 
-  const draft = buildDraft(exercise, setNumber, persistedSet, templateSet, planItem);
+  const draft = buildDraft(exercise, setNumber, persistedSet, templateSet);
   if (draft.rir == null) draft.rir = defaultEffort;
 
   let expanded = sessionStorage.getItem(PANEL_EXPANDED_KEY) !== '0';
@@ -295,6 +301,14 @@ export async function mountSetLogger(host, {
   const pickerHost = wrap.querySelector('.oktt-velgere');
   const completedHost = wrap.querySelector('.oktt-fullforte-wrap-host');
   const pickers = {};
+  let pickersMounted = false;
+
+  function destroyPickers() {
+    Object.values(pickers).forEach((p) => p?.destroy?.());
+    for (const k of Object.keys(pickers)) delete pickers[k];
+    pickersMounted = false;
+    if (pickerHost) pickerHost.innerHTML = '';
+  }
 
   function mountCompletedSets() {
     if (!completedHost) return;
@@ -331,14 +345,23 @@ export async function mountSetLogger(host, {
       toggle.setAttribute('aria-label', expanded ? 'Minimer panel' : 'Utvid panel');
     }
     wrap.querySelector('#oktt-bar-expand')?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (expanded) {
+      ensurePickersMounted();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          pickers.weight?.relayout?.();
+          pickers.reps?.relayout?.();
+        });
+      });
+    } else if (compact) {
+      destroyPickers();
+    }
     syncOverlayHeight(host);
   }
 
   function remountPickers() {
-    Object.values(pickers).forEach((p) => p?.destroy?.());
-    for (const k of Object.keys(pickers)) delete pickers[k];
+    destroyPickers();
     if (!pickerHost) return;
-    pickerHost.innerHTML = '';
 
     if (logMode === 'duration') {
       pickers.duration = mountDurationWheel(pickerHost, {
@@ -368,7 +391,7 @@ export async function mountSetLogger(host, {
       pickerHost.appendChild(repsHost);
       pickers.reps = mountRepStrip(repsHost, {
         value: draft.reps,
-        centerHint: planItem?.suggestedReps ?? store.repMidpoint(exercise),
+        centerHint: defs.reps,
         compact,
         onChange: (v) => { draft.reps = v; updateBarPreview(); },
       });
@@ -385,12 +408,21 @@ export async function mountSetLogger(host, {
     if (compact) {
       effortHost.querySelector('.pill-rad')?.classList.add('oktt-innsats-rad');
     }
+    pickersMounted = true;
     updateBarPreview();
     syncOverlayHeight(host);
   }
 
-  remountPickers();
-  updateBarPreview();
+  function ensurePickersMounted() {
+    if (pickersMounted) return;
+    remountPickers();
+  }
+
+  if (!compact || expanded) {
+    remountPickers();
+  } else {
+    updateBarPreview();
+  }
 
   wrap.querySelector('#oktt-toggle')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -429,6 +461,7 @@ export async function mountSetLogger(host, {
   });
 
   function syncDraftFromPickers() {
+    if (!pickersMounted) return;
     if (pickers.reps?.getValue) draft.reps = pickers.reps.getValue();
     if (pickers.weight?.getValueKg) draft.weight = pickers.weight.getValueKg();
     if (commentInput) draft.comment = commentInput.value.trim();
@@ -445,7 +478,7 @@ export async function mountSetLogger(host, {
     draft.workoutId = workout.id;
     const saved = await store.saveSet({ ...draft, comment: draft.comment.trim() });
     await store.touchWorkoutDuration(workout.id);
-    if (compact) sessionStorage.setItem(PANEL_EXPANDED_KEY, '0');
+    if (compact && expanded) sessionStorage.setItem(PANEL_EXPANDED_KEY, '1');
     onSaved(saved);
   }
 
@@ -456,7 +489,7 @@ export async function mountSetLogger(host, {
 
   return {
     destroy() {
-      Object.values(pickers).forEach((p) => p?.destroy?.());
+      destroyPickers();
       host.innerHTML = '';
       closeSheet();
       document.getElementById('app')?.style.removeProperty('--oktt-overlay-h');

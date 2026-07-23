@@ -312,6 +312,8 @@ export function mountValueStrip(host, {
 
   let scrollTimer = null;
   let rafId = null;
+  let scrollSyncReady = false;
+  let resizeObs = null;
 
   function emit(val) {
     const next = snap(val);
@@ -325,6 +327,7 @@ export function mountValueStrip(host, {
   }
 
   function scrollToValue(val, smooth = false) {
+    if (drum.clientWidth <= 0) return false;
     val = snap(val);
     let item = [...list.querySelectorAll('.verdi-stripe-item')]
       .find((el) => Math.abs(parse(el.dataset.value) - val) < step * 0.01);
@@ -333,10 +336,22 @@ export function mountValueStrip(host, {
       item = [...list.querySelectorAll('.verdi-stripe-item')]
         .find((el) => Math.abs(parse(el.dataset.value) - val) < step * 0.01);
     }
-    if (!item) return;
-    const left = item.offsetLeft - drum.clientWidth / 2 + ITEM / 2;
-    drum.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+    if (!item) return false;
+    const items = [...list.querySelectorAll('.verdi-stripe-item')];
+    const idx = items.indexOf(item);
+    const left = Math.max(0, PAD + idx * ITEM + ITEM / 2 - drum.clientWidth / 2);
+    const maxLeft = Math.max(0, drum.scrollWidth - drum.clientWidth);
+    drum.scrollTo({ left: Math.min(left, maxLeft), behavior: smooth ? 'smooth' : 'auto' });
     updateHighlight(val);
+    return true;
+  }
+
+  function syncScrollPosition(smooth = false) {
+    return scrollToValue(current, smooth);
+  }
+
+  function markScrollReady() {
+    if (syncScrollPosition(false)) scrollSyncReady = true;
   }
 
   function nearestFromScroll() {
@@ -364,6 +379,7 @@ export function mountValueStrip(host, {
     });
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
+      if (!scrollSyncReady) return;
       const val = nearestFromScroll();
       if (Math.abs(val - current) >= step * 0.01) emit(val);
     }, 35);
@@ -399,9 +415,15 @@ export function mountValueStrip(host, {
   host.appendChild(wrap);
   current = snap(current);
   buildItems(current);
+
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObs = new ResizeObserver(() => markScrollReady());
+    resizeObs.observe(drum);
+  }
+
   requestAnimationFrame(() => {
-    scrollToValue(current, false);
-    onChange(current);
+    markScrollReady();
+    if (scrollSyncReady) onChange(current);
   });
 
   return {
@@ -409,11 +431,17 @@ export function mountValueStrip(host, {
     setValue(v) {
       const n = v != null ? snap(v) : current;
       current = n;
-      scrollToValue(n, false);
-      updateHighlight(n);
+      if (!syncScrollPosition(false)) buildItems(current);
+      else updateHighlight(n);
       onChange(n);
     },
+    relayout() {
+      scrollSyncReady = false;
+      markScrollReady();
+    },
     destroy() {
+      resizeObs?.disconnect();
+      resizeObs = null;
       clearTimeout(scrollTimer);
       if (rafId) cancelAnimationFrame(rafId);
       host.innerHTML = '';
@@ -426,7 +454,7 @@ export function mountWeightStrip(host, { valueKg, units, onChange, compact = fal
   const step = weightStep(units);
   const unit = weightUnit(units);
   const hop = 10;
-  const display = valueKg != null ? snapDisplay(toDisplayWeight(valueKg, units), units) : 40;
+  const display = valueKg != null ? snapDisplay(toDisplayWeight(valueKg, units), units) : null;
 
   host.innerHTML = '';
   const shell = document.createElement('div');
@@ -443,7 +471,7 @@ export function mountWeightStrip(host, { valueKg, units, onChange, compact = fal
   const strip = mountValueStrip(shell.querySelector('.verdi-stripe-hopp-mid'), {
     label: '',
     value: display,
-    centerHint: display,
+    centerHint: display ?? 50,
     step,
     min: 0,
     max: 300,
@@ -468,6 +496,7 @@ export function mountWeightStrip(host, { valueKg, units, onChange, compact = fal
       if (v == null) return;
       strip.setValue(snapDisplay(toDisplayWeight(v, units), units));
     },
+    relayout: () => strip.relayout?.(),
     destroy() {
       strip.destroy();
       host.innerHTML = '';

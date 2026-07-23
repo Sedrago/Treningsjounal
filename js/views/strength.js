@@ -5,7 +5,6 @@
 import * as store from '../store.js';
 import { initContent, getDescription } from '../content.js';
 import { mountSetLogger, completedSetsHtml, bindCompletedSetsList, PANEL_EXPANDED_KEY } from '../session-log.js';
-import * as programShare from '../program-share.js';
 import { mountMoodInline, workoutNeedsMood } from '../mood-prompt.js';
 import { groupBy } from '../stats.js';
 import { defaultProgramName, openSaveTemplateSheet } from '../program-ui.js';
@@ -24,7 +23,8 @@ function sessionProgress(items, todaySets) {
   return { started, total: items.length };
 }
 
-function statusLine(plan, items, todaySets) {
+function statusLine(plan, items, todaySets, sessionEnded = false) {
+  if (sessionEnded && todaySets.length) return 'Økt avsluttet i dag';
   if (!items.length) return 'Tomt program';
   const { started, total } = sessionProgress(items, todaySets);
   if (!todaySets.length) return `${total} øvelse${total === 1 ? '' : 'r'} klar`;
@@ -83,6 +83,38 @@ function planItemFromMalFields(item, host) {
   return store.sanitizePlanItem(raw);
 }
 
+function exerciseIdsForItem(item, exMap) {
+  const ex = store.getExerciseFromMap(exMap, item.exerciseId);
+  return [...new Set([item.exerciseId, ex?.id, ex?.catalogId].filter(Boolean))];
+}
+
+function setsForPlanItem(item, setsByEx, exMap) {
+  const seen = new Set();
+  const out = [];
+  for (const id of exerciseIdsForItem(item, exMap)) {
+    for (const s of setsByEx.get(id) || []) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      out.push(s);
+    }
+  }
+  return out.sort((a, b) => a.setNumber - b.setNumber);
+}
+
+function findItemIndexByFocus(items, focusId, exMap) {
+  if (!focusId) return -1;
+  return items.findIndex((it) => exerciseIdsForItem(it, exMap).includes(focusId));
+}
+
+function previousSetTemplate(exSets, setNum) {
+  if (setNum <= 1) return null;
+  const prev = exSets.find((s) => s.setNumber === setNum - 1);
+  if (prev) return prev;
+  return exSets
+    .filter((s) => s.setNumber < setNum)
+    .sort((a, b) => b.setNumber - a.setNumber)[0] || null;
+}
+
 function nextSetNumber(persisted) {
   if (!persisted.length) return 1;
   const nums = persisted.map((s) => s.setNumber);
@@ -97,16 +129,17 @@ function resolveActive(items, setsByEx, exMap) {
   if (!items.length) return null;
 
   const focusId = sessionStorage.getItem(FOCUS_KEY);
-  let exIndex = focusId ? items.findIndex((it) => it.exerciseId === focusId) : -1;
+  let exIndex = findItemIndexByFocus(items, focusId, exMap);
 
   if (exIndex < 0) {
-    exIndex = items.findIndex((it) => !(setsByEx.get(it.exerciseId) || []).length);
+    exIndex = items.findIndex((it) => !setsForPlanItem(it, setsByEx, exMap).length);
     if (exIndex < 0) exIndex = 0;
   }
 
   const item = items[exIndex];
+  sessionStorage.setItem(FOCUS_KEY, item.exerciseId);
   const exercise = store.getExerciseFromMap(exMap, item.exerciseId);
-  const persisted = setsByEx.get(item.exerciseId) || [];
+  const persisted = setsForPlanItem(item, setsByEx, exMap);
   const setNum = nextSetNumber(persisted);
 
   return { exIndex, item, exercise, setNum };
@@ -135,6 +168,10 @@ export async function homeStrengthLabel() {
   const plan = await store.getTodayWorkoutPlan();
   const items = plan?.items || [];
   const todaySets = enriched.filter((s) => s.date === today);
+  const workout = await store.getWorkoutByDate(today);
+  if (workout?.sessionCompletedAt && todaySets.length) {
+    return { title: 'Styrketrening', sub: 'Økt avsluttet i dag' };
+  }
   if (!items.length && !todaySets.length) {
     return { title: 'Styrketrening', sub: 'Se kalender eller velg program' };
   }
@@ -165,13 +202,14 @@ export async function render(container, params, query = {}) {
 
   const setsByEx = groupBy(daySets, (s) => s.exerciseId);
   const hasPartialLog = daySets.length > 0;
+  const sessionEndedToday = Boolean(dayWorkout?.sessionCompletedAt);
 
   if (!isToday || !items.length) {
     if (!isToday) sessionStorage.removeItem(SESSION_KEY);
-  } else if (hasPartialLog) {
-    sessionStorage.setItem(SESSION_KEY, '1');
   }
-  const sessionActive = isToday && sessionStorage.getItem(SESSION_KEY) === '1' && items.length > 0;
+  const sessionActive = isToday && items.length > 0
+    && !sessionEndedToday
+    && sessionStorage.getItem(SESSION_KEY) === '1';
   const active = sessionActive ? resolveActive(items, setsByEx, exMap) : null;
   const teknikkOpenId = sessionStorage.getItem(TEKNIKK_KEY);
   const expandedId = sessionStorage.getItem(EXPAND_KEY);
@@ -235,10 +273,11 @@ export async function render(container, params, query = {}) {
   }).join('');
 
   const menuItems = [
-    ...(isToday && daySets.length ? [{ action: 'lagre-fra-logging', label: 'Lagre program fra dagens logging' }] : []),
     ...(items.length ? [{ action: 'lagre-mal', label: 'Lagre som program' }] : []),
     ...(items.length ? [{ action: 'tom', label: 'Tøm program', farlig: true }] : []),
-    ...(sessionActive ? [{ action: 'pause', label: 'Pause økt' }] : []),
+    ...(isToday && !sessionEndedToday && hasPartialLog
+      ? [{ action: 'avslutt', label: 'Avslutt økt' }]
+      : []),
   ];
 
   container.innerHTML = `
@@ -246,7 +285,7 @@ export async function render(container, params, query = {}) {
       <a href="#/styrketrening" class="tilbake" aria-label="Tilbake til styrketrening">‹</a>
       <div>
         <h1>Styrketrening</h1>
-        <p class="dus">${formatDateLong(viewDate)}${plan?.name ? ` · ${esc(plan.name)}` : ''}${isToday ? ` · ${esc(statusLine(plan, items, daySets))}` : viewDate > today ? ' · Planlagt' : ''}</p>
+        <p class="dus">${formatDateLong(viewDate)}${plan?.name ? ` · ${esc(plan.name)}` : ''}${isToday ? ` · ${esc(statusLine(plan, items, daySets, sessionEndedToday))}` : viewDate > today ? ' · Planlagt' : ''}</p>
         <p class="styrke-nav-lenker dus liten"><a href="#/programmer">Programmer</a> · <a href="#/kalender">Kalender</a></p>
       </div>
     </header>
@@ -272,7 +311,12 @@ export async function render(container, params, query = {}) {
       <div id="styrke-liste">${rows}</div>
     </section>
 
-    ${isToday && !sessionActive && items.length ? '<button type="button" class="knapp primaer stor" id="start-okt">Start økt</button>' : ''}
+    ${isToday && !sessionActive && !sessionEndedToday && items.length
+      ? `<button type="button" class="knapp primaer stor" id="start-okt">${hasPartialLog ? 'Fortsett økt' : 'Start økt'}</button>`
+      : ''}
+    ${isToday && sessionEndedToday && hasPartialLog
+      ? '<p class="dus liten styrke-okt-avsluttet">Økt avsluttet for i dag. Loggede sett finnes i historikk.</p>'
+      : ''}
     <button type="button" class="knapp sekundaer bred" id="legg-til-ovelse">+ Legg til øvelse</button>
 
     ${isToday ? `
@@ -351,24 +395,15 @@ export async function render(container, params, query = {}) {
           toast(`«${ex.name}» lagt til`, 'suksess');
         }, () => render(container, params, query));
       });
-    } else if (action === 'lagre-fra-logging') {
-      const saveItems = programShare.itemsFromLoggedSession(daySets, items);
-      if (!saveItems.length) {
-        toast('Ingen loggede sett å lagre fra', 'feil');
-        return;
-      }
-      openSaveTemplateSheet(host, saveItems, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems: outItems }) => {
-        const finalName = name || defaultProgramName(outItems, scheduleDate || viewDate);
-        await store.saveAsTemplate(finalName, outItems, { scheduleDate });
-        toast(scheduleDate
-          ? `«${finalName}» lagret fra dagens logging og lagt på ${formatDateShort(scheduleDate)}`
-          : `Programmet «${finalName}» er lagret fra dagens logging`, 'suksess');
-      }, {
-        title: 'Lagre program fra dagens logging',
-        intro: `${saveItems.length} øvelse${saveItems.length === 1 ? '' : 'r'} med mål hentet fra det du logget i dag.`,
-        defaultName: plan?.name ? `${plan.name} (logget)` : `Økt ${formatDateShort(viewDate)}`,
-        goalsChecked: true,
-      });
+    } else if (action === 'avslutt') {
+      if (!confirm('Avslutte økten for i dag? Loggede sett beholdes.')) return;
+      await store.completeStrengthSession(viewDate);
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(FOCUS_KEY);
+      sessionStorage.removeItem(TEKNIKK_KEY);
+      sessionStorage.removeItem(EXPAND_KEY);
+      toast('Økt avsluttet', 'suksess');
+      render(container, params, query);
     } else if (action === 'lagre-mal') {
       openSaveTemplateSheet(host, items, exMap, setsByEx, viewDate, async ({ name, scheduleDate, saveItems }) => {
         const finalName = name || defaultProgramName(saveItems, scheduleDate || viewDate);
@@ -385,17 +420,12 @@ export async function render(container, params, query = {}) {
       sessionStorage.removeItem(EXPAND_KEY);
       await store.savePlanForDate(viewDate, { id: plan?.id, items: [], name: '', sourceTemplateId: '' });
       render(container, params, query);
-    } else if (action === 'pause') {
-      sessionStorage.removeItem(SESSION_KEY);
-      sessionStorage.removeItem(FOCUS_KEY);
-      sessionStorage.removeItem(TEKNIKK_KEY);
-      sessionStorage.removeItem(EXPAND_KEY);
-      render(container, params, query);
     }
   }
 
-  container.querySelector('#start-okt')?.addEventListener('click', () => {
+  container.querySelector('#start-okt')?.addEventListener('click', async () => {
     if (!items.length) return;
+    if (isToday) await store.reopenStrengthSession(viewDate);
     sessionStorage.setItem(SESSION_KEY, '1');
     sessionStorage.setItem(PANEL_EXPANDED_KEY, '1');
     render(container, params, query);
@@ -510,12 +540,9 @@ export async function render(container, params, query = {}) {
   }
 
   if (sessionActive && active?.exercise) {
-    const exSets = setsByEx.get(active.item.exerciseId) || [];
+    const exSets = setsForPlanItem(active.item, setsByEx, exMap);
     const persistedSet = exSets.find((s) => s.setNumber === active.setNum) || null;
-    const prevSet = exSets.find((s) => s.setNumber === active.setNum - 1)
-      || exSets.slice().sort((a, b) => b.setNumber - a.setNumber)[0]
-      || (await store.getLastSessionForExercise(active.item.exerciseId, today))?.sets?.slice(-1)[0]
-      || null;
+    const prevSet = previousSetTemplate(exSets, active.setNum);
 
     await mountSetLogger(sessionHost, {
       exercise: active.exercise,
@@ -527,6 +554,7 @@ export async function render(container, params, query = {}) {
       compact: true,
       beforeDate: today,
       onSaved: () => {
+        sessionStorage.setItem(FOCUS_KEY, active.item.exerciseId);
         toast('Sett lagret', 'suksess');
         render(container, params, query);
       },

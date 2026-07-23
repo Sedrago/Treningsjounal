@@ -287,6 +287,7 @@ export async function render(container, params, query, options = {}) {
     foodIntakes,
     lactate,
     nutritionSummary,
+    todayWorkout,
   ] = await Promise.all([
     store.getEnrichedSets(),
     store.getAerobicSessions(),
@@ -294,6 +295,7 @@ export async function render(container, params, query, options = {}) {
     store.getAllFoodIntakes(),
     store.getLactateEntries(),
     store.getDailyNutritionSummary(todayStr()),
+    store.getWorkoutByDate(todayStr()),
   ]);
 
   const momentum = computeMomentum({
@@ -302,6 +304,7 @@ export async function render(container, params, query, options = {}) {
     sleep: sleepRows,
     aerobic,
     lactate,
+    strengthSessionCompletedToday: Boolean(todayWorkout?.sessionCompletedAt),
   });
 
   const infoSlides = buildHomeInfoRotation({

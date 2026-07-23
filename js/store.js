@@ -1005,6 +1005,25 @@ export async function loadTemplateIntoDate(templateId, date = todayStr()) {
   });
 }
 
+/** Avslutter styrkeøkt for en dato (loggede sett beholdes). */
+export async function completeStrengthSession(date = todayStr()) {
+  const workout = await getOrCreateWorkoutForDate(date);
+  if (!workout.sessionCompletedAt) {
+    workout.sessionCompletedAt = nowIso();
+    await saveWorkout(workout);
+  }
+  return workout;
+}
+
+/** Nullstiller avslutt-markering (f.eks. ved «Fortsett økt»). */
+export async function reopenStrengthSession(date = todayStr()) {
+  const workout = await getWorkoutByDate(date);
+  if (!workout?.sessionCompletedAt) return workout;
+  workout.sessionCompletedAt = null;
+  await saveWorkout(workout);
+  return workout;
+}
+
 /** @deprecated – bruk loadTemplateIntoDate. */
 export async function loadTemplateIntoActive(templateId) {
   return loadTemplateIntoDate(templateId, todayStr());
