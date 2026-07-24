@@ -138,6 +138,7 @@ export async function render(container, params, query = {}) {
   let activeIndex = 0;
 
   async function persistRow(row) {
+    if (row.removed) return;
     const s = row.set;
     const hasContent = s.weight != null || s.reps != null
       || s.durationSec != null || s.rir != null || s.comment;
@@ -291,17 +292,26 @@ export async function render(container, params, query = {}) {
       comment.classList.toggle('skjult');
       if (!comment.classList.contains('skjult')) comment.focus();
     });
-    actions.querySelector('[data-handling="slett"]').addEventListener('click', async () => {
-      if (rows.length <= 1) return;
+    actions.querySelector('[data-handling="slett"]').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isLast = rows.length <= 1;
+      if (isLast && !row.set.id) return;
+      const nr = row.set.setNumber;
+      if (!confirm(`Slette sett ${nr}?`)) return;
+
+      row.removed = true;
       if (row.set.id) await store.deleteSet(row.set.id);
       row.pickers?.weight?.destroy();
       row.pickers?.reps?.destroy();
       row.pickers?.rir?.destroy();
       row.pickers?.duration?.destroy();
-      rows.splice(row.index, 1);
+      rows.splice(rows.indexOf(row), 1);
       row.el.remove();
-      renumber();
-      openPanel(Math.min(activeIndex, rows.length - 1));
+      if (rows.length) {
+        renumber();
+        openPanel(Math.min(activeIndex, rows.length - 1));
+      }
     });
   }
 
@@ -314,7 +324,11 @@ export async function render(container, params, query = {}) {
       pickers: null,
       el: document.createElement('div'),
     };
-    row.save = debounce(() => persistRow(row), 400);
+    row.save = debounce(() => {
+      if (row.removed) return;
+      persistRow(row);
+    }, 400);
+    row.removed = false;
 
     row.el.className = 'sett-panel lukket';
     row.el.innerHTML = `
