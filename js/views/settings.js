@@ -130,7 +130,7 @@ export async function render(container) {
       <label class="felt-navn" for="s-sovn-mal">Optimalt søvnmål (timer)</label>
       <input type="number" class="inndata" id="s-sovn-mal" value="${esc(s('sleepDailyGoalHours'))}" min="1" max="14" step="0.5" inputmode="decimal">
       <p class="dus liten">Momentum bruker målet som optimum — mer søvn gir ikke ekstra poeng.</p>
-      <p class="dus liten"><a href="#/inntak?favoritter=1">Administrer inntaksfavoritter</a></p>
+      <p class="dus liten"><a href="#/inntak?favoritter=1">Administrer ernæringsfavoritter</a></p>
     </section>
 
     <section class="kort" aria-label="Kropp">

@@ -582,6 +582,23 @@ select.inndata { appearance: none; }
 }
 .momentum-faktor:hover { color: var(--momentum); text-decoration: none; }
 
+.momentum-faktor-gruppe {
+  border-bottom: 1px solid color-mix(in srgb, var(--kant) 65%, transparent);
+  padding-bottom: 4px;
+}
+.momentum-faktor-gruppe:last-child { border-bottom: none; padding-bottom: 0; }
+.momentum-faktor-gruppe .momentum-faktor--ernaring-hode {
+  grid-template-rows: auto;
+  border-bottom: none;
+  padding-bottom: 8px;
+}
+.momentum-ernaring-nested {
+  padding: 0 0 10px;
+}
+.momentum-ernaring-nested .kost-fremdrift:last-child {
+  margin-bottom: 0;
+}
+
 .momentum-karbo {
   margin-top: 12px;
   padding-top: 12px;
@@ -2983,7 +3000,19 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   border-color: var(--aksent);
   color: var(--aksent-tekst);
 }
+.kost-qty-rad--favoritt {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kost-qty-manuell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
 .kost-qty-input { width: 72px; margin: 0; flex-shrink: 0; }
+.kost-qty-manuell .kost-qty-input { width: 80px; }
 
 .kost-manuell { margin-top: 12px; }
 .kost-manuell summary {

@@ -42,6 +42,18 @@ function optionalNumInput(id, container) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Alle fire makrofelt må være utfylt (0 er tillatt). */
+function readRequiredPresetMacros(container, prefix = 'preset') {
+  const proteinG = optionalNumInput(`#${prefix}-protein`, container);
+  const carbsG = optionalNumInput(`#${prefix}-karbo`, container);
+  const fatG = optionalNumInput(`#${prefix}-fett`, container);
+  const kcal = optionalNumInput(`#${prefix}-kcal`, container);
+  if (proteinG == null || carbsG == null || fatG == null || kcal == null) {
+    return null;
+  }
+  return { proteinG, carbsG, fatG, kcal };
+}
+
 export async function render(container, params, query) {
   const showPresets = query.favoritter === '1' || params[0] === 'favoritter';
   const date = query.date || todayStr();
@@ -53,7 +65,7 @@ export async function render(container, params, query) {
   container.innerHTML = `
     <header class="side-topp">
       <a href="#/logging" class="tilbake" aria-label="Tilbake til logging">‹</a>
-      <h1>Inntak</h1>
+      <h1>Ernæring</h1>
     </header>
 
     <section class="kort" aria-label="Dagsoversikt">
@@ -68,20 +80,22 @@ export async function render(container, params, query) {
 
     <section class="kort inntak-metode" aria-label="Lagret favoritt">
       <h2 class="kort-tittel inntak-metode-tittel"><span class="inntak-metode-nr">1</span> Lagret favoritt</h2>
-      <p class="dus liten">Velg favoritt og antall.</p>
+      <p class="dus liten">Velg favoritt. Trykk et tall for å legge til med en gang, eller skriv antall og trykk Legg til.</p>
       <label class="felt-navn" for="inntak-preset">Favoritt</label>
       <select class="inndata" id="inntak-preset">
         <option value="">Velg favoritt …</option>
         ${presets.map((p) => `<option value="${p.id}">${esc(presetLabel(p))}</option>`).join('')}
       </select>
       <p class="felt-navn">Antall</p>
-      <div class="kost-qty-rad">
-        <div class="kost-qty-pills" role="group" aria-label="Antall">
-          ${[1, 2, 3, 4].map((n) => `<button type="button" class="kost-qty-pill${n === 1 ? ' aktiv' : ''}" data-qty="${n}">${n}</button>`).join('')}
+      <div class="kost-qty-rad kost-qty-rad--favoritt">
+        <div class="kost-qty-pills" role="group" aria-label="Hurtig legg til">
+          ${[1, 2, 3, 4].map((n) => `<button type="button" class="kost-qty-pill" data-qty-hurtig="${n}">${n}</button>`).join('')}
         </div>
-        <input type="number" class="inndata kost-qty-input" id="inntak-qty" value="1" min="0.25" step="0.25" inputmode="decimal">
+        <div class="kost-qty-manuell">
+          <input type="number" class="inndata kost-qty-input" id="inntak-qty" placeholder="Antall" min="0.25" step="0.25" inputmode="decimal" aria-label="Antall">
+          <button type="button" class="knapp primaer mini" id="inntak-legg-til" ${presets.length ? '' : 'disabled'}>Legg til</button>
+        </div>
       </div>
-      <button type="button" class="knapp primaer bred" id="inntak-legg-til" ${presets.length ? '' : 'disabled'}>Legg til</button>
       ${presets.length ? '' : '<p class="dus liten">Opprett favoritter nederst på siden, eller bruk manuell registrering.</p>'}
     </section>
 
@@ -140,7 +154,7 @@ export async function render(container, params, query) {
         <input type="text" class="inndata" id="inntak-notat" placeholder="F.eks. lunsj">
         <label class="kost-lagre-favoritt">
           <input type="checkbox" id="inntak-lagre-favoritt">
-          Lagre som favoritt
+          Lagre som favoritt <span class="dus">(krever protein, karbo, fett og kalorier)</span>
         </label>
         <div id="inntak-favoritt-felt" hidden>
           <label class="felt-navn" for="inntak-favoritt-navn">Favorittnavn</label>
@@ -171,7 +185,7 @@ export async function render(container, params, query) {
 
     <section class="kort" aria-label="Administrer favoritter" id="inntak-favoritter">
       <h2 class="kort-tittel">Administrer favoritter</h2>
-      <p class="dus liten">Protein, karbo og valgfritt fett/kalorier per enhet.</p>
+      <p class="dus liten">Protein, karbo, fett og kalorier per enhet (alle påkrevd).</p>
       <form id="preset-skjema" class="kost-preset-skjema">
         <input type="hidden" id="preset-id">
         <label class="felt-navn" for="preset-navn">Navn</label>
@@ -183,21 +197,21 @@ export async function render(container, params, query) {
           </div>
           <div class="felt">
             <label class="felt-navn" for="preset-karbo">Karbo (g)</label>
-            <input type="number" class="inndata" id="preset-karbo" min="0" step="0.1" value="0" inputmode="decimal">
+            <input type="number" class="inndata" id="preset-karbo" min="0" step="0.1" required inputmode="decimal">
           </div>
           <div class="felt">
-            <label class="felt-navn" for="preset-enhet">Enhet</label>
+            <label class="felt-navn" for="preset-enhet">Enhet <span class="dus">(valgfritt)</span></label>
             <input type="text" class="inndata" id="preset-enhet" placeholder="stk">
           </div>
         </div>
         <div class="skjema-rad">
           <div class="felt">
-            <label class="felt-navn" for="preset-fett">Fett (g) <span class="dus">(valgfritt)</span></label>
-            <input type="number" class="inndata" id="preset-fett" min="0" step="0.1" inputmode="decimal">
+            <label class="felt-navn" for="preset-fett">Fett (g)</label>
+            <input type="number" class="inndata" id="preset-fett" min="0" step="0.1" required inputmode="decimal">
           </div>
           <div class="felt">
-            <label class="felt-navn" for="preset-kcal">Kalorier (kcal) <span class="dus">(valgfritt)</span></label>
-            <input type="number" class="inndata" id="preset-kcal" min="0" step="1" inputmode="numeric">
+            <label class="felt-navn" for="preset-kcal">Kalorier (kcal)</label>
+            <input type="number" class="inndata" id="preset-kcal" min="0" step="1" required inputmode="numeric">
           </div>
         </div>
         <div class="knapp-rad">
@@ -252,33 +266,37 @@ export async function render(container, params, query) {
     onSaved: reload,
   });
 
-  let selectedQty = 1;
-  container.querySelectorAll('.kost-qty-pill').forEach((btn) => {
+  async function addPresetIntake(qty) {
+    const presetId = container.querySelector('#inntak-preset').value;
+    const preset = presets.find((p) => p.id === presetId);
+    if (!preset) {
+      toast('Velg en favoritt først', 'feil');
+      return;
+    }
+    const q = Number(qty);
+    if (!Number.isFinite(q) || q <= 0) {
+      toast('Oppgi et gyldig antall', 'feil');
+      return;
+    }
+    const d = container.querySelector('#inntak-dato').value;
+    await store.saveFoodIntake(store.intakeFromPreset(preset, q, { date: d }));
+    toast('Inntak lagret', 'suksess');
+    await reload();
+  }
+
+  container.querySelectorAll('[data-qty-hurtig]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      selectedQty = Number(btn.dataset.qty);
-      container.querySelector('#inntak-qty').value = String(selectedQty);
-      container.querySelectorAll('.kost-qty-pill').forEach((b) => b.classList.toggle('aktiv', b === btn));
-    });
-  });
-  container.querySelector('#inntak-qty').addEventListener('input', (e) => {
-    selectedQty = Number(e.target.value) || 1;
-    container.querySelectorAll('.kost-qty-pill').forEach((b) => {
-      b.classList.toggle('aktiv', Number(b.dataset.qty) === selectedQty);
+      addPresetIntake(Number(btn.dataset.qtyHurtig));
     });
   });
 
   container.querySelector('#inntak-legg-til')?.addEventListener('click', async () => {
-    const presetId = container.querySelector('#inntak-preset').value;
-    const preset = presets.find((p) => p.id === presetId);
-    if (!preset) {
-      toast('Velg en favoritt', 'feil');
+    const qty = optionalNumInput('#inntak-qty', container);
+    if (qty == null) {
+      toast('Skriv antall i feltet', 'feil');
       return;
     }
-    const qty = Number(container.querySelector('#inntak-qty').value) || selectedQty;
-    const d = container.querySelector('#inntak-dato').value;
-    await store.saveFoodIntake(store.intakeFromPreset(preset, qty, { date: d }));
-    toast('Inntak lagret', 'suksess');
-    await reload();
+    await addPresetIntake(qty);
   });
 
   const favCheckbox = container.querySelector('#inntak-lagre-favoritt');
@@ -286,6 +304,13 @@ export async function render(container, params, query) {
   favCheckbox.addEventListener('change', () => { favFields.hidden = !favCheckbox.checked; });
 
   container.querySelector('#inntak-manuell-lagre').addEventListener('click', async () => {
+    if (favCheckbox.checked) {
+      const macros = readRequiredPresetMacros(container, 'inntak');
+      if (!macros) {
+        toast('Favoritt krever protein, karbo, fett og kalorier', 'feil');
+        return;
+      }
+    }
     const proteinG = optionalNumInput('#inntak-protein', container);
     const carbsG = optionalNumInput('#inntak-karbo', container) ?? 0;
     const fatG = optionalNumInput('#inntak-fett', container);
@@ -305,15 +330,16 @@ export async function render(container, params, query) {
       note,
     });
     if (favCheckbox.checked) {
+      const macros = readRequiredPresetMacros(container, 'inntak');
       const name = container.querySelector('#inntak-favoritt-navn').value.trim()
         || note.split('×')[0].trim()
         || 'Favoritt';
       await store.saveFoodPreset({
         name,
-        proteinG: proteinG ?? 0,
-        carbsG,
-        fatG,
-        kcal,
+        proteinG: macros.proteinG,
+        carbsG: macros.carbsG,
+        fatG: macros.fatG,
+        kcal: macros.kcal,
         unitLabel: container.querySelector('#inntak-favoritt-enhet').value.trim(),
       });
       toast('Inntak og favoritt lagret', 'suksess');
@@ -335,19 +361,23 @@ export async function render(container, params, query) {
   const resetPresetForm = () => {
     presetForm.reset();
     container.querySelector('#preset-id').value = '';
-    container.querySelector('#preset-karbo').value = '0';
     presetCancel.hidden = true;
   };
 
   presetForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const macros = readRequiredPresetMacros(container, 'preset');
+    if (!macros) {
+      toast('Fyll ut protein, karbo, fett og kalorier', 'feil');
+      return;
+    }
     await store.saveFoodPreset({
       id: container.querySelector('#preset-id').value || undefined,
       name: container.querySelector('#preset-navn').value,
-      proteinG: container.querySelector('#preset-protein').value,
-      carbsG: container.querySelector('#preset-karbo').value,
-      fatG: optionalNumInput('#preset-fett', container),
-      kcal: optionalNumInput('#preset-kcal', container),
+      proteinG: macros.proteinG,
+      carbsG: macros.carbsG,
+      fatG: macros.fatG,
+      kcal: macros.kcal,
       unitLabel: container.querySelector('#preset-enhet').value,
     });
     toast('Favoritt lagret', 'suksess');

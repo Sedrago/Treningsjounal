@@ -5,11 +5,11 @@
 import * as store from '../store.js';
 import * as api from '../api.js';
 import * as sync from '../sync.js';
+import { renderNutritionProgressBarsHtml } from '../nutrition-ui.js';
 import { computeMomentum } from '../momentum.js';
 import { buildHomeInfoRotation } from '../home-insight.js';
 import { openMomentumGuide, closeMomentumGuide, isMomentumGuideOpen } from '../momentum-guide.js';
 import { momentumChart } from '../charts.js';
-import { renderHomeCarbsLineHtml, renderHomeCaloriesLineHtml } from '../nutrition-ui.js';
 import {
   buildMomentumOverlays,
   hasUnreadPartnerSync,
@@ -39,10 +39,41 @@ function momentumChangeHtml(change) {
   return `<p class="momentum-endring ${cls}">${sign}${change} siden i går</p>`;
 }
 
-function renderMomentumFactors(factors) {
+function nutritionSummarySafe(summary) {
+  return summary ?? {
+    proteinG: 0,
+    carbsG: 0,
+    fatG: null,
+    kcal: null,
+    fatPartial: false,
+    kcalPartial: false,
+  };
+}
+
+function renderNutritionMomentumFactor(factor, summary) {
+  const safe = nutritionSummarySafe(summary);
+  return `
+    <li class="momentum-faktor-gruppe">
+      <a href="${esc(factor.href)}" class="momentum-faktor momentum-faktor--ernaring-hode">
+        <span class="momentum-faktor-hode">
+          <span class="momentum-faktor-navn">${esc(factor.label)}</span>
+          <span class="momentum-faktor-status dus">${esc(factor.status)}</span>
+        </span>
+        <span class="momentum-faktor-pil" aria-hidden="true">›</span>
+      </a>
+      <div class="momentum-ernaring-nested">${renderNutritionProgressBarsHtml(safe)}</div>
+    </li>`;
+}
+
+function renderMomentumFactors(factors, nutritionSummary) {
+  const summary = nutritionSummarySafe(nutritionSummary);
   return `
     <ul class="momentum-faktorer" aria-label="Faktorer i dag">
-      ${factors.map((f) => `
+      ${factors.map((f) => {
+    if (f.id === 'protein') {
+      return renderNutritionMomentumFactor(f, summary);
+    }
+    return `
         <li>
           <a href="${esc(f.href)}" class="momentum-faktor">
             <span class="momentum-faktor-hode">
@@ -54,7 +85,8 @@ function renderMomentumFactors(factors) {
             </span>
             <span class="momentum-faktor-pil" aria-hidden="true">›</span>
           </a>
-        </li>`).join('')}
+        </li>`;
+  }).join('')}
     </ul>`;
 }
 
@@ -344,9 +376,7 @@ export async function render(container, params, query, options = {}) {
       </div>
       <div id="momentum-graf" class="momentum-graf-wrap"></div>
       ${renderPartnerPanel(partnersForUi, partnerState)}
-      ${renderMomentumFactors(momentum.factors)}
-      ${renderHomeCarbsLineHtml(nutritionSummary)}
-      ${renderHomeCaloriesLineHtml(nutritionSummary)}
+      ${renderMomentumFactors(momentum.factors, nutritionSummary)}
     </section>
 
     <div id="momentum-guide-host"></div>

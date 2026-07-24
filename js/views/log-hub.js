@@ -18,8 +18,8 @@ export async function render(container) {
       <a href="#/inntak" class="hub-lenke">
         <span class="hub-lenke-ikon" aria-hidden="true">🍳</span>
         <span class="hub-lenke-tekst">
-          <strong>Inntak</strong>
-          <span class="dus liten">Protein og karbohydrater</span>
+          <strong>Ernæring</strong>
+          <span class="dus liten">Protein, karbo og kalorier</span>
         </span>
         <span class="hub-lenke-pil" aria-hidden="true">›</span>
       </a>

@@ -1159,14 +1159,16 @@ export async function saveFoodPreset(preset) {
     name: String(preset.name || '').trim(),
     proteinG: roundMacroG(preset.proteinG),
     carbsG: roundMacroG(preset.carbsG),
-    fatG: preset.fatG == null || preset.fatG === '' ? null : roundMacroG(preset.fatG),
-    kcal: preset.kcal == null || preset.kcal === '' ? null : roundKcal(preset.kcal),
+    fatG: roundMacroG(preset.fatG),
+    kcal: roundKcal(preset.kcal),
     unitLabel: String(preset.unitLabel || '').trim(),
     sortOrder: preset.sortOrder ?? 0,
     deleted: false,
     updatedAt: nowIso(),
   };
   if (!record.name) throw new Error('Navn mangler');
+  if (record.fatG == null || !Number.isFinite(record.fatG)) throw new Error('Fett mangler');
+  if (record.kcal == null || !Number.isFinite(record.kcal)) throw new Error('Kalorier mangler');
   await db.put('foodPresets', record);
   await queueOp('foodPreset', 'upsert', record);
   return record;

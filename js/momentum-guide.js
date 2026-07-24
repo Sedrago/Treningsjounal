@@ -32,7 +32,7 @@ function momentumGuideHtml() {
         <h3 class="momentum-guide-del">Fem faktorer i dag</h3>
         <ul class="momentum-guide-liste momentum-guide-vekter">
           <li><strong>Styrketrening</strong> — ${wStrength} % av dagscore</li>
-          <li><strong>Protein</strong> — ${wProtein} %</li>
+          <li><strong>Ernæring</strong> — ${wProtein} %</li>
           <li><strong>Søvn</strong> — ${wSleep} %</li>
           <li><strong>Aerob</strong> — ${wAerobic} %</li>
           <li><strong>Anaerob (laktat)</strong> — ${wLactate} %</li>
@@ -56,8 +56,8 @@ function momentumGuideHtml() {
         </section>
 
         <section class="momentum-guide-seksjon">
-          <h4>Protein</h4>
-          <p>Kun <strong>i dag</strong>. Opp til 100 % når du når daglig proteinmål (innstillinger). Over mål gir ikke ekstra.</p>
+          <h4>Ernæring</h4>
+          <p>Kun <strong>i dag</strong>. Momentum-linjen følger daglig proteinmål (innstillinger). Karbo- og kaloribarer vises under Ernæring på hjem når du har satt tak i innstillinger. Over proteinmål gir ikke ekstra.</p>
         </section>
 
         <section class="momentum-guide-seksjon">

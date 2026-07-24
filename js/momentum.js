@@ -170,7 +170,7 @@ function pillarStatusText(pct) {
 
 export const MOMENTUM_FACTORS = [
   { id: 'strength', label: 'Styrketrening', href: '#/styrketrening' },
-  { id: 'protein', label: 'Protein', href: '#/inntak' },
+  { id: 'protein', label: 'Ernæring', href: '#/inntak' },
   { id: 'sleep', label: 'Søvn', href: '#/sovn' },
   { id: 'aerobic', label: 'Aerob', href: '#/aerob' },
   { id: 'lactate', label: 'Anaerob', href: '#/anaerob' },

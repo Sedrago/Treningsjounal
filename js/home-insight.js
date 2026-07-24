@@ -9,7 +9,7 @@ import { fmtNum, fmtMacroG, windowStartStr } from './utils.js';
 
 const PILLAR_LABELS = {
   strength: 'Styrketrening',
-  protein: 'Protein',
+  protein: 'Ernæring',
   sleep: 'Søvn',
   aerobic: 'Aerob',
   lactate: 'Anaerob',

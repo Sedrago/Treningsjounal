@@ -56,19 +56,26 @@ function homeCapLineHtml({ label, current, cap, classBase, ariaLabel }) {
     </div>`;
 }
 
-export function renderNutritionSummaryHtml(summary) {
+export function renderNutritionProgressBarsHtml(summary) {
+  const s = summary ?? { proteinG: 0, carbsG: 0, kcal: null };
   const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
   const carbMax = store.nutritionCarbMaxG();
   const kcalMax = store.nutritionCaloriesMaxKcal();
 
   return `
-    ${progressBar('Protein', summary.proteinG, proteinGoal, { isMax: false })}
-    ${carbMax != null ? progressBar('Karbo', summary.carbsG, carbMax, { isMax: true }) : ''}
-    ${kcalMax != null ? progressBar('Kalorier', summary.kcal ?? 0, kcalMax, { isMax: true, unit: 'kcal', fmt: fmtKcal }) : ''}
+    ${progressBar('Protein', s.proteinG ?? 0, proteinGoal, { isMax: false })}
+    ${carbMax != null ? progressBar('Karbo', s.carbsG ?? 0, carbMax, { isMax: true }) : ''}
+    ${kcalMax != null ? progressBar('Kalorier', s.kcal ?? 0, kcalMax, { isMax: true, unit: 'kcal', fmt: fmtKcal }) : ''}`;
+}
+
+export function renderNutritionSummaryHtml(summary) {
+  return `
+    ${renderNutritionProgressBarsHtml(summary)}
     ${renderDailyNutritionTableHtml(summary)}`;
 }
 
 export function renderDailyNutritionTableHtml(summary) {
+  const s = summary ?? { proteinG: 0, carbsG: 0, fatG: null, kcal: null, fatPartial: false, kcalPartial: false };
   const proteinGoal = store.nutritionGoalG('proteinDailyGoalG', 150);
   const carbMax = store.nutritionCarbMaxG();
   const kcalMax = store.nutritionCaloriesMaxKcal();
@@ -78,16 +85,16 @@ export function renderDailyNutritionTableHtml(summary) {
   const goalFat = '–';
   const goalKcal = kcalMax != null ? `${fmtKcal(kcalMax)} max` : '–';
 
-  const fatVal = summary.fatG != null ? `${fmtMacroG(summary.fatG)} g` : '–';
-  const kcalVal = summary.kcal != null ? `${fmtKcal(summary.kcal)} kcal` : '–';
-  const fatCell = summary.fatG != null && summary.fatPartial
-    ? `${fmtMacroG(summary.fatG)} g*`
+  const fatVal = s.fatG != null ? `${fmtMacroG(s.fatG)} g` : '–';
+  const kcalVal = s.kcal != null ? `${fmtKcal(s.kcal)} kcal` : '–';
+  const fatCell = s.fatG != null && s.fatPartial
+    ? `${fmtMacroG(s.fatG)} g*`
     : fatVal;
-  const kcalCell = summary.kcal != null && summary.kcalPartial
-    ? `${fmtKcal(summary.kcal)} kcal*`
+  const kcalCell = s.kcal != null && s.kcalPartial
+    ? `${fmtKcal(s.kcal)} kcal*`
     : kcalVal;
 
-  const footnote = (summary.fatPartial || summary.kcalPartial)
+  const footnote = (s.fatPartial || s.kcalPartial)
     ? '<p class="dus liten kost-tabell-fotnote">* Delvis — fett/energi telles bare for inntak der det er registrert.</p>'
     : '';
 
@@ -105,12 +112,12 @@ export function renderDailyNutritionTableHtml(summary) {
         <tbody>
           <tr>
             <th scope="row">Protein</th>
-            <td>${fmtMacroG(summary.proteinG)} g</td>
+            <td>${fmtMacroG(s.proteinG)} g</td>
             <td class="dus">${goalProtein}</td>
           </tr>
           <tr>
             <th scope="row">Karbo</th>
-            <td>${fmtMacroG(summary.carbsG)} g</td>
+            <td>${fmtMacroG(s.carbsG)} g</td>
             <td class="dus">${goalCarbs}</td>
           </tr>
           <tr>
