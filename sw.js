@@ -3,7 +3,7 @@
  * Selve treningsdataene bor i IndexedDB og berøres ikke av denne.
  */
 
-const CACHE = 'flowbooster-v146';
+const CACHE = 'flowbooster-v155';
 
 const ASSETS = [
   './',
@@ -40,6 +40,8 @@ const ASSETS = [
   'js/nutrition-ai.js',
   'js/meal-ai-ui.js',
   'js/food-table-ui.js',
+  'js/nutrition-search-ui.js',
+  'js/portion-log-ui.js',
   'js/program-ui.js',
   'js/program-pickers.js',
   'js/views/programs.js',

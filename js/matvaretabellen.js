@@ -4,6 +4,7 @@
  */
 
 import * as db from './db.js';
+import { fmtMacroG, fmtKcal } from './utils.js';
 
 function roundMacroG(n) {
   return Math.round(Number(n) * 10) / 10;
@@ -233,4 +234,71 @@ export function formatIntakeNote(foodName, amount, unit) {
     ? String(Math.round(amt))
     : String(amt);
   return `${foodName} · ${amtStr} ${u}`;
+}
+
+/** Notat for logging med gram per enhet × antall. */
+export function formatIntakeNoteGrams(foodName, portionG, count) {
+  const pg = Number(portionG);
+  const c = Number(count);
+  const pgStr = Number.isFinite(pg) && Math.abs(pg - Math.round(pg)) < 1e-9
+    ? String(Math.round(pg))
+    : String(pg);
+  const cStr = Number.isFinite(c) && Math.abs(c - Math.round(c)) < 1e-9
+    ? String(Math.round(c))
+    : String(c);
+  if (!Number.isFinite(c) || c <= 1) return `${foodName} · ${pgStr} g`;
+  return `${foodName} · ${cStr} × ${pgStr} g`;
+}
+
+/** Makro for totalt gram ut fra verdier per 100 g. */
+export function macrosFromPer100g(per100, totalGram) {
+  const g = Math.max(0, Number(totalGram) || 0);
+  const f = g / 100;
+  return {
+    grams: g,
+    proteinG: roundMacroG((per100.proteinG ?? 0) * f),
+    carbsG: roundMacroG((per100.carbsG ?? 0) * f),
+    fatG: roundMacroG((per100.fatG ?? 0) * f),
+    kcal: Math.round((per100.kcal ?? 0) * f),
+  };
+}
+
+/** Forhåndsvisning: «50 g → 7 g P …» */
+export function formatPortionPreview(totalGram, per100) {
+  const g = Number(totalGram);
+  if (!per100 || !Number.isFinite(g) || g <= 0) return '';
+  const m = macrosFromPer100g(per100, g);
+  const gStr = Math.abs(g - Math.round(g)) < 1e-9 ? String(Math.round(g)) : String(Math.round(g * 10) / 10);
+  return `${gStr} g → ${formatMacrosCompact(m)}`;
+}
+
+/** Kompakt makrolinje for lister og dropdowns. */
+export function formatMacrosCompact(m) {
+  if (!m) return '–';
+  const parts = [
+    `${fmtMacroG(m.proteinG ?? 0)} g P`,
+    `${fmtMacroG(m.carbsG ?? 0)} g K`,
+    `${fmtMacroG(m.fatG ?? 0)} g F`,
+    `${fmtKcal(m.kcal ?? 0)} kcal`,
+  ];
+  return parts.join(', ');
+}
+
+/**
+ * Matvarenavn med næringsinnhold for søk/dropdown.
+ * @param {string} id foodId
+ * @param {string} name visningsnavn
+ * @param {{ amount?: number, unit?: string }} [portion] standard 100 g
+ */
+export function foodListLabel(id, name, portion = {}) {
+  const food = getFoodById(id);
+  const displayName = name || food?.foodName || '';
+  if (!food) return displayName;
+  const amount = portion.amount != null ? portion.amount : 100;
+  const unit = portion.unit || 'g';
+  const m = macrosForPortion(food, amount, unit);
+  const suffix = amount === 100 && unit === 'g'
+    ? ' / 100 g'
+    : ` / ${amount} ${unitLabel(unit)}`;
+  return `${displayName} (${formatMacrosCompact(m)}${suffix})`;
 }

@@ -9,10 +9,54 @@ import {
   searchFoodsRanked,
   getFoodById,
   macrosForPortion,
+  gramsPerUnit,
 } from './matvaretabellen.js';
+import * as store from './store.js';
 
 const CACHE_META = 'mealStructureCacheV1';
 const SPREAD_G_PER_STK = 15;
+
+/** Mengde (g) per enhet + antall fra parser amount/unit (valgfritt matvare for stk/glass). */
+export function derivePortionAndCount(amount, unit, food = null) {
+  const u = normalizeUnit(unit);
+  const amt = Number(amount);
+  const n = Number.isFinite(amt) && amt > 0 ? amt : 1;
+
+  if (u === 'g') {
+    return { portionG: n, count: 1 };
+  }
+  if (u === 'dl') {
+    return { portionG: 100, count: n };
+  }
+  if (u === 'glass') {
+    const pg = food ? gramsPerUnit(food, 'glass') : 200;
+    return { portionG: pg, count: n };
+  }
+  if (u === 'stk') {
+    const pg = food ? gramsPerUnit(food, 'stk') : null;
+    return { portionG: pg, count: n };
+  }
+  return { portionG: n, count: 1 };
+}
+
+function applyPortionModel(row) {
+  if (row.brandEstimate) return row;
+  const food = row.foodId ? getFoodById(row.foodId) : null;
+  const { portionG, count } = derivePortionAndCount(row.amount, row.unit, food);
+  const pg = row.portionG != null && Number(row.portionG) > 0 ? Number(row.portionG) : portionG;
+  const c = row.count != null && Number(row.count) > 0 ? Number(row.count) : count;
+  return { ...row, portionG: pg, count: c, unit: 'g' };
+}
+
+export function rowTotalGrams(row) {
+  if (row.brandEstimate) return null;
+  const pg = Number(row.portionG);
+  const c = Number(row.count ?? 1);
+  if (Number.isFinite(pg) && pg > 0 && Number.isFinite(c) && c > 0) return pg * c;
+  const food = row.foodId ? getFoodById(row.foodId) : null;
+  if (food && row.amount != null) return macrosForPortion(food, row.amount, row.unit || 'g').grams;
+  return 0;
+}
 
 function normalizeUnit(unit) {
   const u = String(unit || 'g').toLowerCase();
@@ -249,7 +293,7 @@ export async function resolveMealFromText(text) {
       assumptionNote: item.assumptionNote || '',
     };
 
-    resolved.push({
+    resolved.push(applyPortionModel({
       ...rowBase,
       foodId: food?.foodId || foodId,
       foodName: food?.foodName || missingFoodLabel(rowBase),
@@ -259,11 +303,18 @@ export async function resolveMealFromText(text) {
       missingHint: !food ? missingHint : '',
       macrosFromAi: !food && macrosFromAi,
       aiMacroBasis: !food ? aiMacroBasis : null,
-    });
+    }));
   }
 
   if (!resolved.length) throw new Error('Ingen matvarelinjer å slå opp');
-  return resolved;
+  const withMacros = resolved.map((r) => recomputeRowMacros(r));
+  return Promise.all(withMacros.map(async (row) => {
+    if (row.brandEstimate || row.macrosFromAi || !row.foodId) return row;
+    if (row.portionG != null && Number(row.portionG) > 0) return row;
+    const last = await store.getLastPortionGramsForFood(row.foodId);
+    if (last == null) return row;
+    return recomputeRowMacros({ ...row, portionG: last });
+  }));
 }
 
 /**
@@ -311,25 +362,28 @@ export function sumResolvedMacros(rows) {
     sum.proteinG += r.macros.proteinG || 0;
     sum.carbsG += r.macros.carbsG || 0;
     sum.fatG += r.macros.fatG || 0;
-    sum.kcal += r.kcal || 0;
+    sum.kcal += r.macros.kcal || 0;
   }
   return sum;
 }
 
 export function recomputeRowMacros(row) {
-  const food = row.foodId ? getFoodById(row.foodId) : null;
+  const r = applyPortionModel(row);
+  const food = r.foodId ? getFoodById(r.foodId) : null;
   if (food) {
+    const totalG = rowTotalGrams(r);
     return {
-      ...row,
+      ...r,
       foodName: food.foodName,
-      macros: macrosForPortion(food, row.amount, row.unit),
+      macros: totalG > 0 ? macrosForPortion(food, totalG, 'g') : null,
       missingFood: false,
       missingHint: '',
       macrosFromAi: false,
       aiMacroBasis: null,
+      unit: 'g',
     };
   }
-  if (row.macrosFromAi && row.aiMacroBasis) {
+  if (r.macrosFromAi && r.aiMacroBasis) {
     const name = row.brandEstimate
       ? (row.originalQuery || row.query || row.foodName)
       : missingFoodLabel(row);

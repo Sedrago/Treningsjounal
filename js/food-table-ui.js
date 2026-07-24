@@ -1,5 +1,5 @@
 /**
- * food-table-ui.js – søk i Matvaretabellen og porsjonsark på Inntak.
+ * food-table-ui.js – søk i Matvaretabellen og porsjonsvalg på Inntak.
  */
 
 import * as store from './store.js';
@@ -8,13 +8,11 @@ import {
   searchFoods,
   getFoodById,
   macrosForPortion,
-  formatIntakeNote,
-  portionHint,
-  MATVARE_UNITS,
+  formatIntakeNoteGrams,
+  foodListLabel,
 } from './matvaretabellen.js';
-import { esc, fmtMacroG, toast } from './utils.js';
-
-const UNITS = MATVARE_UNITS;
+import { renderPortionLogHtml, bindPortionLog } from './portion-log-ui.js';
+import { esc, toast } from './utils.js';
 
 function debounce(fn, ms) {
   let t;
@@ -24,106 +22,69 @@ function debounce(fn, ms) {
   };
 }
 
-function renderMacroPreview(m) {
-  const parts = [`${fmtMacroG(m.proteinG)} g P`, `${fmtMacroG(m.carbsG)} g K`];
-  if (m.fatG) parts.push(`${fmtMacroG(m.fatG)} g F`);
-  if (m.kcal) parts.push(`${m.kcal} kcal`);
-  parts.push(`${Math.round(m.grams)} g totalt`);
-  return parts.join(' · ');
+function foodPer100gFromTable(food) {
+  const m = macrosForPortion(food, 100, 'g');
+  return {
+    proteinG: m.proteinG,
+    carbsG: m.carbsG,
+    fatG: m.fatG,
+    kcal: m.kcal,
+  };
 }
 
-function openPortionSheet(host, food, { date, onSaved }) {
-  let amount = 1;
-  let unit = 'glass';
+async function renderOppslagPanel(panelEl, food, { getDate, onSaved }) {
+  panelEl.hidden = false;
+  const prefix = 'matvare-oppslag';
+  const lastG = await store.getLastPortionGramsForFood(food.foodId);
 
-  const syncPreview = () => {
-    const m = macrosForPortion(food, amount, unit);
-    const el = host.querySelector('#matvare-preview');
-    if (el) el.textContent = renderMacroPreview(m);
-    const hint = host.querySelector('#matvare-enhet-hint');
-    if (hint) hint.textContent = portionHint(unit);
-  };
-
-  host.innerHTML = `
-    <div class="ark-bakgrunn" data-lukk></div>
-    <div class="ark matvare-portion-ark" role="dialog" aria-labelledby="matvare-portion-tittel">
-      <div class="ark-hode">
-        <h2 id="matvare-portion-tittel">${esc(food.foodName)}</h2>
-        <button type="button" class="lukk" data-lukk aria-label="Lukk">✕</button>
-      </div>
-      <p class="dus liten">Verdier fra Matvaretabellen (Mattilsynet), per porsjon.</p>
-      <p class="felt-navn">Mengde</p>
-      <div class="kost-qty-rad">
-        <input type="number" class="inndata kost-qty-input" id="matvare-mengde" value="1" min="0.25" step="0.25" inputmode="decimal">
-      </div>
-      <p class="felt-navn">Enhet</p>
-      <div class="matvare-enhet-rad" role="group" aria-label="Enhet">
-        ${UNITS.map((u) => `
-          <button type="button" class="kost-qty-pill matvare-enhet-pill${u.id === unit ? ' aktiv' : ''}"
-            data-unit="${u.id}">${esc(u.label)}</button>`).join('')}
-      </div>
-      <p class="dus liten" id="matvare-enhet-hint">${esc(portionHint(unit))}</p>
-      <p class="matvare-preview" id="matvare-preview"></p>
-      <button type="button" class="knapp primaer bred" id="matvare-legg-til">Legg til inntak</button>
+  panelEl.innerHTML = `
+    <div class="matvare-oppslag-valgt">
+      <p class="matvare-oppslag-navn"><strong>${esc(food.foodName)}</strong></p>
+      <p class="dus liten">Verdier fra Matvaretabellen per 100 g.</p>
+      ${renderPortionLogHtml(prefix)}
     </div>`;
 
-  const close = () => { host.innerHTML = ''; };
-  host.querySelectorAll('[data-lukk]').forEach((el) => el.addEventListener('click', close));
-
-  const mengdeInput = host.querySelector('#matvare-mengde');
-  mengdeInput.addEventListener('input', () => {
-    amount = Number(mengdeInput.value) || 0;
-    syncPreview();
-  });
-
-  host.querySelectorAll('.matvare-enhet-pill').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      unit = btn.dataset.unit;
-      host.querySelectorAll('.matvare-enhet-pill').forEach((b) => {
-        b.classList.toggle('aktiv', b.dataset.unit === unit);
+  const api = bindPortionLog(panelEl, prefix, {
+    getPer100g: () => foodPer100gFromTable(food),
+    onError: (msg) => toast(msg, 'feil'),
+    onAdd: async ({ portionG, count, totalGram, macros }) => {
+      if (!macros.proteinG && !macros.carbsG) {
+        toast('Ingen makroverdier for denne matvaren', 'feil');
+        return;
+      }
+      await store.saveFoodIntake({
+        date: getDate(),
+        proteinG: macros.proteinG,
+        carbsG: macros.carbsG,
+        fatG: macros.fatG,
+        kcal: macros.kcal,
+        note: formatIntakeNoteGrams(food.foodName, portionG, count),
       });
-      syncPreview();
-    });
+      await store.setLastPortionGramsForFood(food.foodId, portionG);
+      toast('Inntak lagret', 'suksess');
+      onSaved?.();
+    },
   });
-
-  host.querySelector('#matvare-legg-til')?.addEventListener('click', async () => {
-    amount = Number(mengdeInput.value) || 0;
-    if (amount <= 0) {
-      toast('Oppgi mengde', 'feil');
-      return;
-    }
-    const m = macrosForPortion(food, amount, unit);
-    if (!m.proteinG && !m.carbsG) {
-      toast('Ingen makroverdier for denne matvaren', 'feil');
-      return;
-    }
-    await store.saveFoodIntake({
-      date,
-      proteinG: m.proteinG,
-      carbsG: m.carbsG,
-      fatG: m.fatG != null && Number.isFinite(m.fatG) ? m.fatG : null,
-      kcal: m.kcal != null && Number.isFinite(m.kcal) ? m.kcal : null,
-      note: formatIntakeNote(food.foodName, amount, unit),
-    });
-    close();
-    toast('Inntak lagret', 'suksess');
-    onSaved?.();
-  });
-
-  syncPreview();
+  if (lastG != null) api?.setPortionG(lastG);
 }
 
 /**
  * @param {HTMLElement} container
- * @param {{ sheetHost: HTMLElement, getDate: () => string, onSaved: () => void }} opts
+ * @param {{ oppslagPanel: HTMLElement, getDate: () => string, onSaved: () => void }} opts
  */
 export function bindMatvaretabellenSearch(container, opts) {
   const input = container.querySelector('#matvare-sok');
   const resultsHost = container.querySelector('#matvare-sok-treff');
   const statusEl = container.querySelector('#matvare-sok-status');
-  if (!input || !resultsHost || !opts.sheetHost) return;
+  const panelEl = opts.oppslagPanel;
+  if (!input || !resultsHost || !panelEl) return;
 
   let ready = false;
+
+  const hidePanel = () => {
+    panelEl.hidden = true;
+    panelEl.innerHTML = '';
+  };
 
   const setStatus = (text) => {
     if (statusEl) statusEl.textContent = text || '';
@@ -140,21 +101,24 @@ export function bindMatvaretabellenSearch(container, opts) {
 
   const renderResults = (items, query) => {
     if (!items.length) {
+      hidePanel();
       resultsHost.innerHTML = `
         <p class="dus liten">Ingen treff i Matvaretabellen for «${esc(query)}».</p>
-        <p class="dus liten">Mange tilskudd (f.eks. proteinpulver) finnes ikke her. Prøv «helmelk», «egg» eller manuell registrering under «Logg inntak».</p>`;
+        <p class="dus liten">Mange tilskudd (f.eks. proteinpulver) finnes ikke her. Prøv «helmelk», «egg» eller manuell registrering.</p>`;
       return;
     }
     resultsHost.innerHTML = items.map((it) => `
       <button type="button" class="velger-rad matvare-treff-rad" data-food-id="${esc(it.id)}">
-        <span class="velger-navn">${esc(it.name)}</span>
+        <span class="velger-navn">${esc(foodListLabel(it.id, it.name))}</span>
       </button>`).join('');
     resultsHost.querySelectorAll('[data-food-id]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const food = getFoodById(btn.dataset.foodId);
         if (!food) return;
-        openPortionSheet(opts.sheetHost, food, {
-          date: opts.getDate(),
+        resultsHost.innerHTML = '';
+        resultsHost.hidden = true;
+        await renderOppslagPanel(panelEl, food, {
+          getDate: opts.getDate,
           onSaved: opts.onSaved,
         });
       });
@@ -169,8 +133,11 @@ export function bindMatvaretabellenSearch(container, opts) {
     const q = input.value.trim();
     if (q.length < 2) {
       resultsHost.innerHTML = '';
+      resultsHost.hidden = true;
+      hidePanel();
       return;
     }
+    resultsHost.hidden = false;
     renderResults(searchFoods(q), q);
   }, 180);
 

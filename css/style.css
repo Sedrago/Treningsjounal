@@ -3043,6 +3043,72 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .preset-handlinger { display: flex; gap: 4px; flex-shrink: 0; }
 .kost-preset-skjema { margin-bottom: 12px; }
 
+.ernaring-accordions-kort {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ernaring-accordion {
+  border: 1px solid var(--kant);
+  border-radius: var(--radius-liten);
+  background: var(--flate-2);
+  overflow: hidden;
+}
+.ernaring-accordion[open] {
+  border-color: color-mix(in srgb, var(--aksent) 35%, var(--kant));
+  background: var(--flate);
+}
+.ernaring-accordion-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--trykk);
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.ernaring-accordion-summary::-webkit-details-marker { display: none; }
+.ernaring-accordion-summary::before {
+  content: '›';
+  display: inline-block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--dus);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.ernaring-accordion[open] > .ernaring-accordion-summary::before {
+  transform: rotate(90deg);
+}
+.ernaring-accordion-innhold {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--kant);
+}
+.ernaring-accordion-innhold > .felt-navn:first-child,
+.ernaring-accordion-innhold > label.felt-navn:first-child {
+  margin-top: 12px;
+}
+.ernaring-sok-hint { margin: 6px 0 8px; }
+.ernaring-favoritt-stjerne {
+  color: var(--aksent-dyp, #d4a017);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.ernaring-sok-rad {
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+.ernaring-sok-rad .velger-navn {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 #matvare-ark-vert .ark-bakgrunn { z-index: 110; }
 #matvare-ark-vert .ark { z-index: 111; }
 
@@ -3088,6 +3154,8 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   flex-direction: column;
   gap: 12px;
   margin: 12px 0;
+  max-height: min(50vh, 420px);
+  overflow-y: auto;
 }
 .meal-bekreft-rad {
   padding: 10px 12px;
@@ -3098,6 +3166,16 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
 .meal-bekreft-rad--mangler { border-color: var(--feil, #c44); }
 .meal-bekreft-rad--ai { border-color: var(--dus, rgba(255,255,255,0.25)); }
 .meal-rad-makro--ai { font-style: italic; }
+.meal-bekreft-rad-hode--med-fjern {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.meal-bekreft-rad-hode--med-fjern .meal-brand-label { flex: 1; margin: 0; }
+.meal-bekreft-rad--egen { border-color: var(--aksent-dyp, #0e9f6e); }
+.meal-legg-til-egen { margin-bottom: 8px; }
+.meal-egen-tittel { flex: 1; font-size: 0.95rem; }
 .meal-bekreft-rad-hode {
   display: flex;
   gap: 8px;
@@ -3138,6 +3216,27 @@ span.kategori-ikon { width: auto; height: auto; font-size: 1.35rem; }
   background: var(--flate-2);
 }
 .matvare-sok-treff .matvare-treff-rad:last-child { border-bottom: none; }
+.matvare-sok-treff .velger-navn,
+#meal-edit-overlay .matvare-sok-treff .velger-navn {
+  font-weight: 500;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+.matvare-sok-treff .matvare-treff-rad.valgt {
+  background: color-mix(in srgb, var(--aksent) 18%, transparent);
+}
+
+.matvare-oppslag-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kant);
+}
+.matvare-oppslag-navn {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
 
 .matvare-enhet-rad {
   display: flex;

@@ -12,6 +12,7 @@ import { isLegacyDefaultExercise } from './legacy-exercises.js';
 import {
   uuid, nowIso, todayStr, addDaysStr, fmtNum, toDisplayWeight, weightUnit,
 } from './utils.js';
+import { macrosFromPer100g, formatIntakeNoteGrams } from './matvaretabellen.js';
 
 /** Legger en operasjon i synk-køen og planlegger sending. */
 async function queueOp(entity, op, data) {
@@ -1153,7 +1154,52 @@ export async function getFoodPresets() {
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name, 'nb'));
 }
 
+const FOOD_PRESET_SCHEMA = 2;
+const META_LAST_PORTION_FOOD = 'nutritionLastPortionByFoodIdV1';
+
+/** Favoritt med makro per 100 g (schema v2) og alle fire felt. */
+export function isFoodPresetReady(p) {
+  if (!p) return false;
+  if ((p.schemaVersion ?? 0) < FOOD_PRESET_SCHEMA) return false;
+  const fields = [p.proteinG, p.carbsG, p.fatG, p.kcal];
+  return fields.every((v) => v != null && Number.isFinite(Number(v)));
+}
+
+export function presetPer100gMacros(p) {
+  if (!p) return null;
+  return {
+    proteinG: Number(p.proteinG) || 0,
+    carbsG: Number(p.carbsG) || 0,
+    fatG: Number(p.fatG) || 0,
+    kcal: Number(p.kcal) || 0,
+  };
+}
+
+export async function getLastPortionGramsForFood(foodId) {
+  if (!foodId) return null;
+  const map = (await db.getMeta(META_LAST_PORTION_FOOD, null)) || {};
+  const v = map[foodId];
+  return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
+}
+
+export async function setLastPortionGramsForFood(foodId, grams) {
+  if (!foodId || !Number.isFinite(Number(grams))) return;
+  const map = (await db.getMeta(META_LAST_PORTION_FOOD, null)) || {};
+  map[foodId] = Math.round(Number(grams) * 10) / 10;
+  await db.setMeta(META_LAST_PORTION_FOOD, map);
+}
+
+export async function touchFoodPresetLastPortion(presetId, portionG) {
+  const row = await db.get('foodPresets', presetId);
+  if (!row || row.deleted) return;
+  row.lastPortionG = Math.round(Number(portionG) * 10) / 10;
+  row.updatedAt = nowIso();
+  await db.put('foodPresets', row);
+  await queueOp('foodPreset', 'upsert', row);
+}
+
 export async function saveFoodPreset(preset) {
+  const existing = preset.id ? await db.get('foodPresets', preset.id) : null;
   const record = {
     id: preset.id || uuid(),
     name: String(preset.name || '').trim(),
@@ -1161,8 +1207,15 @@ export async function saveFoodPreset(preset) {
     carbsG: roundMacroG(preset.carbsG),
     fatG: roundMacroG(preset.fatG),
     kcal: roundKcal(preset.kcal),
-    unitLabel: String(preset.unitLabel || '').trim(),
-    sortOrder: preset.sortOrder ?? 0,
+    defaultPortionG: preset.defaultPortionG != null && preset.defaultPortionG !== ''
+      ? Math.round(Number(preset.defaultPortionG) * 10) / 10
+      : (existing?.defaultPortionG ?? null),
+    lastPortionG: preset.lastPortionG != null && preset.lastPortionG !== ''
+      ? Math.round(Number(preset.lastPortionG) * 10) / 10
+      : (existing?.lastPortionG ?? null),
+    schemaVersion: FOOD_PRESET_SCHEMA,
+    per100g: true,
+    sortOrder: preset.sortOrder ?? existing?.sortOrder ?? 0,
     deleted: false,
     updatedAt: nowIso(),
   };
@@ -1207,22 +1260,26 @@ function formatPresetIntakeQty(q) {
   return fmtNum(x, 1);
 }
 
-export function intakeFromPreset(preset, qty, opts = {}) {
-  const q = Math.max(0.25, Number(qty) || 1);
-  const unit = String(preset.unitLabel || '').trim();
-  const defaultNote = unit
-    ? `${preset.name} ${unit} x ${formatPresetIntakeQty(q)}`
-    : `${preset.name} x ${formatPresetIntakeQty(q)}`;
+/** @param {object} preset makro per 100 g */
+export function intakeFromPreset(preset, count, opts = {}) {
+  const c = Math.max(0.25, Number(count) || 1);
+  const portionG = Number(opts.portionG);
+  if (!Number.isFinite(portionG) || portionG <= 0) {
+    throw new Error('Mengde per enhet (g) mangler');
+  }
+  const per100 = presetPer100gMacros(preset);
+  const totalGram = portionG * c;
+  const m = macrosFromPer100g(per100, totalGram);
   return {
     date: opts.date || todayStr(),
     time: opts.time || nowTimeStr(),
-    proteinG: roundMacroG(preset.proteinG * q),
-    carbsG: roundMacroG((preset.carbsG ?? 0) * q),
-    fatG: preset.fatG != null ? roundMacroG(preset.fatG * q) : null,
-    kcal: preset.kcal != null ? roundKcal(preset.kcal * q) : null,
-    qty: q,
+    proteinG: m.proteinG,
+    carbsG: m.carbsG,
+    fatG: m.fatG,
+    kcal: m.kcal,
+    qty: c,
     presetId: preset.id,
-    note: opts.note || defaultNote,
+    note: opts.note || formatIntakeNoteGrams(preset.name, portionG, c),
   };
 }
 
