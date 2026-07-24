@@ -9,7 +9,6 @@ import {
   getFoodById,
   macrosForPortion,
   formatIntakeNoteGrams,
-  foodListLabel,
   formatMacrosCompact,
 } from './matvaretabellen.js';
 import { renderPortionLogHtml, bindPortionLog } from './portion-log-ui.js';
@@ -31,9 +30,46 @@ function normalizeSearch(s) {
     .trim();
 }
 
-function presetLabel(p) {
+function presetSearchTitle(p) {
   const tag = store.isFoodPresetReady(p) ? '' : ' — må oppdateres';
-  return `${p.name} (${formatMacrosCompact(p)} / 100 g)${tag}`;
+  return `${p.name}${tag}`;
+}
+
+function presetSearchMacrosLine(p) {
+  return `${formatMacrosCompact(p)} / 100 g`;
+}
+
+function foodSearchTitle(id, name) {
+  const food = getFoodById(id);
+  return name || food?.foodName || '';
+}
+
+function foodSearchMacrosLine(id) {
+  const food = getFoodById(id);
+  if (!food) return '';
+  const m = macrosForPortion(food, 100, 'g');
+  return `${formatMacrosCompact(m)} / 100 g`;
+}
+
+function searchResultRowHtml({ favoritt = false, presetId = '', foodId = '', title, macros }) {
+  const dataAttr = presetId
+    ? `data-preset-id="${esc(presetId)}"`
+    : `data-food-id="${esc(foodId)}"`;
+  const favClass = favoritt ? ' ernaring-sok-rad--favoritt' : '';
+  const star = favoritt
+    ? '<span class="ernaring-favoritt-stjerne" aria-hidden="true">★</span>'
+    : '';
+  const makro = macros
+    ? `<span class="ernaring-sok-makro dus liten">${esc(macros)}</span>`
+    : '';
+  return `
+      <button type="button" class="velger-rad ernaring-sok-rad${favClass}" ${dataAttr}>
+        ${star}
+        <span class="ernaring-sok-rad-innhold">
+          <span class="ernaring-sok-navn">${esc(title)}</span>
+          ${makro}
+        </span>
+      </button>`;
 }
 
 function filterPresets(presets, query) {
@@ -197,15 +233,17 @@ export function bindUnifiedNutritionSearch(container, opts) {
     }
 
     resultsHost.hidden = false;
-    const presetRows = presetHits.map((p) => `
-      <button type="button" class="velger-rad ernaring-sok-rad ernaring-sok-rad--favoritt" data-preset-id="${esc(p.id)}">
-        <span class="ernaring-favoritt-stjerne" aria-hidden="true">★</span>
-        <span class="velger-navn">${esc(presetLabel(p))}</span>
-      </button>`).join('');
-    const foodRows = foodHits.map((it) => `
-      <button type="button" class="velger-rad ernaring-sok-rad" data-food-id="${esc(it.id)}">
-        <span class="velger-navn">${esc(foodListLabel(it.id, it.name))}</span>
-      </button>`).join('');
+    const presetRows = presetHits.map((p) => searchResultRowHtml({
+      favoritt: true,
+      presetId: p.id,
+      title: presetSearchTitle(p),
+      macros: presetSearchMacrosLine(p),
+    })).join('');
+    const foodRows = foodHits.map((it) => searchResultRowHtml({
+      foodId: it.id,
+      title: foodSearchTitle(it.id, it.name),
+      macros: foodSearchMacrosLine(it.id),
+    })).join('');
 
     resultsHost.innerHTML = presetRows + foodRows;
 
